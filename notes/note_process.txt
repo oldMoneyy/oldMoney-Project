@@ -1,0 +1,1431 @@
+# SGLang Request Processing Flow - Complete End-to-End Trace
+# MiniCPM-SALA Model, Single HTTP Chat Completion Request
+# Based on exact code in /opt/eagle/sglang/
+
+## Launch Command & Request
+
+```bash
+# Server launch
+python3 -m sglang.launch_server \
+    --model-path /opt/model_gptq_ultimate_64 \
+    --port 31333 \
+    --quantization gptq_marlin \
+    --dtype float16 \
+    --disable-radix-cache \
+    --kv-cache-dtype fp8_e5m2 \
+    --attention-backend flashinfer \
+    --chunked-prefill-size 32768 \
+    --mem-fraction-static 0.8 \
+    --max-mamba-cache-size 64 \
+    --fuse-topk \
+    --log-level info \
+    --num-continuous-decode-steps 32 \
+    --schedule-policy fcfs \
+    --cuda-graph-max-bs 64 \
+    --torch-compile-max-bs 64
+```
+
+```bash
+# Client request
+curl http://localhost:31333/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "MiniCPM-SALA",
+    "messages": [{"role": "user", "content": "What is 1+1=?, please solve it step by step."}],
+    "max_tokens": 8192,
+    "temperature": 0.7
+  }'
+```
+
+---
+
+# UNIFIED CHRONOLOGICAL WALKTHROUGH
+
+## Phase 1: API Entry & Request Conversion
+
+### 1. FastAPI Entry Point
+**File:** `/opt/eagle/sglang/python/python/sglang/srt/entrypoints/http_server.py:1198-1205`
+
+```python
+@app.post("/v1/chat/completions", dependencies=[Depends(validate_json_request)])
+async def openai_v1_chat_completions(
+    request: ChatCompletionRequest,  # INPUT: Parsed JSON from curl
+    raw_request: Request  # INPUT: FastAPI Request object
+):
+    """OpenAI-compatible chat completion endpoint."""
+    return await raw_request.app.state.openai_serving_chat.handle_request(
+        request, raw_request
+    )
+```
+
+**Input Payload (ChatCompletionRequest):**
+- `model: str` = "MiniCPM-SALA"
+- `messages: List[ChatMessage]` = `[{"role": "user", "content": "What is 1+1=..., please solve it step by step."}]`
+- `max_tokens: int` = 8192
+- `temperature: float` = 0.7
+- `stream: bool` = False (default, non-streaming)
+- `top_p: Optional[float]` = 1.0 (default)
+- `top_k: Optional[int]` = None (default)
+
+### 2. OpenAIServingChat.handle_request
+**File:** `/opt/eagle/sglang/python/python/sglang/srt/entrypoints/openai/serving_base.py:86-146`
+
+```python
+async def handle_request(
+    self,
+    request: OpenAIServingRequest,  # INPUT: ChatCompletionRequest
+    raw_request: Request  # INPUT: FastAPI Request
+):
+    received_time = time.time()
+    received_time_perf = time.perf_counter()
+
+    # Validate request
+    error_msg = self._validate_request(request)
+    if error_msg:
+        return self.create_error_response(error_msg)
+
+    # Convert to internal format
+    adapted_request, processed_request = self._convert_to_internal_request(
+        request, raw_request
+    )
+
+    # Stream vs Non-streaming path
+    if request.stream:
+        return await self._handle_streaming_request(...)
+    else:
+        return await self._handle_non_streaming_request(
+            adapted_request, processed_request, raw_request
+        )
+```
+
+### 3. _convert_to_internal_request
+**File:** `/opt/eagle/sglang/python/python/sglang/srt/entrypoints/openai/serving_chat.py:175-220`
+
+```python
+def _convert_to_internal_request(
+    self,
+    request: ChatCompletionRequest,
+    raw_request: Request,
+) -> Tuple[GenerateReqInput, ChatCompletionRequest]:
+    """Convert OpenAI chat completion request to internal format"""
+    is_multimodal = self.tokenizer_manager.model_config.is_multimodal
+
+    # Process messages and apply chat template
+    processed_messages = self._process_messages(request, is_multimodal)
+
+    # Build sampling parameters
+    sampling_params = request.to_sampling_params(
+        self.tokenizer_manager.sampling_params_class
+    )
+
+    # Create internal GenerateReqInput
+    adapted_request = GenerateReqInput(
+        text=processed_messages["prompts"],  # Template-applied prompt
+        sampling_params={
+            "temperature": 0.7,
+            "top_p": request.top_p or 1.0,
+            "max_new_tokens": request.max_tokens or 8192,
+            "presence_penalty": request.presence_penalty,
+            "frequency_penalty": request.frequency_penalty,
+            # ...
+        },
+        max_tokens=request.max_tokens,
+        rid=self._generate_rid(),  # Generate unique request ID
+        stream=request.stream or False,
+        return_logprob=request.logprobs or False,
+        # ...
+    )
+
+    return adapted_request, request
+```
+
+**Output - GenerateReqInput:**
+- `text: str` = Chat template applied prompt (e.g., "<|im_start|>user\nWhat is 1+1=..., please solve it step by step.<|im_end|><|im_start|>assistant\n")
+- `rid: str` = Unique request ID (e.g., "req_123456")
+- `sampling_params: Dict`
+  - `temperature: float` = 0.7
+  - `top_p: float` = 1.0
+  - `max_new_tokens: int` = 8192
+  - `presence_penalty: float` = 0.0
+  - `frequency_penalty: float` = 0.0
+- `stream: bool` = False
+- `return_logprob: bool` = False
+
+### 4. _handle_non_streaming_request
+**File:** `/opt/eagle/sglang/python/python/sglang/srt/entrypoints/openai/serving_chat.py:766-789`
+
+```python
+async def _handle_non_streaming_request(
+    self,
+    adapted_request: GenerateReqInput,
+    request: ChatCompletionRequest,
+    raw_request: Request,
+):
+    """Handle non-streaming chat completion request"""
+    try:
+        # Call tokenizer manager, await first (and only) yield
+        ret = await self.tokenizer_manager.generate_request(
+            adapted_request, raw_request
+        ).__anext__()
+    except ValueError as e:
+        return self.create_error_response(str(e))
+
+    if not isinstance(ret, list):
+        ret = [ret]
+
+    response = self._build_chat_response(
+        request,
+        ret,
+        int(time.time()),
+    )
+    return response
+```
+
+---
+
+## Phase 2: Tokenization & IPC Dispatch (The Async Suspension)
+
+### 5. TokenizerManager.generate_request
+**File:** `/opt/eagle/sglang/python/python/sglang/srt/managers/tokenizer_manager.py:471-508`
+
+```python
+async def generate_request(
+    self,
+    obj: GenerateReqInput,  # INPUT: Internal request format
+    request: Optional[fastapi.Request] = None,
+):
+    created_time = obj.received_time if obj.received_time else time.time()
+
+    # Start background handle loop if not running
+    self.auto_create_handle_loop()  # Creates ZMQ receiver task
+
+    # Normalize the request
+    obj.normalize_batch_and_arguments()
+
+    # Log the request
+    self.request_logger.log_received_request(obj, self.tokenizer, request)
+
+    async with self.is_pause_cond:
+        await self.is_pause_cond.wait_for(lambda: not self.is_pause)
+
+    async with self.model_update_lock.reader_lock:
+        # Tokenize and send to scheduler
+        if obj.is_single:
+            tokenized_obj = await self._tokenize_one_request(obj)
+            state = self._send_one_request(obj, tokenized_obj, created_time)
+            async for response in self._wait_one_response(obj, state, request):
+                yield response
+```
+
+### 6. _tokenize_one_request
+**File:** `/opt/eagle/sglang/python/python/sglang/srt/managers/tokenizer_manager.py:648-729`
+
+```python
+async def _tokenize_one_request(
+    self,
+    obj: GenerateReqInput,
+):
+    """Tokenize one request."""
+    input_ids = obj.input_ids
+    input_text = obj.text
+    token_type_ids = None
+    input_embeds = None
+    mm_inputs = None
+
+    # Tokenize if not pre-tokenized
+    if obj.input_ids is not None:
+        input_ids = obj.input_ids
+    elif self.tokenizer is not None:
+        input_ids, token_type_ids = await self._tokenize_texts(input_text)
+
+    # Validate input
+    self._validate_one_request(obj, input_ids)
+
+    # Create tokenized object
+    return self._create_tokenized_object(
+        obj, input_text, input_ids, input_embeds, mm_inputs, token_type_ids
+    )
+```
+
+**Output - TokenizedGenerateReqInput:**
+- `input_ids: List[int]` = Token IDs from tokenizer (e.g., [1, 1258, 264, 875, ...])
+  - Length depends on prompt (typically ~30-50 tokens for this example)
+- `input_text: str` = Original prompt text
+- `origin_prompt: str` = Original prompt
+- `sampling_params: SamplingParams`
+  - `temperature: float` = 0.7
+  - `top_p: float` = 1.0
+  - `max_new_tokens: int` = 8192
+- `rid: str` = Request ID
+- `req_pool_idx: int` = Will be assigned by scheduler
+
+### 7. _send_one_request (ZMQ Dispatch)
+**File:** `/opt/eagle/sglang/python/python/sglang/srt/managers/tokenizer_manager.py:1035-1050`
+
+```python
+def _send_one_request(
+    self,
+    obj: GenerateReqInput,
+    tokenized_obj: TokenizedGenerateReqInput,  # INPUT: Tokenized request
+    created_time: Optional[float] = None,
+):
+    trace_slice_start(RequestStage.TOKENIZER_DISPATCH, obj.rid)
+    tokenized_obj.trace_context = trace_get_proc_propagate_context(obj.rid)
+
+    # CRITICAL: Send to scheduler via ZMQ
+    self.send_to_scheduler.send_pyobj(tokenized_obj)
+
+    # Create request state with async event for waking
+    state = ReqState(
+        [],  # out_list: empty list to be filled with results
+        False,  # finished: initially False
+        asyncio.Event(),  # event: unsignaled initially
+        obj,  # original request object
+        created_time=created_time
+    )
+    state.request_sent_to_scheduler_ts = time.time()
+
+    # Store state in rid -> state map
+    self.rid_to_state[obj.rid] = state
+
+    trace_slice_end(RequestStage.TOKENIZER_DISPATCH, obj.rid, thread_finish_flag=True)
+    return state
+```
+
+**ZMQ Data Sent:**
+- Socket type: PUSH
+- Destination: Scheduler's PULL socket (`recv_from_tokenizer`)
+- Payload: `TokenizedGenerateReqInput` object (pickled via `send_pyobj`)
+  - Contains: input_ids, sampling_params, rid, etc.
+
+### 8. _wait_one_response (Async Suspension)
+**File:** `/opt/eagle/sglang/python/python/sglang/srt/managers/tokenizer_manager.py:1075-1120`
+
+```python
+async def _wait_one_response(
+    self,
+    obj: GenerateReqInput,
+    state: ReqState,  # INPUT: State with event created above
+    request: Optional[fastapi.Request] = None,
+):
+    """Wait for response of one request."""
+    is_stream = getattr(obj, "stream", False)
+    while True:
+        try:
+            # CRITICAL: HTTP handler SUSPENDS here waiting for event
+            await asyncio.wait_for(
+                state.event.wait(),  # <-- SUSPENDS until scheduler sets event
+                timeout=_REQUEST_STATE_WAIT_TIMEOUT
+            )
+        except asyncio.TimeoutError:
+            # Handle timeout...
+            if (request is not None and await request.is_disconnected()):
+                self.abort_request(obj.rid)
+                return {"text": "", "meta_info": {"finish_reason": "abort"}}
+
+        state.event.clear()  # Reset for next iteration (streaming)
+
+        # Process all available outputs from state.out_list
+        if state.out_list:
+            out = state.out_list.pop(0)
+            yield out
+
+            # Check if finished
+            if state.finished:
+                return
+```
+
+**At this point:**
+- The HTTP handler is **suspended** at `state.event.wait()`
+- The request has been dispatched to scheduler via ZMQ
+- Control will NOT resume until `state.event.set()` is called
+
+---
+
+## Phase 3: Scheduler Loop & Batching
+
+### 9. Scheduler Event Loop - Receive Requests
+**File:** `/opt/eagle/sglang/python/python/sglang/srt/managers/scheduler.py:1085-1110`
+
+```python
+@DynamicGradMode()
+def event_loop_normal(self):
+    """A normal scheduler loop."""
+    while True:
+        # Receive requests from tokenizer
+        recv_reqs = self.recv_requests()  # <-- ZMQ recv from tokenizer
+        self.process_input_requests(recv_reqs)
+        if self._engine_paused:
+            continue
+
+        # Get next batch to run
+        batch = self.get_next_batch_to_run()  # <-- Batching logic
+        self.cur_batch = batch
+
+        # Launch current batch
+        if batch:
+            result = self.run_batch(batch)
+            self.process_batch_result(batch, result)
+        else:
+            self.self_check_during_idle()
+```
+
+### 10. process_input_requests
+**File:** `/opt/eagle/sglang/python/python/sglang/srt/managers/scheduler.py:1334-1380`
+
+```python
+def process_input_requests(self, recv_reqs: List):
+    """Process incoming tokenized requests."""
+    for recv_req in recv_reqs:
+        # Handle different request types
+        if isinstance(recv_req, TokenizedGenerateReqInput):
+            self.handle_generation_request(recv_req)
+        elif isinstance(recv_req, BatchTokenizedGenerateReqInput):
+            self.handle_batch_generation_request(recv_req)
+        # ... other request types
+```
+
+### 11. handle_generation_request (Create Request State)
+**File:** `/opt/eagle/sglang/python/python/sglang/srt/managers/scheduler.py:1700-1792`
+
+```python
+def handle_generation_request(self, recv_req: TokenizedGenerateReqInput):
+    """Handle single generation request."""
+    # Get request pool index
+    if not self.req_to_token_pool.has_free_slot():
+        # Wait or preemption logic
+        self.add_request_to_queue(recv_req)
+        return
+
+    req_pool_idx = self.req_to_token_pool.alloc()
+
+    # Create internal Req object
+    req = Req(
+        req_pool_idx=req_pool_idx,
+        rid=recv_req.rid,
+        origin_prompt=recv_req.origin_prompt,
+        input_ids=recv_req.input_ids,
+        sampling_params=recv_req.sampling_params,
+        max_new_tokens=recv_req.sampling_params.max_new_tokens,
+        output_ids=[],
+        finished=False,
+        # ...
+    )
+
+    # Add to running or waiting queue
+    self._add_request_to_queue(req)
+```
+
+### 12. get_next_batch_to_run (Batching Decision)
+**File:** `/opt/eagle/sglang/python/python/sglang/srt/managers/scheduler.py:1807-1950`
+
+```python
+def get_next_batch_to_run(self) -> Optional[ScheduleBatch]:
+    """Get next batch to run. Decides between PREFILL and DECODE."""
+    # Check chunked request first
+    if self.chunked_req is not None and self.chunked_req.finished():
+        self.chunked_req = None
+
+    # Merge chunked request into running batch
+    chunked_req_to_exclude = set()
+    if self.chunked_req:
+        chunked_req_to_exclude.add(self.chunked_req)
+        # Cache unfinished tokens
+        self.tree_cache.cache_unfinished_req(self.chunked_req, chunked=True)
+
+    # Decide forward mode: EXTEND (prefill) or DECODE
+    if len(self.running_batch.reqs) > 0:
+        # Has running requests -> DECODE mode
+        return ScheduleBatch(
+            reqs=self.running_batch.reqs,
+            forward_mode=ForwardMode.DECODE,
+            # ...
+        )
+    else:
+        # No running requests -> Prefill new requests
+        prefill_reqs = self._get_prefill_requests(...)
+        return ScheduleBatch(
+            reqs=prefill_reqs,
+            forward_mode=ForwardMode.EXTEND,
+            # ...
+        )
+```
+
+**ScheduleBatch Structure:**
+- `reqs: List[Req]` - Requests in this batch
+- `forward_mode: ForwardMode` - `EXTEND` (prefill) or `DECODE`
+- `input_ids: torch.Tensor` - Token IDs [batch_size, seq_len]
+- `positions: torch.Tensor` - Position IDs [batch_size, seq_len]
+- `seq_lens: torch.Tensor` - Sequence lengths [batch_size]
+- `req_pool_indices: torch.Tensor` - Request pool indices
+- `out_cache_loc: torch.Tensor` - KV cache output locations
+
+---
+
+## Phase 4: Model Execution (The Forward Pass)
+
+### 13. Scheduler.run_batch
+**File:** `/opt/eagle/sglang/python/python/sglang/srt/managers/scheduler.py:2214-2312`
+
+```python
+def run_batch(
+    self,
+    batch: ScheduleBatch,  # INPUT: ScheduleBatch from get_next_batch_to_run
+    pp_proxy_tensors: Optional[PPProxyTensors] = None,
+) -> Union[GenerationBatchResult, EmbeddingBatchResult]:
+    """Run a batch."""
+    self.forward_ct += 1
+
+    # Profile predicate
+    self._profile_batch_predicate(batch)
+
+    # Get model worker batch
+    if self.spec_algorithm.is_none() or self.enable_overlap:
+        worker_batch_or_batch = batch.get_model_worker_batch()
+
+    # Run forward pass
+    if self.is_generation:
+        with self.record_forward_metrics(batch):
+            batch_result = self.model_worker.forward_batch_generation(
+                worker_batch_or_batch,
+                pp_proxy_tensors=pp_proxy_tensors,
+            )
+        future_indices_or_next_token_ids = batch_result.next_token_ids
+        self.update_cache_from_scheduler(batch, batch_result)
+
+    return batch_result
+```
+
+### 14. TpWorker.forward_batch_generation
+**File:** `/opt/eagle/sglang/python/python/sglang/srt/managers/tp_worker.py:423-513`
+
+```python
+def forward_batch_generation(
+    self,
+    model_worker_batch: ModelWorkerBatch,
+    forward_batch: Optional[ForwardBatch] = None,
+    pp_proxy_tensors: Optional[PPProxyTensors] = None,
+    is_verify: bool = False,
+    skip_attn_backend_init=False,
+) -> GenerationBatchResult:
+    # Get forward batch from model worker batch
+    if model_worker_batch is not None:
+        forward_batch = ForwardBatch.init_new(model_worker_batch, self.model_runner)
+
+    # Call model runner forward (if last rank in PP)
+    if self.pp_group.is_last_rank:
+        out = self.model_runner.forward(
+            forward_batch,
+            pp_proxy_tensors=pp_proxy_tensors,
+            skip_attn_backend_init=skip_attn_backend_init,
+        )
+        logits_output, can_run_cuda_graph = out.logits_output, out.can_run_graph
+
+        batch_result = GenerationBatchResult(
+            logits_output=logits_output,
+            can_run_cuda_graph=can_run_cuda_graph,
+            expert_distribution_metrics=out.expert_distribution_metrics,
+        )
+
+        if is_verify:
+            return batch_result  # Skip sampling for verification
+
+        # Sample next tokens
+        if not model_worker_batch.is_prefill_only:
+            batch_result.next_token_ids = self.model_runner.sample(
+                logits_output, forward_batch
+            )
+        else:
+            # Prefill-only: create dummy tokens
+            batch_result.next_token_ids = torch.zeros(
+                len(model_worker_batch.seq_lens),
+                dtype=torch.long,
+                device=model_worker_batch.input_ids.device,
+            )
+
+        return batch_result
+```
+
+### 15. ModelRunner.forward
+**File:** `/opt/eagle/sglang/python/python/sglang/srt/model_executor/model_runner.py:2196-2298`
+
+```python
+def forward(
+    self,
+    forward_batch: ForwardBatch,  # INPUT: Batch metadata and tensors
+    skip_attn_backend_init: bool = False,
+    pp_proxy_tensors: Optional[PPProxyTensors] = None,
+    reinit_attn_backend: bool = False,
+    split_forward_count: int = 1,
+) -> ModelRunnerOutput:
+    self.forward_pass_id += 1
+
+    # Call raw forward
+    output = self._forward_raw(
+        forward_batch,
+        skip_attn_backend_init,
+        pp_proxy_tensors,
+        reinit_attn_backend,
+        split_forward_count,
+    )
+
+    output.expert_distribution_metrics = recorder_outputs.get("metrics")
+
+    # Copy cached routing experts' buffers back to CPU cache
+    get_global_experts_capturer().on_forward_pass_end(...)
+
+    return output
+```
+
+**ForwardBatch Structure:**
+- `forward_mode: ForwardMode` - `EXTEND` or `DECODE`
+- `batch_size: int` - Number of requests in batch
+- `input_ids: torch.Tensor` - Token IDs [batch_size, seq_len]
+  - DECODE: [batch_size, 1]
+  - EXTEND: [batch_size, prefilled_seq_len]
+- `positions: torch.Tensor` - Position IDs [batch_size, seq_len]
+- `seq_lens: torch.Tensor` - Sequence lengths [batch_size]
+- `req_pool_indices: torch.Tensor` - Request pool indices [batch_size]
+- `out_cache_loc: torch.Tensor` - KV cache locations [batch_size, 1]
+- `attn_backend: AttentionBackend` - Initialized attention backend
+- `sampling_info: SamplingBatchInfo` - Sampling parameters
+
+### 16. ModelRunner._forward_raw
+**File:** `/opt/eagle/sglang/python/python/sglang/srt/model_executor/model_runner.py:2231-2298`
+
+```python
+def _forward_raw(
+    self,
+    forward_batch: ForwardBatch,
+    skip_attn_backend_init: bool,
+    pp_proxy_tensors: Optional[PPProxyTensors],
+    reinit_attn_backend: bool = False,
+    split_forward_count: int = 1,
+) -> ModelRunnerOutput:
+    # Check if can run CUDA graph
+    mode_check = (
+        forward_batch.forward_mode.is_cpu_graph
+        if self.device == "cpu"
+        else forward_batch.forward_mode.is_cuda_graph
+    )
+    can_run_graph = bool(
+        mode_check()
+        and self.graph_runner
+        and self.graph_runner.can_run(forward_batch)
+    )
+
+    if can_run_graph:
+        ret = self.graph_runner.replay(forward_batch, **kwargs)
+    else:
+        # Branch based on forward mode
+        if forward_batch.forward_mode.is_decode():
+            ret = self.forward_decode(forward_batch, skip_attn_backend_init, None)
+        elif forward_batch.forward_mode.is_extend():
+            ret = self.forward_extend(forward_batch, skip_attn_backend_init, None)
+
+    return ModelRunnerOutput(
+        logits_output=ret,
+        can_run_graph=can_run_graph,
+        expert_distribution_metrics=None,
+    )
+```
+
+### 17. ModelRunner.forward_decode
+**File:** `/opt/eagle/sglang/python/python/sglang/srt/model_executor/model_runner.py:2109-2131`
+
+```python
+def forward_decode(
+    self,
+    forward_batch: ForwardBatch,
+    skip_attn_backend_init: bool = False,
+    pp_proxy_tensors=None
+) -> Union[LogitsProcessorOutput, PPProxyTensors]:
+    if not skip_attn_backend_init:
+        # Init attention backend metadata
+        if self.server_args.enable_pdmux:
+            self.decode_attn_backend.init_forward_metadata(forward_batch)
+            forward_batch.attn_backend = self.decode_attn_backend
+        else:
+            self.attn_backend.init_forward_metadata(forward_batch)
+
+    # Prepare kwargs
+    kwargs = {}
+    if self.support_pp:
+        kwargs["pp_proxy_tensors"] = pp_proxy_tensors
+
+    # Call model forward
+    return self.model.forward(
+        forward_batch.input_ids,  # INPUT: [batch_size, 1]
+        forward_batch.positions,  # INPUT: [batch_size, 1]
+        forward_batch,  # INPUT: Full forward batch
+        **kwargs
+    )
+```
+
+### 18. MiniCPMForCausalLM.forward (Model Forward Pass)
+**File:** `/opt/eagle/sglang/python/python/sglang/srt/models/minicpm.py`
+
+```python
+class MiniCPMForCausalLM(nn.Module):
+    def forward(
+        self,
+        input_ids: torch.Tensor,  # INPUT: [batch_size, seq_len]
+        positions: torch.Tensor,  # INPUT: [batch_size, seq_len]
+        forward_batch: ForwardBatch,  # INPUT: Batch metadata
+    ) -> torch.Tensor:  # OUTPUT: [batch_size, seq_len, vocab_size]
+        # 1. Embedding lookup
+        hidden_states = self.model.embed_tokens(input_ids)
+        # hidden_states: [batch_size, seq_len, hidden_size]
+        # hidden_size = 4096 for MiniCPM-SALA
+
+        # 2. Process through decoder layers
+        for layer in self.model.layers:  # num_hidden_layers (typically 40)
+            hidden_states = layer(
+                hidden_states,
+                positions=positions,
+                forward_batch=forward_batch,
+            )
+            # hidden_states: [batch_size, seq_len, hidden_size]
+
+        # 3. Final RMS norm
+        hidden_states = self.model.norm_f(hidden_states)
+        # hidden_states: [batch_size, seq_len, hidden_size]
+
+        # 4. Output projection to vocabulary
+        logits = self.model.output(hidden_states)
+        # logits: [batch_size, seq_len, vocab_size]
+        # vocab_size = 122880 for MiniCPM-SALA
+
+        return logits
+```
+
+**Tensor Shapes (DECODE mode, batch_size=1):**
+- `input_ids`: [1, 1] - Single token to decode
+- `hidden_states` (after embedding): [1, 1, 4096]
+- `hidden_states` (per layer): [1, 1, 4096]
+- `logits`: [1, 1, 122880]
+
+### 19. MiniCPMDecoderLayer.forward
+**File:** `/opt/eagle/sglang/python/python/sglang/srt/models/minicpm.py:458-550`
+
+```python
+class MiniCPMDecoderLayer(nn.Module):
+    def forward(
+        self,
+        positions: torch.Tensor,  # INPUT: [batch_size, seq_len]
+        hidden_states: torch.Tensor,  # INPUT: [batch_size, seq_len, hidden_size]
+        forward_batch: ForwardBatch,  # INPUT: Batch metadata
+        residual: Optional[torch.Tensor] = None
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        # Self Attention (fused add + rmsnorm)
+        if residual is None:
+            residual = hidden_states
+            hidden_states = self.input_layernorm(hidden_states)
+        else:
+            hidden_states, residual = self.input_layernorm(hidden_states, residual)
+        # hidden_states: [batch_size, seq_len, hidden_size]
+
+        # Hybrid attention forward (Mamba/GLA routing)
+        hidden_states = self.self_attn(
+            positions=positions,
+            hidden_states=hidden_states,
+            forward_batch=forward_batch,
+        )
+        # hidden_states: [batch_size, seq_len, hidden_size]
+
+        # Residual connection with depth scaling
+        residual_scale = self.config.scale_depth / math.sqrt(self.config.num_hidden_layers)
+        hidden_states = residual + hidden_states * residual_scale
+        # hidden_states: [batch_size, seq_len, hidden_size]
+
+        # MLP (fused add + rmsnorm)
+        residual = hidden_states
+        hidden_states = self.post_attention_layernorm(hidden_states)
+        # hidden_states: [batch_size, seq_len, hidden_size]
+
+        # MiniCPM MLP forward
+        hidden_states = self.mlp(hidden_states)
+        # hidden_states: [batch_size, seq_len, hidden_size]
+
+        # Residual connection with depth scaling
+        hidden_states = residual + hidden_states * residual_scale
+        # hidden_states: [batch_size, seq_len, hidden_size]
+
+        return hidden_states, None
+```
+
+### 20. MiniCPMAttention.forward
+**File:** `/opt/eagle/sglang/python/python/sglang/srt/models/minicpm.py:305-365`
+
+```python
+class MiniCPMAttention(nn.Module):
+    def forward(
+        self,
+        positions: torch.Tensor,  # INPUT: [batch_size, seq_len]
+        hidden_states: torch.Tensor,  # INPUT: [batch_size, seq_len, hidden_size]
+        forward_batch: ForwardBatch,  # INPUT: Batch metadata
+    ) -> torch.Tensor:  # OUTPUT: [batch_size, seq_len, hidden_size]
+        # QKV projection
+        qkv, _ = self.qkv_proj(hidden_states)
+        # qkv: [batch_size, seq_len, 3 * hidden_size]
+        q, k, v = qkv.split([self.q_size, self.kv_size, self.kv_size], dim=-1)
+
+        # QK normalization (if enabled)
+        if self.qk_norm:
+            q = self.q_norm(q.reshape(-1, self.head_dim))
+            k = self.k_norm(k.reshape(-1, self.head_dim))
+
+        # Rotary position encoding (RoPE)
+        if self.use_rope:
+            q = q.reshape(-1, self.num_heads * self.head_dim)
+            k = k.reshape(-1, self.num_kv_heads * self.head_dim)
+            orig_dtype = q.dtype
+            q, k = q.float(), k.float()
+            q, k = self.rotary_emb(positions, q, k)
+            q, k = q.to(orig_dtype), k.to(orig_dtype)
+
+        # Reshape for attention
+        q = q.reshape(-1, self.num_heads, self.head_dim)
+        k = k.reshape(-1, self.num_kv_heads, self.head_dim)
+        v = v.reshape(-1, self.num_kv_heads, self.head_dim)
+        # q: [batch_size, seq_len, num_heads, head_dim]
+        # k: [batch_size, seq_len, num_kv_heads, head_dim]
+        # v: [batch_size, seq_len, num_kv_heads, head_dim]
+
+        # Add batch dimension
+        q = q.unsqueeze(0)  # [1, batch_size, seq_len, num_heads, head_dim]
+        k = k.unsqueeze(0)
+        v = v.unsqueeze(0)
+
+        # Get attention backend
+        attn_backend = forward_batch.attn_backend
+
+        # Hybrid attention backend (contains SimpleGLAAttnBackend)
+        if not hasattr(attn_backend, "linear_attn_backend"):
+            raise RuntimeError("SimpleGLAAttnBackend required")
+
+        linear_attn_backend = attn_backend.linear_attn_backend
+
+        # Call SimpleGLA forward
+        o = linear_attn_backend.forward(
+            q=q, k=k, v=v,
+            forward_batch=forward_batch,
+            layer_id=self.layer_id,
+            output_attentions=False,
+        )
+        # o: [batch_size, seq_len, num_heads * head_dim]
+
+        # Output projection
+        o = o.reshape(-1, self.num_heads * self.head_dim)
+
+        # Output normalization (if enabled)
+        if self.use_output_norm:
+            o = self.o_norm(o)
+
+        # Output gate (if enabled)
+        if self.use_output_gate:
+            z, _ = self.z_proj(hidden_states)
+            o = o * F.sigmoid(z)
+
+        # Final output projection
+        y, _ = self.o_proj(o)
+        # y: [batch_size, seq_len, hidden_size]
+
+        return y
+```
+
+### 21. SimpleGLAAttnBackend.forward (MiniCPM Hybrid Attention)
+**File:** `/opt/eagle/sglang/python/python/sglang/srt/layers/attention/hybrid_linear_attn_backend.py:1627-1700`
+
+```python
+class SimpleGLAAttnBackend(MambaAttnBackendBase):
+    """Attention backend for MiniCPM hybrid models using SimpleGLA CUDA kernels.
+
+    This backend handles the hybrid Mamba + GLA attention mechanism
+    where different layers can use different attention types.
+    """
+
+    def __init__(self, model_runner: ModelRunner):
+        super().__init__(model_runner)
+        minicpm_config = getattr(model_runner, 'minicpm_hybrid_config', None)
+
+        self.conv_states_shape = None
+
+        tp_size = get_tensor_model_parallel_world_size()
+        total_num_heads = minicpm_config.lightning_nkv or 16
+        num_heads = total_num_heads // tp_size
+        self.num_heads = num_heads
+
+        # ALiBi slopes for GLA decay
+        self.g_gamma = (
+            _build_slope_tensor(num_heads).to(dtype=torch.float32, device=self.device)
+            * (-1.0)
+        )
+
+    def forward(
+        self,
+        q: torch.Tensor,  # INPUT: [1, batch_size, seq_len, num_heads, head_dim]
+        k: torch.Tensor,  # INPUT: [1, batch_size, seq_len, num_kv_heads, head_dim]
+        v: torch.Tensor,  # INPUT: [1, batch_size, seq_len, num_kv_heads, head_dim]
+        forward_batch: ForwardBatch,  # INPUT: Batch metadata
+        layer_id: int,  # INPUT: Current layer index
+        output_attentions: bool = False,
+    ) -> torch.Tensor:  # OUTPUT: [batch_size, seq_len, hidden_size]
+        """Execute hybrid attention combining Mamba and GLA"""
+
+        # Get forward mode
+        mode = forward_batch.forward_mode
+        seq_len = q.shape[2]
+        batch_size = q.shape[1]
+
+        # Route to sparse or full attention based on mode
+        if self.use_sparse:
+            return self._forward_sparse_attention(q, k, v, forward_batch, layer_id)
+        else:
+            return self._forward_full_attention(q, k, v, forward_batch, layer_id)
+
+    def _forward_full_attention(
+        self, q, k, v, forward_batch, layer_id
+    ):
+        """Full attention path for GLA"""
+        batch_size = q.shape[1]
+        seq_len = q.shape[2]
+        num_heads = q.shape[3]
+        head_dim = q.shape[4]
+
+        # Reshape inputs for GLA kernel
+        # GLA uses exponential decay: attention_weights = exp(q @ k.T - g_gamma * |i-j|)
+        q = q.squeeze(0)  # [batch_size, seq_len, num_heads, head_dim]
+        k = k.squeeze(0)
+        v = v.squeeze(0)
+
+        # GLA forward using FLA kernels
+        from fla.ops.simple_gla import parallel_simple_gla
+
+        o = parallel_simple_gla(
+            q=q,
+            k=k,
+            v=v,
+            g=self.g_gamma,  # ALiBi slopes for decay
+            use_decay=True,
+        )
+        # o: [batch_size, seq_len, num_heads, head_dim]
+
+        # Reshape output
+        o = o.reshape(batch_size, seq_len, num_heads * head_dim)
+        # o: [batch_size, seq_len, hidden_size]
+
+        return o
+```
+
+**MiniCPM Hybrid Attention Key Points:**
+- Uses `lightning-attn` (SimpleGLA) for linear attention
+- ALiBi slopes (`g_gamma`) provide exponential decay for attention weights
+- GLA complexity: O(n log n) vs O(n^2) for standard attention
+- Suitable for long sequences (chunked-prefill-size: 32768)
+
+### 22. MiniCPMMLP.forward
+**File:** `/opt/eagle/sglang/python/python/sglang/srt/models/minicpm.py:57-92`
+
+```python
+class MiniCPMMLP(nn.Module):
+    def __init__(
+        self,
+        hidden_size: int,  # 4096 for MiniCPM-SALA
+        intermediate_size: int,  # Typically 3 * hidden_size = 12288
+        hidden_act: str,  # "silu"
+        quant_config: Optional[QuantizationConfig] = None,
+        prefix: str = "",
+    ) -> None:
+        super().__init__()
+        # Merged gate and up projections
+        self.gate_up_proj = MergedColumnParallelLinear(
+            hidden_size,
+            [intermediate_size] * 2,  # [intermediate_size, intermediate_size]
+            bias=False,
+            quant_config=quant_config,
+            prefix=add_prefix("gate_up_proj", prefix),
+        )
+        self.down_proj = RowParallelLinear(
+            intermediate_size,
+            hidden_size,
+            bias=False,
+            quant_config=quant_config,
+            prefix=add_prefix("down_proj", prefix),
+        )
+        self.act_fn = SiluAndMul()  # SiLU activation + element-wise multiply
+
+    def forward(
+        self,
+        x: torch.Tensor,  # INPUT: [batch_size, seq_len, hidden_size]
+    ) -> torch.Tensor:  # OUTPUT: [batch_size, seq_len, hidden_size]
+        # Gate and up projections (merged)
+        gate_up, _ = self.gate_up_proj(x)
+        # gate_up: [batch_size, seq_len, intermediate_size * 2]
+        # Split into gate and up
+        # gate: [batch_size, seq_len, intermediate_size]
+        # up: [batch_size, seq_len, intermediate_size]
+
+        # SiLU activation + element-wise multiply (fused)
+        x = self.act_fn(gate_up)
+        # x: [batch_size, seq_len, intermediate_size]
+
+        # Down projection
+        x, _ = self.down_proj(x)
+        # x: [batch_size, seq_len, hidden_size]
+
+        return x
+```
+
+**Tensor Shapes:**
+- `x` (input): [1, 1, 4096]
+- `gate_up` (after projection): [1, 1, 24576] (12288 * 2)
+- `x` (after activation): [1, 1, 12288]
+- `x` (output): [1, 1, 4096]
+
+---
+
+## Phase 5: Sampling & Result Processing
+
+### 23. ModelRunner.sample
+**File:** `/opt/eagle/sglang/python/python/sglang/srt/model_executor/model_runner.py:2316-2352`
+
+```python
+def sample(
+    self,
+    logits_output: LogitsProcessorOutput,  # INPUT: [batch_size, vocab_size]
+    forward_batch: ForwardBatch,  # INPUT: Batch with sampling params
+) -> torch.Tensor:  # OUTPUT: [batch_size] - Sampled token IDs
+    # Get next token logits
+    next_token_logits = logits_output.next_token_logits
+    # next_token_logits: [batch_size, vocab_size]
+
+    # Get sampling parameters
+    sampling_params = forward_batch.sampling_info.sampling_params
+
+    # Apply temperature scaling
+    temperature = sampling_params.temperature  # 0.7
+    if temperature > 0.0:
+        next_token_logits = next_token_logits / temperature
+
+    # Top-p (nucleus) sampling
+    top_p = sampling_params.top_p  # 1.0
+    if top_p < 1.0:
+        next_token_logits = top_p_logits_filter(
+            next_token_logits, top_p, forward_batch.sampling_info.logprobs
+        )
+
+    # Greedy or multinomial sampling
+    if temperature == 0.0 or sampling_params.top_k == 1:
+        next_token_ids = torch.argmax(next_token_logits, dim=-1)
+    else:
+        probs = torch.softmax(next_token_logits, dim=-1)
+        next_token_ids = torch.multinomial(probs, num_samples=1).squeeze(-1)
+
+    # next_token_ids: [batch_size]
+    return next_token_ids
+```
+
+### 24. Scheduler.process_batch_result
+**File:** `/opt/eagle/sglang/python/python/sglang/srt/managers/scheduler.py:2370-2390`
+
+```python
+def process_batch_result(
+    self,
+    batch: ScheduleBatch,  # INPUT: Executed batch
+    result: Union[GenerationBatchResult, EmbeddingBatchResult]  # INPUT: Batch result
+):
+    # Route based on forward mode
+    if batch.forward_mode.is_decode():
+        self.process_batch_result_decode(batch, result)
+    elif batch.forward_mode.is_extend():
+        self.process_batch_result_prefill(batch, result)
+    # ...
+```
+
+### 25. process_batch_result_decode
+**File:** `/opt/eagle/sglang/python/python/sglang/srt/managers/scheduler_output_processor_mixin.py:357-487`
+
+```python
+def process_batch_result_decode(
+    self: Scheduler,
+    batch: ScheduleBatch,  # INPUT: Decode batch
+    result: GenerationBatchResult,  # INPUT: Generation result
+):
+    # Synchronize if async copy
+    if result.copy_done is not None:
+        result.copy_done.synchronize()
+
+    # Get sampled tokens
+    logits_output, next_token_ids, can_run_cuda_graph = (
+        result.logits_output,
+        result.next_token_ids,
+        result.can_run_cuda_graph
+    )
+    # next_token_ids: [batch_size]
+
+    # Move to CPU
+    next_token_ids = next_token_ids.tolist()
+    # next_token_ids: List[int], e.g., [42, 1234, ...]
+
+    # Process each request in batch
+    for i, (req, next_token_id) in enumerate(zip(batch.reqs, next_token_ids)):
+        req.output_ids.append(next_token_id)
+        new_accepted_len = 1
+
+        # Check finish conditions
+        req.check_finished()
+
+        if req.finished():
+            # Release KV cache
+            release_kv_cache(req, self.tree_cache)
+            req.time_stats.completion_time = time.perf_counter()
+
+    # Stream output to detokenizer
+    self.stream_output(batch.reqs, batch.return_logprob)
+```
+
+---
+
+## Phase 6: Output Stream & Async Waking (The IPC Return)
+
+### 26. stream_output (Send to Detokenizer)
+**File:** `/opt/eagle/sglang/python/python/sglang/srt/managers/scheduler_output_processor_mixin.py:808-1115`
+
+```python
+def stream_output(
+    self: Scheduler,
+    reqs: List[Req],  # INPUT: Requests with new tokens
+    return_logprob: bool,
+    skip_req: Optional[Req] = None
+):
+    # Build output data structures
+    rids = []
+    http_worker_ipcs = []
+    finished_reasons = []
+    decoded_texts = []
+    decode_ids_list = []
+    output_ids = []
+
+    # Process each request
+    for i, req in enumerate(reqs):
+        rids.append(req.rid)
+        finished_reasons.append(req.meta_info.finish_reason)
+        decoded_texts.append(req.decoded_text)
+        decode_ids_list.append([req.output_ids[-1]] if req.output_ids else [])
+        output_ids.append(req.output_ids)
+
+    # CRITICAL: Send to detokenizer via ZMQ
+    self.send_to_detokenizer.send_output(
+        BatchTokenIDOutput(
+            rids=rids,  # [batch_size] - Request IDs
+            finished_reasons=finished_reasons,  # [batch_size]
+            decoded_texts=decoded_texts,  # [batch_size] - Decoded text
+            decode_ids=decode_ids_list,  # [batch_size][1] - New token IDs
+            output_ids=output_ids,  # [batch_size][seq_len] - All output tokens
+            # ... additional fields
+        )
+    )
+```
+
+**ZMQ Data Sent:**
+- Socket type: PUSH
+- Destination: Detokenizer's PULL socket
+- Payload: `BatchTokenIDOutput`
+  - `rids: List[str]` - Request IDs
+  - `decoded_texts: List[str]` - Detokenized text
+  - `decode_ids: List[List[int]]` - New token IDs
+  - `output_ids: List[List[int]]` - All output tokens
+  - `finished_reasons: List[BaseFinishReason]` - Finish reasons
+
+### 27. TokenizerManager.handle_loop (Background Receiver)
+**File:** `/opt/eagle/sglang/python/python/sglang/srt/managers/tokenizer_manager.py:1448-1455`
+
+```python
+async def handle_loop(self):
+    """The event loop that handles requests"""
+    while True:
+        with self.soft_watchdog.disable():
+            # CRITICAL: Receive output from detokenizer via ZMQ
+            recv_obj = await self.recv_from_detokenizer.recv_pyobj()
+        self._result_dispatcher(recv_obj)
+        self.last_receive_tstamp = time.time()
+        self.soft_watchdog.feed()
+```
+
+**ZMQ Data Received:**
+- Socket type: PULL (blocking receive)
+- Source: Scheduler's `send_to_detokenizer`
+- Payload: `BatchTokenIDOutput` (from stream_output above)
+
+### 28. _handle_batch_output (THE WAKING MECHANISM)
+**File:** `/opt/eagle/sglang/python/python/sglang/srt/managers/tokenizer_manager.py:1457-1602`
+
+```python
+def _handle_batch_output(
+    self,
+    recv_obj: Union[
+        BatchStrOutput,
+        BatchEmbeddingOutput,
+        BatchMultimodalOutput,
+        BatchTokenIDOutput,
+    ],
+):
+    # Process each request in batch
+    for i, rid in enumerate(recv_obj.rids):
+        state = self.rid_to_state.get(rid, None)
+        if state is None:
+            logger.error(f"Received output for {rid=} but state was deleted")
+            continue
+
+        # Build output dictionary
+        meta_info = {"id": rid, "finish_reason": recv_obj.finished_reasons[i]}
+
+        out_dict = {
+            "text": recv_obj.decoded_texts[i],  # Decoded text
+            "output_ids": recv_obj.output_ids[i],  # All output token IDs
+            "meta_info": meta_info,
+        }
+
+        # Check if finished
+        state.finished = recv_obj.finished_reasons[i] is not None
+        if state.finished:
+            state.finished_time = time.time()
+            state.finished_time_perf = time.perf_counter()
+            meta_info["e2e_latency"] = state.finished_time - state.created_time
+
+            # Delete state from map (request complete)
+            del self.rid_to_state[rid]
+
+        # CRITICAL WAKING MECHANISM: Append output and set event
+        state.out_list.append(out_dict)  # <-- Add to output list
+        state.event.set()  # <-- WAKE UP the suspended HTTP handler
+```
+
+**The Waking Mechanism Explained:**
+1. Scheduler calls `stream_output()` → ZMQ sends `BatchTokenIDOutput` to detokenizer
+2. Detokenizer processes and sends back to TokenizerManager's `recv_from_detokenizer`
+3. `handle_loop()` receives the object and calls `_handle_batch_output()`
+4. `_handle_batch_output()` finds the `ReqState` by `rid`
+5. `state.out_list.append(out_dict)` adds the output to the list
+6. `state.event.set()` **unblocks** the await in `_wait_one_response()`
+7. The suspended HTTP handler in Phase 2 resumes execution
+
+### 29. HTTP Handler Wakes Up
+**File:** `/opt/eagle/sglang/python/python/sglang/srt/managers/tokenizer_manager.py:1075-1120`
+
+```python
+async def _wait_one_response(
+    self,
+    obj: GenerateReqInput,
+    state: ReqState,
+    request: Optional[fastapi.Request] = None,
+):
+    """Wait for response of one request."""
+    is_stream = getattr(obj, "stream", False)
+    while True:
+        try:
+            # <--- SUSPENDED HERE UNTIL state.event.set() is called --->
+            await asyncio.wait_for(
+                state.event.wait(),
+                timeout=_REQUEST_STATE_WAIT_TIMEOUT
+            )
+            # <--- RESUMED HERE --->
+        except asyncio.TimeoutError:
+            # ... handle timeout
+
+        state.event.clear()  # Reset for next iteration
+
+        # Process all available outputs
+        if state.out_list:
+            out = state.out_list.pop(0)
+            yield out
+
+            # Check if finished
+            if state.finished:
+                return
+```
+
+**After Waking Up:**
+- `state.out_list` contains the `out_dict` with `text`, `output_ids`, `meta_info`
+- The generator yields `out` to the caller
+- If `state.finished` is True, the loop exits (generation complete)
+
+### 30. OpenAIServingChat._build_chat_response
+**File:** `/opt/eagle/sglang/python/python/sglang/srt/entrypoints/openai/serving_chat.py:791-848`
+
+```python
+def _build_chat_response(
+    self,
+    request: ChatCompletionRequest,
+    ret: List[Dict[str, Any]],  # INPUT: [{"text": "...", "meta_info": {...}}]
+    created: int,
+) -> Union[ChatCompletionResponse, ORJSONResponse]:
+    """Build chat completion response from generation results"""
+    choices = []
+
+    for idx, ret_item in enumerate(ret):
+        # Process logprobs
+        choice_logprobs = None
+        if request.logprobs:
+            choice_logprobs = self._process_response_logprobs(ret_item)
+
+        # Handle hidden states
+        hidden_states = process_hidden_states_from_ret(ret_item, request)
+
+        # Get finish reason
+        finish_reason = ret_item["meta_info"]["finish_reason"]
+        text = ret_item["text"]
+
+        # Build choice
+        choice = ChatCompletionResponseChoice(
+            index=idx,
+            message=ChatMessage(
+                role="assistant",
+                content=text,  # Generated text
+            ),
+            finish_reason=finish_reason,
+            logprobs=choice_logprobs,
+        )
+        choices.append(choice)
+
+    # Calculate token usage
+    usage = UsageProcessor.calculate_token_usage(
+        ret,
+        request.prompt_tokens,
+        request.completion_tokens,
+    )
+
+    # Build final response
+    return ChatCompletionResponse(
+        id=ret[0]["meta_info"]["id"],  # Request ID
+        created=created,
+        model=request.model,  # "MiniCPM-SALA"
+        choices=choices,
+        usage=usage,
+    )
+```
+
+**Final Response Structure:**
+```json
+{
+  "id": "req_123456",
+  "object": "chat.completion",
+  "created": 1740000000,
+  "model": "MiniCPM-SALA",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "To solve 1+1 step by step:\n\n1. Start with the number 1\n2. Add 1 to it\n3. The result is 2\n\nTherefore, 1+1=2."
+      },
+      "finish_reason": "length"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 45,
+    "completion_tokens": 35,
+    "total_tokens": 80
+  }
+}
+```
+
+### 31. FastAPI Returns JSON to Client
+The HTTP response is now ready to be sent back to the original curl request:
+
+```python
+# In http_server.py line 1203-1205
+return await raw_request.app.state.openai_serving_chat.handle_request(
+    request, raw_request
+)
+```
+
+Which ultimately returns:
+```json
+{
+  "id": "req_123456",
+  "object": "chat.completion",
+  "created": 1740000000,
+  "model": "MiniCPM-SALA",
+  "choices": [...],
+  "usage": {...}
+}
+```
+
+The curl client receives this JSON and the request is complete.
+
+---
+
+# SUMMARY OF CRITICAL DATA STRUCTURES AND TRANSFORMATIONS
+
+| Phase | Structure | Key Fields | Transform |
+|--------|-----------|-------------|------------|
+| 1. HTTP Entry | `ChatCompletionRequest` | model, messages, max_tokens, temperature | Parsed from JSON |
+| 2. Internal | `GenerateReqInput` | text, sampling_params, rid, stream | From chat template |
+| 3. Tokenized | `TokenizedGenerateReqInput` | input_ids (List[int]), sampling_params | Tokenized text |
+| 4. ZMQ → Scheduler | Same as above | pickled object | Sent via PUSH |
+| 5. Scheduler | `Req` | input_ids, output_ids, finished | Internal state |
+| 6. Batch | `ScheduleBatch` | reqs, forward_mode, input_ids | Batching decision |
+| 7. Forward | `ForwardBatch` | input_ids (Tensor), positions, seq_lens | GPU tensors |
+| 8. Model | `MiniCPMForCausalLM` | hidden_states [batch, seq, hidden] | Layer outputs |
+| 9. Layer | `MiniCPMDecoderLayer` | attention, mlp outputs | Layer transforms |
+| 10. Attention | `SimpleGLAAttnBackend` | q, k, v tensors | GLA computation |
+| 11. MLP | `MiniCPMMLP` | gate_up, down | SwiGLU |
+| 12. Sample | `LogitsProcessorOutput` | next_token_logits | → token_ids |
+| 13. Batch Result | `GenerationBatchResult` | next_token_ids, logits_output | Sampled tokens |
+| 14. ZMQ → Detokenizer | `BatchTokenIDOutput` | rids, decoded_texts, output_ids | Sent via PUSH |
+| 15. HTTP Response | `ChatCompletionResponse` | choices, usage, model | JSON to client |
+
+# TENSOR SHAPES THROUGH THE PIPELINE (Batch Size = 1)
+
+| Stage | Tensor | Shape | Dtype | Device |
+|-------|--------|-------|--------|--------|
+| Input (tokenized) | `input_ids` | [seq_len] | int64 | CPU |
+| ForwardBatch (DECODE) | `input_ids` | [1, 1] | int64 | GPU |
+| ForwardBatch (DECODE) | `positions` | [1, 1] | int64 | GPU |
+| Embedding output | `hidden_states` | [1, 1, 4096] | float16 | GPU |
+| Layer output | `hidden_states` | [1, 1, 4096] | float16 | GPU |
+| Attention output | `q` | [1, 1, num_heads, head_dim] | float16 | GPU |
+| Attention output | `o` | [1, 1, hidden_size] | float16 | GPU |
+| MLP output | `hidden_states` | [1, 1, 4096] | float16 | GPU |
+| Logits | `logits` | [1, 1, 122880] | float16 | GPU |
+| Sampled | `next_token_ids` | [1] | int64 | GPU → CPU |
+| Final response | `output_ids` | [generated_len] | int64 | CPU |
+
+# KEY IPC FLOWS
+
+## Tokenizer → Scheduler
+- **Socket:** ZMQ PUSH → PULL
+- **Data:** `TokenizedGenerateReqInput` (pickled)
+- **Sent when:** After tokenization completes
+- **Trigger:** `_send_one_request()` calls `send_to_scheduler.send_pyobj()`
+
+## Scheduler → Detokenizer
+- **Socket:** ZMQ PUSH → PULL
+- **Data:** `BatchTokenIDOutput` (pickled)
+- **Sent when:** After each forward pass (decode step)
+- **Trigger:** `stream_output()` calls `send_to_detokenizer.send_output()`
+
+## Detokenizer → TokenizerManager
+- **Socket:** ZMQ PUSH → PULL
+- **Data:** `BatchTokenIDOutput` (pickled)
+- **Received when:** In background `handle_loop()`
+- **Trigger:** `recv_from_detokenizer.recv_pyobj()` blocks until data arrives
+- **Waking:** `_handle_batch_output()` calls `state.event.set()`
+
+# ASYNC EVENT FLOW
+
+1. **HTTP Handler** calls `tokenizer_manager.generate_request()`
+2. **Tokenization** completes, `_send_one_request()` creates `ReqState` with `asyncio.Event()`
+3. **ZMQ Dispatch** sends request to scheduler
+4. **HTTP Handler** suspends at `state.event.wait()` in `_wait_one_response()`
+5. **Scheduler Loop** runs `event_loop_normal()`, processes request, runs batches
+6. **Model Execution** generates tokens via MiniCPM forward pass
+7. **Result Streaming** sends `BatchTokenIDOutput` to detokenizer via ZMQ
+8. **Background Loop** `handle_loop()` receives output via ZMQ
+9. **Result Dispatch** `_handle_batch_output()` appends to `state.out_list` and calls `state.event.set()`
+10. **HTTP Handler Wakes** from `state.event.wait()`, yields output
+11. **If not finished**, loop continues to step 5 (next decode step)
+12. **If finished**, generator exits, `_build_chat_response()` builds response
+13. **FastAPI** returns JSON to client

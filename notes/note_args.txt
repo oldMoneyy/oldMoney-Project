@@ -1,0 +1,759 @@
+# SGLang launch_server Arguments - Deep Code-Level Definitions
+## Source: /opt/eagle/sglang/python/python/sglang/srt/
+
+---
+
+## 1. --model-path /opt/model_gptq_ultimate_64
+
+### Code Definition (/opt/eagle/sglang/python/python/sglang/srt/server_args.py:2532-2537)
+```python
+parser.add_argument(
+    "--model-path",
+    "--model",
+    type=str,
+    help="The path of the model weights. This can be a local folder or a Hugging Face repo ID.",
+    required=True,
+)
+```
+
+### Deep Implementation Impact
+- **Used by**: `ModelRunner.__init__()` (/opt/eagle/sglang/python/python/sglang/srt/model_executor/model_runner.py:281-282)
+- **Resolution flow**:
+  1. Passed to `ModelConfig.from_server_args()` to load model configuration
+  2. Used by `DefaultModelLoader` to load weights from disk or HuggingFace
+  3. Determines model architecture (GPT, Llama, Qwen, etc.) which affects:
+     - Attention pattern selection
+     - Quantization support (GPTQ Marlin for this model)
+     - Special handling (e.g., MiniCPM, Mamba, DeepSeek)
+
+---
+
+## 2. --port 31333
+
+### Code Definition (/opt/eagle/sglang/python/python/sglang/srt/server_args.py:2645-2649)
+```python
+parser.add_argument(
+    "--port",
+    type=int,
+    default=ServerArgs.port,
+    help="The port of the HTTP server.",
+)
+```
+
+### Deep Implementation Impact
+- **Used by**: `TokenizerManager` and HTTP server entrypoints
+- Sets up ZMQ IPC communication between scheduler and tokenizer processes
+- Default: 30000, HTTP server listens on this port
+
+---
+
+## 3. --quantization gptq_marlin
+
+### Code Definition (/opt/eagle/sglang/python/python/sglang/srt/server_args.py:2702-2707)
+```python
+parser.add_argument(
+    "--quantization",
+    type=str,
+    default=ServerArgs.quantization,
+    choices=QUANTIZATION_CHOICES,
+    help="The quantization method.",
+)
+# QUANTIZATION_CHOICES = [..., "gptq_marlin", ...]
+```
+
+### Deep Implementation Impact
+- **Used by**: `ModelConfig` -> weight loading -> `ReplicatedLinear` (/opt/eagle/sglang/python/python/sglang/srt/layers/linear.py)
+- **GPTQ Marlin Flow**:
+  1. `model_loader/utils.py` selects `QuantMixtralForCausalLM` architecture for GPTQ Marlin
+  2. `ReplicatedLinear` uses `gptq_marlin_gemm` from `sgl_kernel`
+  3. **Marlin tile size optimization** (/opt/eagle/sglang/python/python/sglang/srt/layers/linear.py:75-85):
+     ```python
+     def adjust_marlin_shard(param, shard_size, shard_offset):
+         marlin_tile_size = getattr(param, "marlin_tile_size", None)
+         if marlin_tile_size is None:
+             return shard_size, shard_offset
+         return shard_size * marlin_tile_size, shard_offset * marlin_tile_size
+     ```
+  4. **Marlin kernel** performs dequantized GEMM using:
+     - 4-bit packed weights (`b_q_weight`)
+     - Activation scales (`b_scales`, `global_scale`)
+     - Zero points (`b_zeros`)
+     - Group indices (`g_idx`, `perm`)
+
+- **Memory Savings**: 4-bit weights reduce GPU memory by ~4x vs FP16
+- **Performance**: Marlin uses CUDA kernels optimized for 4-bit GEMM with tensor cores
+
+---
+
+## 4. --dtype float16
+
+### Code Definition (/opt/eagle/sglang/python/python/sglang/srt/server_args.py:2688-2697)
+```python
+parser.add_argument(
+    "--dtype",
+    type=str,
+    default=ServerArgs.dtype,
+    choices=["auto", "half", "float16", "bfloat16", "float", "float32"],
+    help="Data type for model weights and activations.",
+)
+```
+
+### Deep Implementation Impact
+- **Used by**: `ModelRunner` for weight casting and activation precision
+- **Implementation** (/opt/eagle/sglang/python/python/sglang/srt/model_loader/utils.py:46-66):
+  ```python
+  if dtype == "auto":
+      dtype = torch.float16
+  elif dtype == "half" or dtype == "float16":
+      dtype = torch.float16
+  elif dtype == "bfloat16":
+      dtype = torch.bfloat16
+  ```
+- **Affects**:
+  - Linear layer weight precision
+  - Attention computation precision
+  - KV cache dtype (unless overridden by `--kv-cache-dtype`)
+  - Mixing with quantization: dequantized ops output at specified dtype
+
+---
+
+## 5. --disable-radix-cache
+
+### Code Definition (server_args.py:3981-3984)
+```python
+parser.add_argument(
+    "--disable-radix-cache",
+    action="store_true",
+    help="Disable RadixAttention for prefix caching.",
+)
+```
+
+### Deep Implementation Impact
+- **Cache selection** (/opt/eagle/sglang/python/python/sglang/srt/managers/scheduler.py:654-668):
+  ```python
+  if (
+      server_args.chunked_prefill_size is not None
+      and server_args.disable_radix_cache
+  ):
+      self.tree_cache = ChunkCache(params)  # or SWAChunkCache
+  else:
+      self.tree_cache = RadixCache(params)  # Default: prefix matching
+  ```
+
+- **ChunkCache vs RadixCache** (/opt/eagle/sglang/python/python/sglang/srt/mem_cache/chunk_cache.py:22-113):
+  - `ChunkCache.match_prefix()` returns empty MatchResult - **NO prefix matching**
+  - `ChunkCache` is a simple wrapper around `token_to_kv_pool_allocator`
+  - **No tree structure** for shared prefix sharing
+  - Each request gets its own KV cache allocation
+
+- **RadixCache benefits**:
+  - Shared KV cache for common prefixes across requests
+  - Reduces compute for prompts with overlapping context
+  - Memory efficiency through reuse
+
+---
+
+## 6. --kv-cache-dtype fp8_e5m2
+
+### Code Definition (server_args.py:2718-2723)
+```python
+parser.add_argument(
+    "--kv-cache-dtype",
+    type=str,
+    default=ServerArgs.kv_cache_dtype,
+    choices=["auto", "fp8_e5m2", "fp8_e4m3", "bf16", "bfloat16", "fp4_e2m1"],
+    help='Data type for kv cache storage. "auto" will use model data type...',
+)
+```
+
+### Deep Implementation Impact
+- **Dtype configuration** (/opt/eagle/sglang/python/python/sglang/srt/model_executor/model_runner.py:1526-1566):
+  ```python
+  def configure_kv_cache_dtype(self):
+      if self.server_args.kv_cache_dtype == "auto":
+          kv_cache_quant_algo = getattr(quant_config, "kv_cache_quant_algo", None)
+          if kv_cache_quant_algo.upper() == "FP8":
+              self.kv_cache_dtype = torch.float8_e4m3fn
+          else:
+              self.kv_cache_dtype = self.dtype
+      elif self.server_args.kv_cache_dtype == "fp8_e5m2":
+          self.kv_cache_dtype = torch.float8_e5m2  # Wider range, good for decode
+      elif self.server_args.kv_cache_dtype == "fp8_e4m3":
+          self.kv_cache_dtype = torch.float8_e4m3fn  # Better precision for prefill
+  ```
+
+- **Cell size calculation** (/opt/eagle/sglang/python/python/sglang/srt/model_executor/model_runner_kv_cache_mixin.py:48-69):
+  ```python
+  def get_cell_size_per_token(self, num_layers: int) -> int:
+      kv_size = torch._utils._element_size(self.kv_cache_dtype)
+      if self.use_mla_backend:
+          cell_size = (
+              (self.model_config.kv_lora_rank + self.model_config.qk_rope_head_dim)
+              * num_layers
+              * kv_size
+          )
+      # fp8_e5m2: kv_size = 1 byte vs 2 bytes for FP16
+      # Saves 50% KV cache memory
+  ```
+
+- **Memory impact**: FP8 (1 byte) vs FP16 (2 bytes) = 50% reduction
+- **Precision trade-off**: FP8_E5M2 has wider dynamic range but lower precision
+
+---
+
+## 7. --attention-backend flashinfer
+
+### Code Definition (server_args.py:3369-3374)
+```python
+parser.add_argument(
+    "--attention-backend",
+    type=str,
+    choices=ATTENTION_BACKEND_CHOICES,
+    default=ServerArgs.attention_backend,
+    help="Choose the kernels for attention layers.",
+)
+```
+
+### Deep Implementation Impact
+- **Backend selection** (/opt/eagle/sglang/python/python/sglang/srt/model_executor/model_runner.py:1577-1645):
+  ```python
+  def _get_attention_backend(self):
+      if self.server_args.attention_backend == "flashinfer":
+          return FlashInferAttnBackend(...)
+      elif self.server_args.attention_backend == "triton":
+          return TritonAttnBackend(...)
+      # ... other backends
+  ```
+
+- **FlashInferAttnBackend** (/opt/eagle/sglang/python/python/sglang/srt/layers/attention/flashinfer_backend.py:112-303):
+  ```python
+  class FlashInferAttnBackend(AttentionBackend):
+      def __init__(self, model_runner, ...):
+          # Decode kernel selection
+          self.decode_wrappers = [
+              BatchDecodeWithPagedKVCacheWrapper(
+                  self.workspace_buffer,
+                  "NHD",
+                  use_tensor_cores=self.decode_use_tensor_cores,
+              ) for _ in range(self.num_wrappers)
+          ]
+          # Prefill kernels
+          self.prefill_wrappers_paged = [
+              BatchPrefillWithPagedKVCacheWrapper(
+                  self.workspace_buffer, "NHD", backend="fa2"
+              ) for _ in range(self.num_wrappers)
+          ]
+  ```
+
+- **FlashInfer provides**:
+  - Prefill with paged KV cache (`BatchPrefillWithPagedKVCacheWrapper`)
+  - Decode with paged KV cache (`BatchDecodeWithPagedKVCacheWrapper`)
+  - Support for sliding window, MLA (Multi-Query Attention)
+  - Optional CUTLASS backend on SM100 GPUs
+  - Workspace buffer management for kernel launches
+
+- **Performance**: FlashInfer typically faster than Triton due to optimized CUDA kernels
+
+---
+
+## 8. --chunked-prefill-size 32768
+
+### Code Definition (server_args.py:2802-2807)
+```python
+parser.add_argument(
+    "--chunked-prefill-size",
+    type=int,
+    default=ServerArgs.chunked_prefill_size,
+    help="The maximum number of tokens in a chunk for the chunked prefill. "
+         "Setting this to -1 means disabling chunked prefill.",
+)
+```
+
+### Deep Implementation Impact
+- **Chunked prefill init** (/opt/eagle/sglang/python/python/sglang/srt/managers/scheduler.py:753-767):
+  ```python
+  def init_chunked_prefill(self):
+      self.chunked_prefill_size = self.server_args.chunked_prefill_size
+      if self.chunked_prefill_size <= 0:  # -1 means disable
+          self.chunked_prefill_size = None
+      self.chunked_req = None
+  ```
+
+- **Prefill batching** (/opt/eagle/sglang/python/python/sglang/srt/managers/scheduler.py:1943-1964):
+  ```python
+  # Determine chunked_prefill_size for this batch
+  chunked_prefill_size = self.chunked_prefill_size
+  if self.chunked_req is not None and self.enable_dynamic_chunking:
+      dynamic_size = self.predict_next_chunk_size(history_len)
+      if dynamic_size is not None:
+          chunked_prefill_size = dynamic_size
+
+  # Prefill policy
+  adder = PrefillAdder(
+      ..., chunked_prefill_size, ...
+  )
+  ```
+
+- **ChunkCache behavior** (/opt/eagle/sglang/python/python/sglang/srt/mem_cache/chunk_cache.py:117-139 for SWA):
+  ```python
+  class SWAChunkCache(ChunkCache):
+      def evict_swa(self, req, prelen):
+          if self.sliding_window_size is not None:
+              new_evicted_seqlen_local = max(
+                  req.evicted_seqlen_local,
+                  prelen - self.sliding_window_size
+              )
+          elif self.attention_chunk_size is not None:
+              new_evicted_seqlen_local = max(
+                  req.evicted_seqlen_local,
+                  prelen // self.attention_chunk_size * self.attention_chunk_size
+              )
+  ```
+
+- **Purpose**: Split long prompts into chunks to:
+  - Allow mixing of prefill and decode batches
+  - Reduce time-to-first-token for long prompts
+  - Enable better batching of concurrent requests
+
+---
+
+## 9. --mem-fraction-static 0.8
+
+### Code Definition (server_args.py:2777-2781)
+```python
+parser.add_argument(
+    "--mem-fraction-static",
+    type=float,
+    default=ServerArgs.mem_fraction_static,
+    help="The fraction of the memory used for static allocation "
+         "(model weights and KV cache memory pool). Use a smaller value if OOM.",
+)
+```
+
+### Deep Implementation Impact
+- **Memory allocation** (/opt/eagle/sglang/python/python/sglang/srt/model_executor/model_runner_kv_cache_mixin.py:134-140):
+  ```python
+  cell_size = self.get_cell_size_per_token(num_layers)
+
+  rest_memory = available_gpu_memory - total_gpu_memory * (1 - self.mem_fraction_static)
+  return int(rest_memory * (1 << 30)) // cell_size
+  ```
+
+- **KV pool size calculation** (/opt/eagle/sglang/python/python/sglang/srt/managers/tp_worker.py:325-326):
+  ```python
+  self._model_runner = ModelRunner(
+      ...,
+      mem_fraction_static=self.server_args.mem_fraction_static,
+      ...
+  )
+  ```
+
+- **Impact**:
+  - `0.8` means 80% of GPU memory for weights + KV cache
+  - Remaining 20% for activation tensors, workspace buffers
+  - Lower values = more room for activation/compute overhead
+  - Higher values = larger KV cache, potentially more concurrent requests
+
+- **OOM error reference** (/opt/eagle/sglang/python/python/sglang/srt/model_executor/model_runner_kv_cache_mixin.py:323-327):
+  ```python
+  if self.max_total_num_tokens <= 0:
+      raise RuntimeError(
+          f"Not enough memory. Please try to increase --mem-fraction-static. "
+          f"Current value: {self.server_args.mem_fraction_static=}"
+      )
+  ```
+
+---
+
+## 10. --max-mamba-cache-size 32
+
+### Code Definition (server_args.py:3734-3738)
+```python
+parser.add_argument(
+    "--max-mamba-cache-size",
+    type=int,
+    default=ServerArgs.max_mamba_cache_size,
+    help="The maximum size of the mamba cache.",
+)
+```
+
+### Deep Implementation Impact
+- **Mamba cache sizing** (/opt/eagle/sglang/python/python/sglang/srt/model_executor/model_runner_kv_cache_mixin.py:264-277):
+  ```python
+  if self.mambaish_config is not None:
+      additional_ratio = 0
+      if self.server_args.enable_mamba_extra_buffer():
+          if not self.spec_algorithm.is_none():
+              additional_ratio = MAMBA_CACHE_V2_ADDITIONAL_RATIO_NO_OVERLAP
+          else:
+              additional_ratio = MAMBA_CACHE_V2_ADDITIONAL_RATIO_OVERLAP
+      if self.server_args.disable_radix_cache:
+          ratio = 1
+      else:
+          ratio = MAMBA_CACHE_SIZE_MAX_RUNNING_REQUESTS_RATIO + additional_ratio
+      max_num_reqs = min(
+          max_num_reqs,
+          self.server_args.max_mamba_cache_size // ratio
+      )
+  ```
+
+- **Purpose**:
+  - Limits the number of Mamba state tokens cached
+  - Mamba/SSM models maintain state across tokens for efficient inference
+  - Higher values = more states in cache = better performance
+
+---
+
+## 11. --fuse-topk
+
+### Code Definition (server_args.py:4008-4011)
+```python
+parser.add_argument(
+    "--fuse-topk",
+    action="store_true",
+    help="fuse stage1+maxpool+topk in minicpm into a single kernel",
+)
+```
+
+### Deep Implementation Impact
+- **MiniCPM backend fusion** (/opt/eagle/sglang/python/python/sglang/srt/layers/attention/minicpm_backend.py:249-280):
+  ```python
+  def __init__(self, model_runner, ...):
+      self.fuse_topk = model_runner.server_args.fuse_topk
+      ...
+
+      if model_runner.server_args.fuse_topk:
+          print("jit start...")
+          for bs in model_runner.server_args.cuda_graph_bs:
+              decode_kernel = fused_attn_pooling_online_topk_decode(
+                  batch_size=bs,
+                  groups=self.heads_per_group,
+                  heads=model_runner.model_config.num_attention_heads,
+                  dim=self.head_dim,
+                  topk=kernel_topk,
+                  pooled_k_len=bucketed_pooled_k_len,
+                  ...
+              )
+  ```
+
+- **Fusion usage** (/opt/eagle/sglang/python/python/sglang/srt/layers/attention/minicpm_backend.py:276-809):
+  ```python
+  # During decode
+  if not self.fuse_topk or fused_kernel is None:
+      topk_idx = compressed_attention(...)  # Separate kernel calls
+  else:
+      # Single kernel does pooling + topk + attention
+      ret = fused_kernel(...)
+  ```
+
+- **Performance benefit**:
+  - Reduces kernel launch overhead
+  - Fuses multiple operations: stage1 (convolution), maxpool, topk selection
+  - Better memory locality for sparse attention
+
+- **Model-specific**: Only used by MiniCPM/MiMo models with sparse attention
+
+---
+
+## 12. --log-level info
+
+### Code Definition (server_args.py:3002-3006)
+```python
+parser.add_argument(
+    "--log-level",
+    type=str,
+    default=ServerArgs.log_level,
+    help="The logging level of all loggers.",
+)
+```
+
+### Deep Implementation Impact
+- **Logger configuration** (/opt/eagle/sglang/python/python/sglang/srt/utils.py:392-420):
+  ```python
+  def configure_logger(server_args, prefix=""):
+      log_level_str = server_args.log_level.upper()
+      log_level = getattr(logging, log_level_str, logging.INFO)
+      ...
+      logger.setLevel(log_level)
+  ```
+
+- **Affects all components**:
+  - Scheduler logs
+  - Model runner logs
+  - Attention backend logs
+  - Tokenizer logs
+
+---
+
+## 13. --num-continuous-decode-steps 32
+
+### Code Definition (server_args.py:4198-4204)
+```python
+parser.add_argument(
+    "--num-continuous-decode-steps",
+    type=int,
+    default=ServerArgs.num_continuous_decode_steps,  # Default: 1
+    help="Run multiple continuous decoding steps to reduce scheduling overhead. "
+         "This can potentially increase throughput but may also increase TTFT. "
+         "The default value is 1, meaning only run one decoding step at a time.",
+)
+```
+
+### Deep Implementation Impact
+- **Status**: This argument is **defined but NOT USED** in the current codebase
+- Searched entire `/opt/eagle/sglang/python/python/sglang/srt/`:
+  - Only appears in `server_args.py` (definition and argparse)
+  - No references found in scheduler.py, model_runner.py, or manager files
+  - Likely a **planned feature** that was not fully implemented
+
+- **Intended behavior** (from help text):
+  - Run multiple decode steps back-to-backack without re-scheduling
+  - Reduce Python-side scheduling overhead between decode passes
+  - Trade-off: Higher throughput but potentially higher TTFT
+
+---
+
+## 14. --schedule-policy fcfs
+
+### Code Definition (server_args.py:2826-2831)
+```python
+parser.add_argument(
+    "--schedule-policy",
+    type=str,
+    default=ServerArgs.schedule_policy,
+    choices=["lpm", "random", "fcfs", "dfs-weight", "lof", "priority"],
+    help="The scheduling policy of the requests.",
+)
+```
+
+### Deep Implementation Impact
+- **Policy enum** (/opt/eagle/sglang/python/python/sglang/srt/managers/schedule_policy.py:75-140):
+  ```python
+  class CacheAgnosticPolicy(Enum):
+      FCFS = "fcfs"  # first come first serve
+      LOF = "lof"  # longest output first
+      RANDOM = "random"
+
+  class SchedulePolicy:
+      def calc_priority(self, waiting_queue: List[Req]):
+          if self.policy == CacheAgnosticPolicy.FCFS:
+              if self.enable_priority_scheduling:
+                  SchedulePolicy._sort_by_priority_and_fcfs(
+                      waiting_queue, self.priority_sign
+                  )
+              return False
+  ```
+
+- **FCFS implementation** (schedule_policy.py:280-289):
+  ```python
+  @staticmethod
+  def _sort_by_priority_and_fcfs(waiting_queue, priority_sign: int):
+      waiting_queue.sort(
+          key=lambda x: (
+              x.priority * priority_sign,
+              x.time_stats.wait_queue_entry_time,  # FIFO order
+          )
+      )
+  ```
+
+- **Other policies**:
+  - `lpm` (Longest Prefix Match): Favors requests with long shared prefixes
+  - `dfs-weight` (Depth-First Search Weighted): Tree-traversal priority
+  - `lof` (Longest Output First): Favors long-running generations
+  - `priority`: Uses request priority field
+
+---
+
+## 15. --cuda-graph-max-bs 64
+
+### Code Definition (server_args.py:3986-3990)
+```python
+parser.add_argument(
+    "--cuda-graph-max-bs",
+    type=int,
+    default=ServerArgs.cuda_graph_max_bs,
+    help="Set the maximum batch size for cuda graph. "
+         "It will extend the cuda graph capture batch size to this value.",
+)
+```
+
+### Deep Implementation Impact
+- **Batch size determination** (cuda_graph_runner.py:189-216):
+  ```python
+  def get_batch_sizes_to_capture(model_runner: ModelRunner):
+      server_args = model_runner.server_args
+      capture_bs = server_args.cuda_graph_bs
+
+      if max(capture_bs) > model_runner.req_to_token_pool.size:
+          capture_bs += [model_runner.req_to_token_pool.size]
+
+      # Apply cuda_graph_max_bs limit
+      capture_bs = [bs for bs in capture_bs if bs <= model_runner.server_args.cuda_graph_max_bs]
+      capture_bs = list(sorted(set(capture_bs)))
+
+      # Torch compile subset
+      compile_bs = (
+          [bs for bs in capture_bs if bs <= server_args.torch_compile_max_bs]
+          if server_args.enable_torch_compile
+          else []
+      )
+      return capture_bs, compile_bs
+  ```
+
+- **CUDA Graph Runner** (cuda_graph_runner.py:232-303):
+  ```python
+  class CudaGraphRunner:
+      def __init__(self, model_runner: ModelRunner):
+          self.max_bs = max(self.capture_bs)  # Limited by cuda_graph_max_bs
+          self.max_num_token = self.max_bs * self.num_tokens_per_bs
+          self.model_runner.attn_backend.init_cuda_graph_state(
+              self.max_bs, self.max_num_token
+          )
+          # Capture graphs for all batch sizes
+          with model_capture_mode():
+              self.capture()
+  ```
+
+- **Graph execution** (cuda_graph_runner.py:376-400):
+  ```python
+  def can_run(self, forward_batch: ForwardBatch):
+      cuda_graph_bs = forward_batch.batch_size
+      is_bs_supported = (
+          graph_key in self.graphs
+          if self.disable_padding
+          else cuda_graph_bs <= self.max_bs  # Use captured graph if BS <= max
+      )
+      return is_bs_supported
+  ```
+
+- **Performance impact**:
+  - Captures kernel launches for specific batch sizes
+  - Replays captured graph instead of launching kernels
+  - Eliminates kernel launch overhead
+  - `64` means graphs captured for BS=1,2,4,8,16,32,64 (default cuda_graph_bs)
+
+---
+
+## 16. --enable-torch-compile
+
+### Code Definition (server_args.py:4124-4127)
+```python
+parser.add_argument(
+    "--enable-torch-compile",
+    action="store_true",
+    help="Optimize the model with torch.compile. Experimental feature.",
+)
+```
+
+### Deep Implementation Impact
+- **Torch compile config** (cuda_graph_runner.py:173-186):
+  ```python
+  def set_torch_compile_config():
+      import torch._dynamo.config
+      import torch._inductor.config
+
+      torch._inductor.config.coordinate_descent_tuning = True
+      torch._inductor.config.triton.unique_kernel_names = True
+      torch._inductor.config.fx_graph_cache = True
+
+      torch._dynamo.config.accumulated_cache_size_limit = 1024
+      monkey_patch_torch_compile()
+  ```
+
+- **Model patching** (cuda_graph_runner.py:141-171):
+  ```python
+  @contextmanager
+  def patch_model(model, enable_compile, num_tokens, tp_group):
+      if enable_compile:
+          _to_torch(model, reverse=False, num_tokens=num_tokens)
+          backup_ca_comm = tp_group.ca_comm
+          yield torch.compile(
+              torch.no_grad()(model.forward),
+              mode=os.environ.get("SGLANG_TORCH_COMPILE_MODE", "max-autotune-no-cudagraphs"),
+              dynamic=_is_hip and get_bool_env_var("SGLANG_TORCH_DYNAMIC_SHAPE"),
+          )
+      else:
+          yield model.forward
+  ```
+
+- **Compile BS filtering** (cuda_graph_runner.py:211-215):
+  ```python
+  compile_bs = (
+      [bs for bs in capture_bs if bs <= server_args.torch_compile_max_bs]
+      if server_args.enable_torch_compile
+      else []
+  )
+  ```
+
+- **Performance**:
+  - Uses PyTorch 2.0+ torch.compile for kernel fusion
+  - Generates optimized CUDA kernels via Triton/NVFuser
+  - Experimental: may have compatibility issues with some models
+
+---
+
+## 17. --torch-compile-max-bs 64
+
+### Code Definition (server_args.py:4152-4156)
+```python
+parser.add_argument(
+    "--torch-compile-max-bs",
+    type=int,
+    default=ServerArgs.torch_compile_max_bs,
+    help="Set the maximum batch size when using torch compile.",
+)
+```
+
+### Deep Implementation Impact
+- **Used in**: `get_batch_sizes_to_capture()` (cuda_graph_runner.py:211-215)
+- **Filters compile_bs**:
+  ```python
+  compile_bs = (
+      [bs for bs in capture_bs if bs <= server_args.torch_compile_max_bs]
+      if server_args.enable_torch_compile
+      else []
+  )
+  ```
+
+- **Purpose**: Limits batch sizes that get torch.compile optimization
+- Prevents excessive compilation time for large batch sizes
+- Works with `--cuda-graph-max-bs`: both limit which batch sizes get optimization
+
+---
+
+# Summary of Inference Flow
+
+## Memory Allocation Flow
+```
+1. ModelRunner.__init__() receives mem_fraction_static=0.8
+2. get_cell_size_per_token() calculates KV cell size based on kv_cache_dtype
+   - fp8_e5m2: 1 byte per element
+   - fp16: 2 bytes per element
+3. init_memory_pool() calculates:
+   - total_rest_memory = total_gpu_memory * 0.8 - model_weights
+   - max_total_num_tokens = total_rest_memory / cell_size
+4. TokenToKVPoolAllocator allocates pool of size max_total_num_tokens
+```
+
+## Batch Execution Flow
+```
+1. Scheduler receives requests via ZMQ
+2. SchedulePolicy.calc_priority() orders waiting queue (fcfs = FIFO)
+3. get_next_batch_to_run() selects batch based on:
+   - Available KV cache
+   - chunked_prefill_size=32768
+4. ModelWorkerBatch created
+5. TPWorker.forward_batch_generation() executes:
+   - ForwardBatch prepared
+   - Attention backend selected (flashinfer)
+   - Quantized GEMM via gptq_marlin
+   - CUDA graph replayed if batch_size <= 64
+```
+
+## Key Performance Optimizations in Your Configuration
+1. **GPTQ Marlin**: 4-bit weights + specialized kernels
+2. **FP8 KV Cache**: 50% memory reduction for KV storage
+3. **FlashInfer**: Fast attention kernels vs Triton fallback
+4. **CUDA Graph**: Eliminate kernel launch overhead for BS <= 64
+5. **Chunked Prefill 32768**: Allow mixing prefill/decode
+6. **No Radix Cache**: Simpler caching, no prefix matching overhead

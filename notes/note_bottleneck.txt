@@ -1,0 +1,273 @@
+
+分析 profiling 的结果：
+
+cat << 'PYEOF' > /tmp/analyze_trace.py
+#!/usr/bin/env python3
+"""Extract key performance info from SGLang torch profiler trace."""
+import gzip
+import json
+import sys
+from collections import defaultdict
+
+trace_path = sys.argv[1]
+
+print(f"Loading {trace_path}...")
+with gzip.open(trace_path, 'rt') as f:
+    data = json.load(f)
+
+events = data if isinstance(data, list) else data.get("traceEvents", [])
+print(f"Total events: {len(events)}")
+
+gpu_kernels = defaultdict(lambda: {"count": 0, "total_us": 0})
+cpu_ops = defaultdict(lambda: {"count": 0, "total_us": 0})
+
+for ev in events:
+    if not isinstance(ev, dict):
+        continue
+    cat = ev.get("cat", "")
+    ph = ev.get("ph", "")
+    dur = ev.get("dur", 0)
+    name = ev.get("name", "")
+python3 /tmp/analyze_trace.py /tmp/sglang_profile/1773334282.060809-TP-0.trace.json.gz
+
+
+python3 /tmp/analyze_trace.py $(ls -t /tmp/sglang_smax_profile/*.trace.json.gz | head -n 1)
+
+
+
+Loading /tmp/sglang_profile/1773334282.060809-TP-0.trace.json.gz...
+Total events: 11357786
+
+==========================================================================================
+TOP 30 GPU KERNELS BY TOTAL TIME
+==========================================================================================
+Total GPU kernel time: 185.67s
+Kernel                                                                    Count  Total(ms)      %
+------------------------------------------------------------------------------------------
+cudaStreamSynchronize                                                     73909    79179.5  42.6%
+void marlin::Marlin<__half, 1125899907892224l, 256, 4, 16, 4, false, 4, 8, false    49152    53150.1  28.6%
+void flashinfer::BatchPrefillWithPagedKVCacheKernel<flashinfer::KernelTraits<    16552    15954.2   8.6%
+cudaEventSynchronize                                                       2070     9392.0   5.1%
+void marlin::Marlin<__half, 1125899907892224l, 256, 1, 8, 8, true, 4, 8, false>   327840     7306.4   3.9%
+void flashinfer::BatchPrefillWithRaggedKVCacheKernel<flashinfer::KernelTraits<      176     5579.3   3.0%
+void flashinfer::activation::act_and_mul_kernel<__half, &                 66240     1460.3   0.8%
+void flashinfer::norm::RMSNormKernel<8u, __half>                         151110     1367.3   0.7%
+void flashinfer::norm::FusedAddRMSNormKernel<8u, __half>                 132480     1177.7   0.6%
+cudaGraphLaunch                                                            2048      905.0   0.5%
+void at::native::elementwise_kernel<128, 4, at::native::gpu_kernel_impl_nocast<a   198336      879.5   0.5%
+void at::native::unrolled_elementwise_kernel<at::native::direct_copy_kernel_cuda   212669      823.3   0.4%
+void cutlass::Kernel2<cutlass_80_wmma_tensorop_f16_s161616gemm_f16_16x16_128x2_t     2065      738.5   0.4%
+cudaDeviceSynchronize                                                         2      696.1   0.4%
+void flashinfer::BatchQKApplyRotaryPosIdsCosSinCacheKernel<false, 128u, 4u, 32u,      504      685.8   0.4%
+void at::native::index_elementwise_kernel<128, 4, at::native::gpu_index_kernel<a    88611      670.4   0.4%
+cudaLaunchKernel                                                         229814      611.9   0.3%
+void at::native::vectorized_elementwise_kernel<4, at::native::float16_copy_kerne   148512      602.3   0.3%
+void at::native::vectorized_gather_kernel<16, long>                       49603      580.2   0.3%
+void at::native::vectorized_elementwise_kernel<4, at::native::AUnaryFunctor<c10:   134550      519.6   0.3%
+chunk_fwd_kernel_o                                                          528      486.4   0.3%
+fused_recurrent_fwd_kernel                                                49152      424.8   0.2%
+chunk_fwd_kernel_h                                                          528      420.0   0.2%
+void at::native::vectorized_elementwise_kernel<4, at::native::BinaryFunctor<c10:    66240      387.7   0.2%
+void at::native::vectorized_elementwise_kernel<4, at::native::sigmoid_kernel_cud    66240      284.7   0.2%
+cudaMemcpyAsync                                                           92858      271.5   0.1%
+create_flashinfer_kv_indices_triton                                        2070      241.5   0.1%
+void at::native::reduce_kernel<128, 4, at::native::ReduceOp<float, at::native::f    49152      146.0   0.1%
+void flashinfer::MergeStateKernel<8u, __half, __half>                       168       78.8   0.0%
+void flashinfer::BatchQKApplyRotaryPosIdsCosSinCacheHeadParallelismKernel<false,    49176       73.4   0.0%
+
+Top 30 cumulative: 99.7%
+
+==========================================================================================
+TOP 20 CPU OPS BY TOTAL TIME
+==========================================================================================
+threading.py                                                                327  1332579.5ms
+eagle/sglang/python/python/sglang/srt/managers/scheduler.py               39255   299318.4ms
+eagle/sglang/python/python/sglang/srt/models/minicpm.py                    2156   266900.2ms
+eagle/sglang/python/python/sglang/srt/model_executor/model_runner.py      10452   237898.7ms
+torch/nn/modules/module.py                                                47234   200499.6ms
+tqdm/_monitor.py                                                             83   190369.6ms
+torch/_inductor/compile_worker/subproc_pool.py                                6   190368.8ms
+multiprocessing/process.py                                                  150   190368.8ms
+eagle/sglang/python/python/sglang/srt/utils/watchdog.py                       2   190368.8ms
+multiprocessing/spawn.py                                                      2   190368.8ms
+<built-in method acquire of _thread.lock object at 0x77af8fa38480>           80   182422.0ms
+torch/utils/_contextlib.py                                                   67   161925.6ms
+<string>                                                                  35469    95288.9ms
+eagle/sglang/python/python/sglang/srt/managers/tp_worker.py               12436    80842.2ms
+aten::item                                                                91442    79409.1ms
+aten::_local_scalar_dense                                                 91442    79363.8ms
+eagle/sglang/python/python/sglang/srt/layers/attention/hybrid_linear_attn_backen     9666    78863.1ms
+aten::is_nonzero                                                          76915    67380.5ms
+nn.Module: MiniCPMModel_0                                                    22    66735.6ms
+eagle/sglang/python/python/sglang/srt/layers/attention/flashinfer_backend.py     6584    23959.5ms
+
+
+
+发现 cudaStreamSynchronize 占了 42.6%，猜测可能是由 aten::item / aten::is_nonzero 的 91442，76915 次调用导致的同步开销大，还发现 cudaGraphLaunch 占比很低，说明 decode 阶段的 CUDA Graph 可能没充分覆盖
+
+
+forward 有 2156 次，cudaGraphLaunch 2048 次，CUDA Graph 应该基本在工作
+
+
+# Add a counter to see if dotv path is hit during decode
+python3 -c "
+import sglang.srt.layers.attention.hybrid_linear_attn_backend as hab
+import inspect
+# Find all classes with forward_decode
+for name, obj in inspect.getmembers(hab, inspect.isclass):
+    if hasattr(obj, 'forward_decode'):
+        src = inspect.getsource(obj.forward_decode)
+        has_item = '.item()' in src
+        has_dotv = 'dotv' in src or 'inline' in src.lower()
+        print(f'{name}.forward_decode: .item()={has_item}, dotv_optimized={has_dotv}, line={inspect.getsourcelines(obj.forward_decode)[1]}')
+"
+
+flashinfer_backend.py 和 hybrid_linear_attn_backend.py 里的 forward_decode 方法都没有 .item() 方法，.item() 方法把 tensor 转化为 Python 类型，直接拉取到 CPU 进行转换，常常出现在 SGLang 的 backend 模块中
+
+During decode, the chunk path (with .item()) is NOT called. Decode uses fused_recurrent_simple_gla which has no .item(). /opt/eagle/sglang/python/python/sglang/srt/layers/attention/hybrid_linear_attn_backend.py
+
+The math doesn't add up for 24 .item() per prefill step — 91k / 24 = 3,810, but total forwards are only 2,156. This means multiple .item() calls per layer per forward. The is_nonzero (76,915) is likely from .any() checks — your _precompute_has_prefix caches one, but there may be others inside FLA or the forward function. 
+
+zero .item() found in any FLA function source
+
+/opt/eagle/sglang/python/python/sglang/srt/managers/schedule_batch.py:
+
+# THIS is your bottleneck — element-wise GPU tensor indexing in a Python loop:
+seq_lens_next = self.seq_lens + 1  # GPU tensor!
+token_num_sparse_k1 = [(1 if seq_lens_next[batch_idx] >= kernel_size and 
+    (seq_lens_next[batch_idx] - kernel_size) % kernel_stride == 0 
+    else 0) for batch_idx in range(bs)]
+
+Every seq_lens_next[batch_idx] triggers .item(), every >= and == triggers is_nonzero. With bs=64, that's ~4 syncs per element × 64 × 2 lines × ~500 decode steps ≈ your numbers.
+
+
+对 trace 进行检查：
+
+cat << 'PYEOF' > /tmp/find_syncs.py
+import gzip, json, sys, collections
+
+trace_file = sys.argv[1]
+print(f"Parsing trace: {trace_file}")
+with gzip.open(trace_file, 'rt') as f:
+    events = json.load(f)
+if isinstance(events, dict):
+    events = events.get("traceEvents", [])
+
+item_lines = collections.Counter()
+nonzero_lines = collections.Counter()
+
+# Fallback in case Traceback isn't perfectly formatted
+python_stack_per_tid = collections.defaultdict(list)
+events.sort(key=lambda x: x.get('ts', 0))
+
+for e in events:
+    name = e.get("name", "")
+    tid = e.get("tid", 0)
+    ph = e.get("ph", "")
+    cat = e.get("cat", "")
+
+    # Track python stack manually as fallback
+    if 'python' in cat or '.py' in name:
+        if ph == 'B' or ph == 'X':
+            python_stack_per_tid[tid].append(name)
+        elif ph == 'E' and python_stack_per_tid[tid]:
+            python_stack_per_tid[tid].pop()
+
+    if name in ["aten::item", "aten::is_nonzero", "aten::_local_scalar_dense"]:
+        args = e.get("args", {})
+        tb = None
+        for key in ["Python traceback", "Traceback", "Python Line", "Python traceback (most recent call last)"]:
+            if key in args:
+                tb = args[key]
+                break
+
+        if tb is not None:
+            if isinstance(tb, list):
+                caller = tb[-1]
+                for frame in reversed(tb):
+                    if 'sglang' in frame or 'fla' in frame:
+                        caller = frame
+                        break
+python3 /tmp/find_syncs.py $(ls -t /tmp/sglang_profile/*.trace.json.gz | head -n 1)
+Parsing trace: /tmp/sglang_profile/1773334282.060809-TP-0.trace.json.gz
+
+=== TOP 10 CALLERS FOR aten::item ===
+ 65664 : eagle/sglang/python/python/sglang/srt/managers/schedule_batch.py(1987): <listcomp>
+ 65664 : eagle/sglang/python/python/sglang/srt/managers/schedule_batch.py(1989): <listcomp>
+ 16414 : <built-in method rsub of type object at 0x77b3b5f7fa00>
+ 12462 : eagle/sglang/python/python/sglang/srt/mem_cache/memory_pool.py(633): write_sparse_k1
+  7216 : <built-in method item of Tensor object at 0x77af703131f0>
+  7036 : eagle/sglang/python/python/sglang/srt/mem_cache/memory_pool.py(103): write
+  4096 : eagle/sglang/python/python/sglang/srt/model_executor/forward_batch_info.py(133): is_decode_or_idle
+  2688 : eagle/sglang/python/python/sglang/srt/mem_cache/memory_pool.py(637): write_sparse_k2
+  1056 : <built-in method any of Tensor object at 0x77af702eb0b0>
+   480 : <built-in function iter>
+
+=== TOP 10 CALLERS FOR aten::is_nonzero ===
+ 32832 : eagle/sglang/python/python/sglang/srt/managers/schedule_batch.py(1987): <listcomp>
+ 32832 : eagle/sglang/python/python/sglang/srt/managers/schedule_batch.py(1989): <listcomp>
+  4133 : eagle/sglang/python/python/sglang/srt/mem_cache/memory_pool.py(633): write_sparse_k1
+  3518 : eagle/sglang/python/python/sglang/srt/mem_cache/memory_pool.py(103): write
+  2048 : eagle/sglang/python/python/sglang/srt/model_executor/forward_batch_info.py(133): is_decode_or_idle
+   784 : eagle/sglang/python/python/sglang/srt/mem_cache/memory_pool.py(637): write_sparse_k2
+   528 : <built-in method any of Tensor object at 0x77af702eb0b0>
+   240 : <built-in function iter>
+
+
+
+推导出 aten::item aten::is_nonzero 基本全部来自 sparse attention 的 schedule 逻辑而不是 FLA / FlashInfer
+
+
+但是结果只优化了从 777s 到 776s，pure noise
+
+从 9.5:1 的 prefill token decode token ratio 我们知道了这个 decode-path 的分析其实错了
+
+sync time in profiler 是对的，但是 GPU 同时也很忙，所以减少 CPU 的 stalls 并不能解决什么问题
+
+root@C.32431003:/opt$ # What's your actual GPU utilization during the run?
+# Check if you're memory-bound or compute-bound
+nvidia-smi dmon -s u -d 1 -c 30
+# Also: are requests running concurrently or serialized?
+# With 64 requests including 128k+ token inputs, scheduling matters hugely
+# Check what's happening with concurrent prefills:
+grep -i 'running\|waiting\|batch_size\|prefill' /tmp/sglang_logs* 2>/dev/null | tail -30
+# gpu     sm    mem    enc    dec    jpg    ofa 
+# Idx      %      %      %      %      %      % 
+    0    100     29      0      0      0      0 
+    0    100     28      0      0      0      0 
+    0    100     28      0      0      0      0 
+    0    100     28      0      0      0      0 
+    0    100     18      0      0      0      0 
+    0    100     29      0      0      0      0 
+    0    100     18      0      0      0      0 
+    0    100     29      0      0      0      0 
+    0    100     11      0      0      0      0 
+    0    100     28      0      0      0      0 
+    0    100     28      0      0      0      0 
+    0    100     28      0      0      0      0 
+    0    100     28      0      0      0      0 
+    0    100     28      0      0      0      0 
+    0    100     20      0      0      0      0 
+    0    100      6      0      0      0      0 
+    0    100     29      0      0      0      0 
+    0    100     28      0      0      0      0 
+    0    100     22      0      0      0      0 
+    0    100     28      0      0      0      0 
+    0    100      2      0      0      0      0 
+    0    100     28      0      0      0      0 
+    0    100      2      0      0      0      0 
+    0    100     28      0      0      0      0 
+    0    100      8      0      0      0      0 
+    0    100     28      0      0      0      0 
+    0    100     21      0      0      0      0 
+    0    100     28      0      0      0      0 
+    0    100      7      0      0      0      0 
+    0    100     28      0      0      0      0 
+
+我们发现 SM 100%, mem ~20-28%. The GPU is fully saturated on compute — there are zero idle bubbles to reclaim. 
+
+SM 100% + low mem% means: your kernels are compute-bound, not memory-bandwidth-bound. 
+
+For W4 Marlin GEMMs this is unusual — they're supposed to be memory-bound.
+
+

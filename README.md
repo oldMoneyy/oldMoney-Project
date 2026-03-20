@@ -366,8 +366,8 @@ source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
 nohup python /opt/oldMoney-Project/quantization/nvfp4_quantize_sala.py \
     --input /opt/model \
     --output /opt/model_nvfp4_gptq \
-    --calib-data /opt/oldMoney-Project/quantization/ultimate_64_token_balanced.jsonl \
-    --max-samples 64 --max-len 131072 \
+    --calib-data /opt/oldMoney-Project/quantization/deadly_32_max_profit.jsonl \
+    --max-samples 32 --max-len 131072 \
     > /opt/oldMoney-Project/quantization/nvfp4_quantize_sala.log 2>&1 &
 ```
 
