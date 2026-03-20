@@ -9,7 +9,7 @@ sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_c
 service ssh restart
 
 cd /opt
-git clone https://github.com/oldMoneyy/oldMoney-Project.git
+git clone https://oldMoneyy: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@github.com/oldMoneyy/oldMoney-Project.git
 ```
 
 # TODO
