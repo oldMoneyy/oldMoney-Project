@@ -68,8 +68,8 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 Copy a backup of original env:
 ```bash
-cp -r /opt/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python/* /opt/oldmoney/sglang_sala_cp/
-uv pip install --no-deps -e /opt/oldmoney/sglang_sala_cp
+cp -r /opt/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python/* /opt/oldMoney-Project/sglang_sala_cp/
+uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
 ```
 
 What I have done to the environment:
@@ -126,7 +126,7 @@ curl http://localhost:31333/v1/chat/completions \
 (2) Send three long requests (5k, 40k, 60k):
 
 ```bash
-python /opt/oldmoney/bench/long_context_test_case.py
+python /opt/oldMoney-Project/bench/long_context_test_case.py
 ```
 The answers are: `Paris`, `BLUE-TIGER-42`, `Alice Zhang, 1987`.
 
@@ -135,7 +135,7 @@ The answers are: `Paris`, `BLUE-TIGER-42`, `Alice Zhang, 1987`.
 In `MiniCPMSparseBackend.forward_extend`, `MiniCPMSparseBackend.init_forward_metadata`, `MiniCPMDecoderLayer.forward`, `FlashInferKernel.forward` there are profiling codes.
 
 ```bash
-python /opt/oldmoney/bench/profile_prefill.py
+python /opt/oldMoney-Project/bench/profile_prefill.py
 ```
 
 
@@ -145,17 +145,17 @@ Concurrency test aligned with SOAR official metric:
 ```bash
 echo "=== S1 (concurrency 1) ==="
 python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31333 \
-    --dataset-name custom --dataset-path /opt/oldmoney/bench/competition_bench.jsonl \
+    --dataset-name custom --dataset-path /opt/oldMoney-Project/bench/competition_bench.jsonl \
     --num-prompts 64 --flush-cache --max-concurrency 1
 
 echo "=== S8 (concurrency 8) ==="
 python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31333 \
-    --dataset-name custom --dataset-path /opt/oldmoney/bench/competition_bench.jsonl \
+    --dataset-name custom --dataset-path /opt/oldMoney-Project/bench/competition_bench.jsonl \
     --num-prompts 64 --flush-cache --max-concurrency 8
 
 echo "=== Smax (unlimited) ==="
 python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31333 \
-    --dataset-name custom --dataset-path /opt/oldmoney/bench/competition_bench.jsonl \
+    --dataset-name custom --dataset-path /opt/oldMoney-Project/bench/competition_bench.jsonl \
     --num-prompts 64 --flush-cache
 ```
 
@@ -187,11 +187,11 @@ nohup python3 eval_model.py \
 
 First time to prepare:
 ```bash
-cd /opt/oldmoney/quantization
+cd /opt/oldMoney-Project/quantization
 mkdir venv
 python -m venv venv/
-source /opt/oldmoney/quantization/venv/bin/activate
-export LD_LIBRARY_PATH=/opt/oldmoney/quantization/venv/lib/python3.10/site-packages/torch/lib:$LD_LIBRARY_PATH
+source /opt/oldMoney-Project/quantization/venv/bin/activate
+export LD_LIBRARY_PATH=/opt/oldMoney-Project/quantization/venv/lib/python3.10/site-packages/torch/lib:$LD_LIBRARY_PATH
 
 uv pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cu128
 # 2. Verify Blackwell support
@@ -217,13 +217,13 @@ pip install --upgrade pip
 python -c "from gptqmodel import GPTQModel, QuantizeConfig; print('GPTQModel OK')"
 
 # or
-# bash /opt/oldmoney/quantization/gptq_env_prepare.sh
+# bash /opt/oldMoney-Project/quantization/gptq_env_prepare.sh
 ```
 
 Activate the environment:
 ```bash
-source /opt/oldmoney/quantization/venv/bin/activate
-export LD_LIBRARY_PATH=/opt/oldmoney/quantization/venv/lib/python3.10/site-packages/torch/lib:$LD_LIBRARY_PATH
+source /opt/oldMoney-Project/quantization/venv/bin/activate
+export LD_LIBRARY_PATH=/opt/oldMoney-Project/quantization/venv/lib/python3.10/site-packages/torch/lib:$LD_LIBRARY_PATH
 ```
 
 
@@ -232,7 +232,7 @@ export LD_LIBRARY_PATH=/opt/oldmoney/quantization/venv/lib/python3.10/site-packa
 ## Prepare Calibration Data
 
 ```bash
-python3 /opt/oldmoney/quantization/generate_ultimate_64.py
+python3 /opt/oldMoney-Project/quantization/generate_ultimate_64.py
 ```
 
 
@@ -241,33 +241,33 @@ python3 /opt/oldmoney/quantization/generate_ultimate_64.py
 
 Pure dense quantization:
 ```bash
-source /opt/oldmoney/quantization/venv/bin/activate
-export LD_LIBRARY_PATH=/opt/oldmoney/quantization/venv/lib/python3.10/site-packages/torch/lib:$LD_LIBRARY_PATH
-nohup python3 opt/oldmoney/quantization/quantiza_gptq_dense_disk.py \
+source /opt/oldMoney-Project/quantization/venv/bin/activate
+export LD_LIBRARY_PATH=/opt/oldMoney-Project/quantization/venv/lib/python3.10/site-packages/torch/lib:$LD_LIBRARY_PATH
+nohup python3 opt/oldMoney-Project/quantization/quantiza_gptq_dense_disk.py \
     --input /opt/model \
     --output /opt/model_gptq_ultimate_64_dense \
     --bits 4 \
     --group-size 128 \
-    --calib-data /opt/oldmoney/quantization/ultimate_64_token_balanced.jsonl \
+    --calib-data /opt/oldMoney-Project/quantization/ultimate_64_token_balanced.jsonl \
     --max-samples 64 \
     --max-len 131072 \
-    > /opt/oldmoney/quantization/gptq_ultimate_64_dense.log 2>&1 &
+    > /opt/oldMoney-Project/quantization/gptq_ultimate_64_dense.log 2>&1 &
 ```
 
 
 Original sparse quantization (# config.sparse_config["dense_len"] = 655360):
 ```bash
-source /opt/oldmoney/quantization/venv/bin/activate
-export LD_LIBRARY_PATH=/opt/oldmoney/quantization/venv/lib/python3.10/site-packages/torch/lib:$LD_LIBRARY_PATH
-nohup python3 opt/oldmoney/quantization/quantiza_gptq_sparse_disk.py \
+source /opt/oldMoney-Project/quantization/venv/bin/activate
+export LD_LIBRARY_PATH=/opt/oldMoney-Project/quantization/venv/lib/python3.10/site-packages/torch/lib:$LD_LIBRARY_PATH
+nohup python3 opt/oldMoney-Project/quantization/quantiza_gptq_sparse_disk.py \
     --input /opt/model \
     --output /opt/model_gptq_ultimate_64_sparse \
     --bits 4 \
     --group-size 128 \
-    --calib-data /opt/oldmoney/quantization/ultimate_64_token_balanced.jsonl \
+    --calib-data /opt/oldMoney-Project/quantization/ultimate_64_token_balanced.jsonl \
     --max-samples 64 \
     --max-len 131072 \
-    > /opt/oldmoney/quantization/gptq_ultimate_64_sparse.log 2>&1 &
+    > /opt/oldMoney-Project/quantization/gptq_ultimate_64_sparse.log 2>&1 &
 ```
 
 
