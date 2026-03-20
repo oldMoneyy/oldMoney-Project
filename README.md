@@ -137,7 +137,7 @@ curl http://localhost:31333/v1/chat/completions \
   -d '{
     "model": "MiniCPM-SALA",
     "messages": [{"role": "user", "content": "What is 32768 * 8 - 1 = ?, give me step by step solution."}],
-    "max_tokens": 8192,
+    "max_tokens": 512,
     "temperature": 0.7
   }'
 ```
@@ -195,45 +195,6 @@ nohup python3 eval_model.py \
 ```
 
 
-# NVFP4
-
-```bash
-uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
-
-source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
-python /opt/oldMoney-Project/quantization/NVFP4.py
-```
-
-```bash
-deactivate
-
-export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
-export PYTORCH_ALLOC_CONF=expandable_segments:True
-python -m sglang.launch_server \
-    --model /opt/model_nvfp4 \
-    --quantization modelopt_fp4 \
-    --attention-backend minicpm_flashinfer \
-    --trust-remote-code \
-    --port 31333
-
-python3 -m sglang.launch_server \
-    --model-path /opt/model_nvfp4 \
-    --port 31333 \
-    --quantization gptq_marlin \
-    --dtype float16 \
-    --disable-radix-cache \
-    --kv-cache-dtype fp8_e5m2 \
-
-    --chunked-prefill-size 32768 \
-    --mem-fraction-static 0.6 \
-    --max-mamba-cache-size 32 \
-    --fuse-topk \
-    --max-running-requests 32 \
-    --log-level info \
-    --num-continuous-decode-steps 2 \
-    --enable-mixed-chunk \
-    --enable-torch-compile
-```
 
 
 # GPTQ
@@ -386,3 +347,70 @@ python3 -m sglang.launch_server \
 3. Dense-quantized model + flashinfer → passes all 3 tests ✓
 4. Dense-quantized model + minicpm_flashinfer → passes only first test ✗
 5. Sparse-quantized model + minicpm_flashinfer → passes only first test ✗
+
+
+# NVFP4
+
+
+Working like shit... Still optimizing.
+
+```bash
+uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
+
+source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
+nohup python /opt/oldMoney-Project/quantization/nvfp4_quantize_sala.py \
+    --input /opt/model \
+    --output /opt/model_nvfp4_mixed \
+    --calib-data /opt/oldMoney-Project/quantization/ultimate_64_token_balanced.jsonl \
+    --max-samples 32 \
+    --max-len 131072 \
+    --minicpm4-precision bf16 \
+    > /opt/oldMoney-Project/quantization/nvfp4_quantize_sala.log 2>&1 &
+```
+
+
+```bash
+python -m sglang.launch_server \
+    --model /opt/model_nvfp4_mlp_only \
+    --quantization modelopt_fp4 \
+    --trust-remote-code \
+    --port 31333 \
+    --disable-radix-cache \
+    --attention-backend minicpm_flashinfer \
+    --chunked-prefill-size 8192 \
+    --max-running-requests 32 \
+    --skip-server-warmup \
+    --dense-as-sparse \
+    --mem-fraction-static 0.82
+```
+
+
+
+
+
+# Key Files
+modeling:
+/opt/oldMoney-Project/sglang_sala_cp/sglang/srt/models/minicpm.py
+
+quantization:
+/opt/SGLang-MiniCPM-SALA/sglang_minicpm_sala_env/lib/python3.10/site-packages/flashinfer/fp4_quantization.py
+/opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/quantization/compressed_tensors/schemes/compressed_tensors_w4a4_nvfp4.py
+/opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/quantization/__init__.py
+/opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/quantization/petit_utils.py
+/opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/quantization/petit.py
+/opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/modelopt_utils.py
+/opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/quantization/modelopt_quant.py
+/opt/SGLang-MiniCPM-SALA/sglang_minicpm_sala_env/lib/python3.10/site-packages/sgl_kernel/gemm.py
+/opt/oldMoney-Project/quantization/quantize_gptq_sparse_cpu.py
+
+kernels:
+/opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/attention/minicpm_backend.py
+/opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/attention/minicpm_fuse_kernel.py
+/opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/attention/minicpm_attention_kernels.py
+/opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/attention/hybrid_linear_attn_backend.py
+/opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/attention/flashinfer_backend.py
+
+
+```bash
+bash /opt/oldMoney-Project/utils_prompt/export_files.sh
+```
