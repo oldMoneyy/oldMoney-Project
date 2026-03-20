@@ -17,10 +17,6 @@ export NVCC_THREADS=4
 export TORCH_CUDA_ARCH_LIST="12.0"
 export LD_LIBRARY_PATH=/opt/oldmoney/quantization/venv/lib/python3.10/site-packages/torch/lib:$LD_LIBRARY_PATH
 
-echo "===== PYTHON ====="
-which python
-python --version
-
 echo "===== INSTALL TORCH ====="
 uv pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cu128
 
