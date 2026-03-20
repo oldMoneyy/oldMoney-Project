@@ -1,0 +1,35 @@
+quantization/venv/
+quantization/flash_attn-2.8.3+cu12torch2.8cxx11abiTRUE-cp310-cp310-linux_x86_64.whl
+quantization/ultimate_64_token_balanced.jsonl
+
+# sglang_sala_cp
+
+vendor/logs
+
+quantization/.ipynb_checkpoints
+
+# Model weights
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.gguf
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+venv/
+*.whl
+
+# Logs
+*.log
+nohup.out
+
+# Build artifacts
+*.so
+build/
+dist/
+
+# Large data
+*.jsonl
