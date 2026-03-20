@@ -1,4 +1,8 @@
 
+```bash
+cd /opt
+git clone https://github.com/oldMoneyy/oldMoney-Project.git
+```
 
 # TODO
 1. Support `--kv-cache-dtype fp8_e5m2` for minicpm backend (**DONE**).
