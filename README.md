@@ -68,7 +68,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 Copy a backup of original env:
 ```bash
-cp -r /opt/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python/* /opt/oldMoney-Project/sglang_sala_cp/
+# cp -r /opt/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python/* /opt/oldMoney-Project/sglang_sala_cp/
 uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
 ```
 
