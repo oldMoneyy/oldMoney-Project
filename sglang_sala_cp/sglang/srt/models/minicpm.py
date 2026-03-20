@@ -528,10 +528,11 @@ class MiniCPMDecoderLayer(nn.Module):
             self.config.scale_depth / math.sqrt(self.config.num_hidden_layers)
         )
 
-        if do_profile:
-            attn_ms = (t2 - t1) * 1000
-            mlp_ms = (t4 - t3) * 1000
-            print(f"[Layer {self.layer_id}] type={self.mixer_type} attn={attn_ms:.1f}ms mlp={mlp_ms:.1f}ms tokens={hidden_states.shape[0]}", flush=True)
+        # PROFILE
+        # if do_profile:
+        #     attn_ms = (t2 - t1) * 1000
+        #     mlp_ms = (t4 - t3) * 1000
+        #     print(f"[Layer {self.layer_id}] type={self.mixer_type} attn={attn_ms:.1f}ms mlp={mlp_ms:.1f}ms tokens={hidden_states.shape[0]}", flush=True)
         
         return hidden_states, None
 

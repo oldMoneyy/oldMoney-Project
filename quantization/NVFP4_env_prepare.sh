@@ -6,16 +6,16 @@ echo "===== START ENV PREP $(date) ====="
 cd /opt/oldMoney-Project/quantization
 
 # recreate venv if missing
-if [ ! -d /opt/oldMoney-Project/quantization/venv ]; then
-  python -m venv /opt/oldMoney-Project/quantization/venv
+if [ ! -d /opt/oldMoney-Project/quantization/nvfp4_venv ]; then
+  python -m venv /opt/oldMoney-Project/quantization/nvfp4_venv
 fi
 
-source /opt/oldMoney-Project/quantization/venv/bin/activate
+source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
 unset PYTHONPATH
 export MAX_JOBS=16
 export NVCC_THREADS=4
 export TORCH_CUDA_ARCH_LIST="8.0;8.6;8.9;9.0;12.0+PTX"
-export LD_LIBRARY_PATH=/opt/oldMoney-Project/quantization/venv/lib/python3.10/site-packages/torch/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/opt/oldMoney-Project/quantization/nvfp4_venv/lib/python3.10/site-packages/torch/lib:$LD_LIBRARY_PATH
 
 echo "===== INSTALL TORCH ====="
 uv pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cu128
@@ -88,4 +88,4 @@ python -c "from infllm_v2 import infllmv2_attn_stage1; print(\"FINAL infllm_v2 O
 python -c "import sparse_kernel_extension; print(\"FINAL sparse_kernel_extension OK\")"
 
 echo "===== DONE ENV PREP $(date) ====="
-' > /opt/oldMoney-Project/quantization/prepare_gptq_env.log 2>&1 &
+' > /opt/oldMoney-Project/quantization/nvfp4_env.log 2>&1 &

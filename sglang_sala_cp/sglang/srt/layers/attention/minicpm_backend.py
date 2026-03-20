@@ -550,9 +550,9 @@ class MiniCPMSparseBackend(AttentionBackend):
 
     def init_forward_metadata(self, forward_batch: ForwardBatch):
         # dotv ########
-        import time
-        torch.cuda.synchronize()
-        _t_start = time.perf_counter()
+        # import time
+        # torch.cuda.synchronize()
+        # _t_start = time.perf_counter()
         # ###########################
         """Initialize forward metadata hence all layers in the forward pass can reuse it."""
         if forward_batch.forward_mode.is_target_verify():
@@ -643,10 +643,10 @@ class MiniCPMSparseBackend(AttentionBackend):
         self.forward_metadata = metadata
 
         # dotv ########################################################
-        torch.cuda.synchronize()
-        _t_end = time.perf_counter()
-        if (_t_end - _t_start) > 0.01:
-            print(f"[init_forward_metadata] {1000*(_t_end - _t_start):.1f}ms bs={forward_batch.batch_size} mode={forward_batch.forward_mode}", flush=True)
+        # torch.cuda.synchronize()
+        # _t_end = time.perf_counter()
+        # if (_t_end - _t_start) > 0.01:
+        #     print(f"[init_forward_metadata] {1000*(_t_end - _t_start):.1f}ms bs={forward_batch.batch_size} mode={forward_batch.forward_mode}", flush=True)
         ###############################################################
 
     def get_topk_for_sparse(
@@ -1223,12 +1223,12 @@ class MiniCPMSparseBackend(AttentionBackend):
     #     return result.view(-1, layer.tp_q_head_num * layer.head_dim)
     def forward_extend(self, q, k, v, layer, forward_batch, save_kv_cache=True,
                        q_rope=None, k_rope=None, sinks=None):
-        import time
-        do_profile = (not torch.cuda.is_current_stream_capturing()) and q.shape[0] > 100
+        # import time
+        # do_profile = (not torch.cuda.is_current_stream_capturing()) and q.shape[0] > 100
         
-        if do_profile:
-            torch.cuda.synchronize()
-            t0 = time.perf_counter()
+        # if do_profile:
+        #     torch.cuda.synchronize()
+        #     t0 = time.perf_counter()
 
         # --- KV cache save ---
         if k is not None:
@@ -1239,9 +1239,9 @@ class MiniCPMSparseBackend(AttentionBackend):
                     layer, cache_loc, k, v, layer.k_scale, layer.v_scale
                 )
 
-        if do_profile:
-            torch.cuda.synchronize()
-            t1 = time.perf_counter()
+        # if do_profile:
+        #     torch.cuda.synchronize()
+        #     t1 = time.perf_counter()
 
         metadata = self.forward_metadata
         is_swa_layer = (layer.sliding_window_size is not None and layer.sliding_window_size > -1)
@@ -1268,9 +1268,9 @@ class MiniCPMSparseBackend(AttentionBackend):
         bs = forward_batch.batch_size
 
         # --- TopK computation ---
-        if do_profile:
-            torch.cuda.synchronize()
-            t2 = time.perf_counter()
+        # if do_profile:
+        #     torch.cuda.synchronize()
+        #     t2 = time.perf_counter()
 
         if max(forward_batch.seq_lens_cpu) >= self.dense_len:
             q_reshaped = q.contiguous().view(-1, layer.tp_q_head_num, layer.head_dim)
@@ -1279,15 +1279,15 @@ class MiniCPMSparseBackend(AttentionBackend):
             )
             
             # dotv === DIAGNOSTIC: measure topk sharing between consecutive tokens ===
-            if do_profile and topk_idx.shape[1] > 1:
-                # topk_idx shape: (kv_heads, q_len, topk)
-                same = (topk_idx[:, 1:, :] == topk_idx[:, :-1, :]).all(dim=-1).float().mean()
-                print(f"  [L{layer.layer_id}] topk consecutive match rate: {same.item():.3f}", flush=True)
+            # if do_profile and topk_idx.shape[1] > 1:
+            #     # topk_idx shape: (kv_heads, q_len, topk)
+            #     same = (topk_idx[:, 1:, :] == topk_idx[:, :-1, :]).all(dim=-1).float().mean()
+            #     print(f"  [L{layer.layer_id}] topk consecutive match rate: {same.item():.3f}", flush=True)
             # dotv === DIAGNOSTIC: measure topk sharing between consecutive tokens ===
 
-            if do_profile:
-                torch.cuda.synchronize()
-                t3 = time.perf_counter()
+            # if do_profile:
+            #     torch.cuda.synchronize()
+            #     t3 = time.perf_counter()
 
             sparse_page_table_sparse_bs = sparse_kernel_extension.get_block_table_v2(
                 topk_idx, page_table, metadata.token_to_bs,
@@ -1306,9 +1306,9 @@ class MiniCPMSparseBackend(AttentionBackend):
                 max_context_length=self.max_context_len, split_stage1=self.split_stage1,
             )
 
-        if do_profile:
-            torch.cuda.synchronize()
-            t4 = time.perf_counter()
+        # if do_profile:
+        #     torch.cuda.synchronize()
+        #     t4 = time.perf_counter()
 
         # --- Page table setup + dense/sparse handling ---
         q_reshaped = q.contiguous().view(-1, layer.tp_q_head_num // 2, layer.head_dim)
@@ -1357,9 +1357,9 @@ class MiniCPMSparseBackend(AttentionBackend):
         key_cache = key_cache.view(-1, self.page_size, layer.tp_k_head_num // 2, layer.head_dim)
         value_cache = value_cache.view(-1, self.page_size, layer.tp_v_head_num // 2, layer.head_dim)
 
-        if do_profile:
-            torch.cuda.synchronize()
-            t5 = time.perf_counter()
+        # if do_profile:
+        #     torch.cuda.synchronize()
+        #     t5 = time.perf_counter()
 
         # --- FlashAttention ---
         attn_params = AttentionParams(
@@ -1377,26 +1377,26 @@ class MiniCPMSparseBackend(AttentionBackend):
         )
         result = self.attention_kernel.forward(attn_params, layer)
 
-        if do_profile:
-            torch.cuda.synchronize()
-            t6 = time.perf_counter()
+        # if do_profile:
+        #     torch.cuda.synchronize()
+        #     t6 = time.perf_counter()
 
         # --- Dense result interleaving ---
         if forward_batch.sparse_batch_size < bs:
             pass  # KEEP YOUR EXISTING CODE HERE
 
-        if do_profile:
-            torch.cuda.synchronize()
-            t7 = time.perf_counter()
-            print(f"  [forward_extend L{layer.layer_id}] "
-                  f"kv_save={1000*(t1-t0):.1f}ms "
-                  f"topk={1000*(t3-t2):.1f}ms "
-                  f"block_table={1000*(t4-t3):.1f}ms "
-                  f"page_setup={1000*(t5-t4):.1f}ms "
-                  f"flash_attn={1000*(t6-t5):.1f}ms "
-                  f"post={1000*(t7-t6):.1f}ms "
-                  f"TOTAL={1000*(t7-t0):.1f}ms",
-                  flush=True)
+        # if do_profile:
+        #     torch.cuda.synchronize()
+        #     t7 = time.perf_counter()
+        #     print(f"  [forward_extend L{layer.layer_id}] "
+        #           f"kv_save={1000*(t1-t0):.1f}ms "
+        #           f"topk={1000*(t3-t2):.1f}ms "
+        #           f"block_table={1000*(t4-t3):.1f}ms "
+        #           f"page_setup={1000*(t5-t4):.1f}ms "
+        #           f"flash_attn={1000*(t6-t5):.1f}ms "
+        #           f"post={1000*(t7-t6):.1f}ms "
+        #           f"TOTAL={1000*(t7-t0):.1f}ms",
+        #           flush=True)
 
         return result.view(-1, layer.tp_q_head_num * layer.head_dim)
     # dotv ###################################################################################
@@ -2123,7 +2123,7 @@ class MiniCPMSparseBackend(AttentionBackend):
                 )
 
                 # Synchronize to ensure GPU operations complete before graph replay
-                torch.cuda.synchronize()
+                # torch.cuda.synchronize()
 
                 # Store the views for reference (not used in forward, wrapper provides access)
                 metadata.flashinfer_kv_indptr = kv_indptr_view

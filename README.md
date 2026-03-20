@@ -12,6 +12,18 @@ cd /opt
 git clone https://oldMoneyy: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@github.com/oldMoneyy/oldMoney-Project.git
 ```
 
+Steps to push commits:
+```bash
+git config --global user.name "github_user_name"
+git config --global user.email "github_user_email"
+
+cd /opt/oldMoney-Project
+git add .
+git commit -m "What are the commits about"
+git remote set-url origin https://oldMoneyy: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@github.com/oldMoneyy/oldMoney-Project.git
+git push -u origin main
+```
+
 # TODO
 1. Support `--kv-cache-dtype fp8_e5m2` for minicpm backend (**DONE**).
 2. Test original model's smax performance with minicpm_flashinfer and flashinfer (uv pip install --no-deps -e /opt/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python) respectively.
@@ -59,7 +71,10 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 
 
-
+How to kill a sglang process:
+```bash
+pkill -f sglang
+```
 
 
 
@@ -70,6 +85,7 @@ Copy a backup of original env:
 ```bash
 # cp -r /opt/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python/* /opt/oldMoney-Project/sglang_sala_cp/
 uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
+# uv pip install --no-deps -e /opt/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python
 ```
 
 What I have done to the environment:
@@ -176,14 +192,21 @@ nohup python3 eval_model.py \
 ```
 
 
+# NVFP4
+
+```bash
+uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
+uv pip install nvidia-modelopt accelerate
+
+
+```
 
 
 
+# GPTQ
 
-# Quantization
 
-
-## Environment for Quantization
+## Environment for GPTQ
 
 First time to prepare:
 ```bash

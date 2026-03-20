@@ -41,7 +41,6 @@ logger = logging.getLogger(__name__)
 
 
 def batched_gather(a, cu_seqlen_q, select):
-    #
     select_bs = len(select)
     select = torch.tensor(select, device="cpu")
     starts = cu_seqlen_q[select]
