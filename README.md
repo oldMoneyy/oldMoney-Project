@@ -392,27 +392,28 @@ python -m sglang.launch_server \
 
 
 # Key Files
-modeling:
-/opt/oldMoney-Project/sglang_sala_cp/sglang/srt/models/minicpm.py
+```bash
+# modeling:
+# /opt/oldMoney-Project/sglang_sala_cp/sglang/srt/models/minicpm.py
 
-quantization:
-/opt/SGLang-MiniCPM-SALA/sglang_minicpm_sala_env/lib/python3.10/site-packages/flashinfer/fp4_quantization.py
-/opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/quantization/compressed_tensors/schemes/compressed_tensors_w4a4_nvfp4.py
-/opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/quantization/__init__.py
-/opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/quantization/petit_utils.py
-/opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/quantization/petit.py
-/opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/modelopt_utils.py
-/opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/quantization/modelopt_quant.py
-/opt/SGLang-MiniCPM-SALA/sglang_minicpm_sala_env/lib/python3.10/site-packages/sgl_kernel/gemm.py
-/opt/oldMoney-Project/quantization/quantize_gptq_sparse_cpu.py
+# quantization:
+# /opt/SGLang-MiniCPM-SALA/sglang_minicpm_sala_env/lib/python3.10/site-packages/flashinfer/fp4_quantization.py
+# /opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/quantization/compressed_tensors/schemes/compressed_tensors_w4a4_nvfp4.py
+# /opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/quantization/__init__.py
+# /opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/quantization/petit_utils.py
+# /opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/quantization/petit.py
+# /opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/modelopt_utils.py
+# /opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/quantization/modelopt_quant.py
+# /opt/SGLang-MiniCPM-SALA/sglang_minicpm_sala_env/lib/python3.10/site-packages/sgl_kernel/gemm.py
+# /opt/oldMoney-Project/quantization/quantize_gptq_sparse_cpu.py
 
-kernels:
-/opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/attention/minicpm_backend.py
-/opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/attention/minicpm_fuse_kernel.py
-/opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/attention/minicpm_attention_kernels.py
-/opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/attention/hybrid_linear_attn_backend.py
-/opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/attention/flashinfer_backend.py
-
+# kernels:
+# /opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/attention/minicpm_backend.py
+# /opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/attention/minicpm_fuse_kernel.py
+# /opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/attention/minicpm_attention_kernels.py
+# /opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/attention/hybrid_linear_attn_backend.py
+# /opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/attention/flashinfer_backend.py
+```
 
 ```bash
 bash /opt/oldMoney-Project/utils_prompt/export_files.sh
