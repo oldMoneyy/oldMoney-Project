@@ -33,6 +33,7 @@ uv pip install flash_attn-2.8.3+cu12torch2.8cxx11abiTRUE-cp310-cp310-linux_x86_6
 echo "===== INSTALL PYTHON DEPS ====="
 apt-get update && apt-get install -y libpcre3-dev
 uv pip install python-pcre regex
+uv pip install nvidia-modelopt
 uv pip install flash-linear-attention
 uv pip install tokenicer
 uv pip install Pillow thefuzz numpy scipy tqdm safetensors sentencepiece protobuf huggingface-hub packaging

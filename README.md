@@ -18,6 +18,9 @@ git config --global user.name "github_user_name"
 git config --global user.email "github_user_email"
 
 cd /opt/oldMoney-Project
+
+git pull
+
 git add .
 git commit -m "What are the commits about"
 git remote set-url origin https://oldMoneyy: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@github.com/oldMoneyy/oldMoney-Project.git
@@ -196,11 +199,41 @@ nohup python3 eval_model.py \
 
 ```bash
 uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
-uv pip install nvidia-modelopt accelerate
 
-
+source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
+python /opt/oldMoney-Project/quantization/NVFP4.py
 ```
 
+```bash
+deactivate
+
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+export PYTORCH_ALLOC_CONF=expandable_segments:True
+python -m sglang.launch_server \
+    --model /opt/model_nvfp4 \
+    --quantization modelopt_fp4 \
+    --attention-backend minicpm_flashinfer \
+    --trust-remote-code \
+    --port 31333
+
+python3 -m sglang.launch_server \
+    --model-path /opt/model_nvfp4 \
+    --port 31333 \
+    --quantization gptq_marlin \
+    --dtype float16 \
+    --disable-radix-cache \
+    --kv-cache-dtype fp8_e5m2 \
+
+    --chunked-prefill-size 32768 \
+    --mem-fraction-static 0.6 \
+    --max-mamba-cache-size 32 \
+    --fuse-topk \
+    --max-running-requests 32 \
+    --log-level info \
+    --num-continuous-decode-steps 2 \
+    --enable-mixed-chunk \
+    --enable-torch-compile
+```
 
 
 # GPTQ

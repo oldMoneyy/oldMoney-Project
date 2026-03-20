@@ -1,0 +1,229 @@
+OPTIMIZATION SESSION LOG - MiniCPM-SALA Sparse + Lightning Attention Inference
+================================================================================
+Date: 2026-03-20
+Model: MiniCPM-SALA (openbmb/MiniCPM-SALA)
+Architecture: 32 layers, 8 minicpm4 (sparse attn) + 24 lightning-attn layers
+GPU: Started on 32GB card, moved to NVIDIA RTX PRO 6000D (98GB, Blackwell GB202, SM100)
+Framework: SGLang with custom MiniCPM sparse backend + FlashInfer
+Benchmark: 4 tests - 20K/87K/150K prefill + 4K decode generation
+
+
+METHODOLOGY
+================================================================================
+
+Step 1: Profile at the layer level first.
+We added per-layer timing in MiniCPMDecoderLayer.forward() in minicpm.py, guarded
+by torch.cuda.is_current_stream_capturing() to avoid breaking CUDA graph capture.
+This immediately showed that the 8 minicpm4 (sparse) layers took ~97ms each while
+the 24 lightning-attn layers took ~9ms each. MLP was ~15ms across all 32 layers.
+The sparse attention layers were 10x slower than lightning layers and dominated
+the prefill time.
+
+Step 2: Profile inside the sparse attention layer.
+We added sub-timing inside forward_extend() in minicpm_backend.py, breaking it into:
+kv_save, topk, block_table, page_setup, flash_attn, post. This showed:
+- flash_attn: 69ms (87% of the sparse layer time)
+- topk: 7-22ms
+- block_table: 3ms
+- page_setup: 1.6ms
+- kv_save: 0.1ms
+
+Step 3: Profile the unmeasured overhead.
+We noticed that sum of all measured per-layer times was ~36s but total was ~48s.
+We added timing to init_forward_metadata() in minicpm_backend.py. This showed
+init_forward_metadata took 230ms per chunk, called 26 times = ~6s. That left
+another ~6s in scheduling/Python overhead.
+
+Step 4: Profile inside FlashInfer.
+We added sub-timing inside FlashInferKernel.forward() in minicpm_attention_kernels.py,
+breaking it into: alloc, convert, plan (begin_forward), forward. This showed:
+- plan (begin_forward): 64ms (87% of flash_attn time!)
+- forward (actual kernel): 7.7ms
+- convert: 1.6ms
+- alloc: 0.3ms
+FlashInfer's begin_forward planning for 16384 batch items was the real bottleneck,
+not the attention computation itself.
+
+
+BOTTLENECKS FOUND
+================================================================================
+
+BOTTLENECK 1: Python loops in metadata construction
+Location: minicpm_sparse_utils.py
+Functions: build_sparse_prefill_metadata(), build_token_mappings()
+Problem: build_sparse_prefill_metadata had a nested Python loop that ran
+extend_seq_len * head_group_num = 8192 * 2 = 16384 iterations per chunk,
+doing one scalar tensor assignment per iteration. build_token_mappings had
+an 8192-element Python list comprehension per sparse batch.
+Impact: 230ms per chunk, 26 chunks = ~6s out of 48s total (12.5%)
+
+BOTTLENECK 2: FlashInfer begin_forward planning overhead
+Location: minicpm_attention_kernels.py, FlashInferKernel.forward()
+Problem: FlashInfer's begin_forward() was called once per sparse layer per chunk.
+With 16384 batch items (8192 tokens * 2 head groups), each begin_forward took
+64ms. Called 8 times per chunk (8 sparse layers) = 512ms per chunk.
+The actual attention kernel only took 7.7ms.
+Impact: 512ms per chunk, 26 chunks = ~13.3s out of 48s total (28%)
+
+
+FAILED OPTIMIZATION ATTEMPTS
+================================================================================
+
+Attempt 1: Fused kernel loop splitting (decode)
+File: minicpm_fuse_kernel.py, fused_attn_pooling_online_topk_decode
+Change: Split nested for p_block: for k: GEMM loop into separate K-scan and
+TopK selection phases to eliminate redundant GEMM recomputation.
+Result: No measurable improvement. The fused topk kernel was only 4-12% of
+total time. Optimizing it was irrelevant to overall performance.
+
+Attempt 2: Fused kernel loop splitting (prefill)
+File: minicpm_fuse_kernel.py, fused_attn_pooling_online_topk_prefill
+Change: Same restructuring as decode kernel.
+Result: No measurable improvement. Same reason as above.
+
+Attempt 3: Page table sorting for sequential memory access
+File: minicpm_backend.py, forward_extend()
+Change: Sort sparse_page_table rows before FlashAttention to improve L2 cache
+utilization during random KV page reads.
+Result: OOM. The full sparse_page_table clone + sort required 768MB-1.13GB
+which exceeded available GPU memory on the 32GB card. Even on bigger GPU,
+FA with paged KV already handles scattered pages efficiently so the 69ms
+was dominated by planning overhead, not random access.
+
+Attempt 4: FA3 direct bypass (skip FlashInfer planning)
+File: minicpm_attention_kernels.py
+Change: For prefill-extend sparse path (bs > 256, seqlen_q=1), bypass FlashInfer
+entirely and call flash_attn_with_kvcache from sgl_kernel directly.
+Result: OOM on 32GB card (FA3 tried to allocate 5.12GB workspace for 16384 batch
+items). On 98GB Blackwell card, got "no kernel image is available for execution
+on the device" because FA3's Hopper kernels require SM90 but Blackwell is SM100.
+
+Attempt 5: Topk-based token grouping
+Idea: Group consecutive tokens that share the same topk block selection into
+larger sequences (e.g., 64 tokens each) to reduce FlashInfer batch count from
+16384 to ~256. This would dramatically improve GPU occupancy.
+Result: Diagnostic showed consecutive topk match rate was 0% (except first chunk
+at 75%). Every token selects completely different blocks. Grouping is impossible.
+
+
+SUCCESSFUL OPTIMIZATIONS
+================================================================================
+
+OPTIMIZATION 1: Metadata vectorization
+Files modified: minicpm_sparse_utils.py
+Functions: build_sparse_prefill_metadata(), build_token_mappings()
+
+build_sparse_prefill_metadata changes:
+- Replaced Python for loop (16384 iterations of scalar assignment) with
+  torch.repeat_interleave + cumsum to build sparse_cu_seqlens_q_cpu
+- Replaced Python for loop to compute old_bs_to_new_bs_range with vectorized
+  torch.where + cumsum
+- Replaced Python loop for max_sparse_cache_len with torch.where + max
+
+build_token_mappings changes:
+- Replaced Python for loop + list comprehension (8192 elements) for token_to_bs
+  with torch.repeat_interleave(segment_ids, lengths)
+- Replaced Python for loop + list comprehension for token_pos_in_bs with
+  vectorized arange + cumsum + repeat_interleave arithmetic
+
+Result: init_forward_metadata dropped from 230ms to 44ms per chunk.
+Saving: ~186ms * 26 chunks = ~4.8s on 150K test.
+
+OPTIMIZATION 2: FlashInfer plan caching
+Files modified: minicpm_attention_kernels.py, minicpm_backend.py
+
+minicpm_attention_kernels.py changes (FlashInferKernel class):
+- Added _cached_plan_kv_indptr, _cached_kv_indptr, _cached_kv_indices,
+  _cached_kv_last_page_len instance variables
+- In forward(), after convert_sparse_page_table_to_flashinfer, check if
+  kv_indptr matches the cached version using torch.equal
+- If match: skip begin_forward entirely (plan is reusable because FlashInfer
+  holds kv_indices by reference, so in-place updates from convert are visible)
+- If no match: call begin_forward normally and cache kv_indptr.clone()
+- Pre-allocate and reuse kv_indptr/kv_indices/kv_last_page_len buffers across
+  calls to avoid repeated allocation
+
+minicpm_backend.py changes:
+- In init_forward_metadata(), invalidate the plan cache at the start of each
+  chunk by setting attention_kernel._cached_plan_kv_indptr = None
+
+Key insight verified empirically: FlashInfer's begin_forward stores kv_indices
+by reference, not by copy. We verified this with a standalone test showing that
+mutating the original indices tensor after begin_forward is visible through the
+wrapper's internal buffer.
+
+Result: flash_attn per sparse layer dropped from 70ms to 8.6ms.
+First layer per chunk: ~26ms (includes one begin_forward call)
+Layers 2-8 per chunk: ~8.6ms each (plan reused, only convert + forward)
+Saving: ~450ms * 26 chunks = ~11.7s on 150K test.
+
+
+BENCHMARK RESULTS (32GB card, original baseline vs after optimization 1)
+================================================================================
+
+                        Original        After opt 1     Improvement
+Test 1 (20K prefill)    8.46s/30.1t/s   7.10s/35.9t/s   +19%
+Test 2 (87K prefill)    22.05s/17.1t/s  20.20s/18.7t/s  +9%
+Test 3 (150K prefill)   56.05s/8.5t/s   49.42s/9.6t/s   +13%
+Test 4 (4K decode)      58.10s/70.5t/s  57.70s/71.0t/s  ~same
+
+(Optimization 2 was developed on the 32GB card but could not be benchmarked there
+due to the FA3 bypass attempt crashing. Full results are from the 98GB card.)
+
+
+BENCHMARK RESULTS (98GB Blackwell card, both optimizations applied)
+================================================================================
+
+Test 1 (20K prefill):   6.00s / 53.0 t/s
+Test 2 (87K prefill):   10.05s / 29.4 t/s
+Test 3 (150K prefill):  24.43s / 19.5 t/s
+Test 4 (4K decode):     41.05s / 72.3 t/s
+
+All correctness tests pass:
+- Test 1: "Paris" (correct)
+- Test 2: "BLUE-TIGER-42" (correct, needle-in-haystack exact match)
+- Test 3: "Alice Zhang, 1987" (correct, multi-document retrieval)
+
+
+REMAINING TIME BREAKDOWN (per chunk on Blackwell, 26 chunks for 150K)
+================================================================================
+
+sparse attn total:    26ms * 8 layers  = 208ms  (topk=14ms, flash_attn=8.6ms, rest=3.4ms)
+lightning-attn:       6ms * 24 layers  = 144ms
+MLP:                  8.6ms * 32 layers = 275ms
+init_forward_metadata:                   31ms
+scheduling/Python overhead:             ~100ms (estimated)
+Total per chunk:                        ~758ms
+Total 26 chunks:                        ~19.7s (close to measured 24.4s)
+
+The remaining gap (~4.7s) is likely from:
+- Last chunk re-planning spike (seen as topk=782ms on L0 of last chunk)
+- Scheduling overhead between chunks
+- Memory allocation for compressed keys (allocate_and_compress_keys)
+- torch.cuda.synchronize calls in profiling code (should be removed)
+
+
+KEY LESSONS
+================================================================================
+
+1. Profile before optimizing. The fused topk kernel looked like the obvious
+   bottleneck from the code structure but was only 4-12% of actual time.
+
+2. The bottleneck is often not where the compute happens. FlashInfer's planning
+   overhead (begin_forward) was 87% of what we measured as "flash_attn" time.
+   The actual attention kernel was fast.
+
+3. Python loops over large ranges are catastrophic in hot paths. A 16384-iteration
+   scalar assignment loop in metadata construction cost 230ms per chunk.
+
+4. Memory constraints matter. Three optimization ideas (page table sorting,
+   FA3 bypass, pool buffer expansion) all failed due to OOM on the 32GB card.
+
+5. Verify assumptions with data. We verified FlashInfer holds kv_indices by
+   reference before implementing plan caching. We measured topk consecutive
+   match rate before implementing token grouping (and killed the idea when
+   it showed 0% match).
+
+6. Hardware compatibility matters. FA3 Hopper kernels don't run on SM100
+   Blackwell. The contest GPU architecture must be checked before choosing
+   kernel paths.

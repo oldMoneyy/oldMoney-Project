@@ -1296,7 +1296,7 @@ class MiniCPMSparseBackend(AttentionBackend):
             ).reshape(-1, self.num_sparse_topk_tokens)
             metadata.sparse_page_table[forward_batch.sparse_idx, :self.num_sparse_topk_tokens] = sparse_page_table_sparse_bs
         else:
-            t3 = t2  # no topk needed
+            # t3 = t2  # no topk needed
             total_k1 = self.forward_metadata.k1.cu_total_compress_token_nums[-1].item()
             total_k2 = self.forward_metadata.k2.cu_total_compress_token_nums[-1].item()
             full_compressed_k1_ext, full_compressed_k2_ext = allocate_and_compress_keys(
