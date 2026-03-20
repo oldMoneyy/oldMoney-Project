@@ -12,8 +12,8 @@ fi
 
 source /opt/oldmoney/quantization/venv/bin/activate
 unset PYTHONPATH
-export MAX_JOBS=1
-export NVCC_THREADS=1
+export MAX_JOBS=16
+export NVCC_THREADS=4
 export TORCH_CUDA_ARCH_LIST="12.0"
 export LD_LIBRARY_PATH=/opt/oldmoney/quantization/venv/lib/python3.10/site-packages/torch/lib:$LD_LIBRARY_PATH
 
