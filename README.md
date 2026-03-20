@@ -79,7 +79,11 @@ How to kill a sglang process:
 pkill -f sglang
 ```
 
-
+See GPU info:
+```bash
+python -c "import torch; print(f'GPU: {torch.cuda.get_device_name(0)}\nCompute Capability: SM{torch.cuda.get_device_capability(0)[0]}{torch.cuda.get_device_capability(0)[1]}')"
+python -c "import torch; print(f'PyTorch Version: {torch.__version__}\nCUDA Version: {torch.version.cuda}\nHas FP8 E4M3: {hasattr(torch, \"float8_e4m3fn\")}')"
+```
 
 
 
@@ -358,13 +362,12 @@ Working like shit... Still optimizing.
 uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
 
 source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
+
 nohup python /opt/oldMoney-Project/quantization/nvfp4_quantize_sala.py \
     --input /opt/model \
-    --output /opt/model_nvfp4_mixed \
+    --output /opt/model_nvfp4_gptq \
     --calib-data /opt/oldMoney-Project/quantization/ultimate_64_token_balanced.jsonl \
-    --max-samples 32 \
-    --max-len 131072 \
-    --minicpm4-precision bf16 \
+    --max-samples 64 --max-len 131072 \
     > /opt/oldMoney-Project/quantization/nvfp4_quantize_sala.log 2>&1 &
 ```
 
@@ -414,3 +417,6 @@ kernels:
 ```bash
 bash /opt/oldMoney-Project/utils_prompt/export_files.sh
 ```
+
+
+
