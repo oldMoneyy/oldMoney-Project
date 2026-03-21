@@ -4,7 +4,7 @@ quantization/flash_attn-2.8.3+cu12torch2.8cxx11abiTRUE-cp310-cp310-linux_x86_64.
 quantization/ultimate_64_token_balanced.jsonl
 
 # sglang_sala_cp
-
+**/.ipynb_checkpoints
 vendor/logs
 
 quantization/.ipynb_checkpoints
