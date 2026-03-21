@@ -654,6 +654,41 @@ def _quantize_layer(
         print(f"      Improvement: {improvement:+.1f}%")
 
         # Replace weight for next-layer calibration
+        # dotv
+        # import modelopt.torch.quantization as mtq
+        
+        # # 将 GPTQ 还原后的浮点权重赋给当前层
+        # ln_mod.weight.data = Q_deq.to(ln_mod.weight.dtype).to(ln_mod.weight.device)
+        
+        # # 提取当前层计算出的最大激活值 (用于后续的 input_scale)
+        # a_max = max(act_amax.get(ln_name, 1.0), 1e-12)
+
+        # # 构造 ModelOpt 需要的量化配置字典 (强制走 NVFP4 + AWQ/GPTQ 兼容模式)
+        # quant_config = {
+        #     "quant_cfg": {
+        #         "*weight_quantizer": {"num_bits": 4, "block_sizes": {-1: 16}, "enable": True},
+        #         "*input_quantizer":  {"num_bits": 4, "block_sizes": {-1: 16}, "enable": True},
+        #     },
+        #     "algorithm": "awq" # 这里填awq是为了让modelopt接受静态的input_scale
+        # }
+
+        # # 让 modelopt 接管这个层，它会自动执行底层的 Swizzle 内存重排并转成 FP8 scales
+        # # 我们传入 dummy 的前向函数，因为我们只需要它的打包功能，不需要它重量化
+        # def dummy_forward(layer):
+        #     pass
+
+        # quantized_layer = mtq.quantize(ln_mod, quant_config, forward_loop=dummy_forward)
+
+        # # 强制塞入我们计算好的最优激活值最大值
+        # # 注意：modelopt 内部通常使用 amax 来推导 scale
+        # for name, module in quantized_layer.named_modules():
+        #     if hasattr(module, 'input_quantizer') and hasattr(module.input_quantizer, '_amax'):
+        #          module.input_quantizer._amax.data = torch.tensor(a_max, dtype=torch.float32, device=device)
+
+        # # 由于我们要导出完整的 checkpoint，我们不在这里单独存 state_dict
+        # # 我们把量化后且经过 modelopt 包装的层，塞回到原来的模型里
+        # # 下面的 original_tensors 收集环节，modelopt_export 会接管
+        # setattr(layer, ln_name.split('.')[-1], quantized_layer)
         ln_mod.weight.data = Q_deq.to(ln_mod.weight.dtype).to(
             ln_mod.weight.device
         )

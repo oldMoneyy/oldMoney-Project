@@ -136,11 +136,22 @@ nohup python3 -m sglang.launch_server \
 (1) Send a simple request:
 
 ```bash
+# gold: D
 curl http://localhost:31333/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "MiniCPM-SALA",
     "messages": [{"role": "user", "content": "Answer the following multiple choice question. The last line of your response should be of the following format: '\''ANSWER: $LETTER'\'' (without quotes) where LETTER is one of ABCD. Think step by step before answering. Which of the following (effective) particles is not associated with a spontaneously-broken symmetry? A) Phonon B) Magnon C) Pion D) Skyrmion "}],
+    "max_tokens": 8192,
+    "temperature": 0.0
+  }'
+
+# gold: B
+curl http://localhost:31333/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "MiniCPM-SALA",
+    "messages": [{"role": "user", "content": "Answer the following multiple choice question. The last line of your response should be of the following format: '\''ANSWER: $LETTER'\'' (without quotes) where LETTER is one of ABCD. Think step by step before answering. You want to study the role of the GADD45G protein in a mouse model. You are highly interested in whether the IL-2-induced protein has a role in the SARS-CoV-2 infection. You decide to create a transgenic mouse model with the inducible overexpression of the coding sequence for the GADD45G gene. You can use it to affinity-purify the protein and identify the protein partners that bind to GADD45G after you infect the mice with the virus. For that purpose, you will modify the gene'\''s coding sequence by introducing the sequence for a single influenza hemagglutinin antigenic determinant that will be at the N-terminus of your recombinant protein. You genetically engineer the plasmid and, aided by Lipofectamine®, transfect it into the Chinese hamster ovary cells. You select the antibiotic-resistant cell colonies to test the expression level of your construct. Once you begin, you observe that you are unable to overexpress your protein as you expected. In the series of tests you undertake to identify the cause, you realize that the sequence of the plus strand of your construct reads: 5'\''ATGTACCCATACGATGTTCCAGATTACGCCAAATGACTCTGGAAGAAGTCCGCGGCCAGGACACAGTTCCGGAAAGCACAGCCAGGATGCAGGGTGCCGGGAAAGCGCTGCATGAGTTGCTGCTGTCGGCGCAGCGTCAGGGCTGCCTCACTGCCGGCGTCTACGAGTCAGCCAAAGTCTTGAACGTGGACCCCGACAATGTGACCTTCTGTGTGCTGGCTGCGGGTGAGGAGGACGAGGGCGACATCGCGCTGCAGATCCATTTTACGCTGATCCAGGCTTTCTGCTGCGAGAACGACATCGACATAGTGCGCGTGGGCGATGTGCAGCGGCTGGCGGCTATCGTGGGCGCCGGCGAGGAGGCGGGTGCGCCGGGCGACCTGCACTGCATCCTCATTTCGAACCCCAACGAGGACGCCTGGAAGGATCCCGCCTTGGAGAAGCTCAGCCTGTTTTGCGAGGAGAGCCGCAGCGTTAACGACTGGGTGCCCAGCATCACCCTCCCCGAGTGA3'\'' You annoyingly notice the reason. A) The lack of the linker sequence is triggering proteolysis of the nascent chain B) The ribosome terminated the translation early C) The tRNA for the UAA codon does not exist in the mouse D) The sequence for the antigenic determinant has a missense mutation"}],
     "max_tokens": 8192,
     "temperature": 0.0
   }'
@@ -382,13 +393,6 @@ Working like shit... Still optimizing.
 uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
 
 source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
-nohup python /opt/oldMoney-Project/quantization/nvfp4_quantize_sala.py \
-    --input /opt/model \
-    --output /opt/model_nvfp4_gptq \
-    --calib-data /opt/oldMoney-Project/quantization/deadly_32_max_profit.jsonl \
-    --max-samples 32 --max-len 131072 \
-    > /opt/oldMoney-Project/logs/nvfp4_quantize_sala.log 2>&1 &
-
 nohup python /opt/oldMoney-Project/quantization/nvfp4_quantize_sala.py \
     --input /opt/model \
     --output /opt/model_nvfp4_gptq \
