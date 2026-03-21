@@ -1,9 +1,16 @@
+#!/usr/bin/env python3
 import os
 import json
 import math
 import argparse
 import numpy as np
 import requests
+
+# # Step 1: Start BF16 model, run baseline
+# python fast_eval.py --mode baseline --api-base http://127.0.0.1:31333
+
+# # Step 2: Start quantized model, run eval
+# python fast_eval.py --mode eval --api-base http://127.0.0.1:31333
 
 # 测试用的一组 Prompt（覆盖长文本、推理、代码等不同场景）
 TEST_PROMPTS = [
@@ -45,37 +52,57 @@ def get_logprobs_from_sglang(api_base, model_name, prompt, max_tokens=128, top_k
 
 def compute_metrics(base_dist, quant_dist):
     """
-    计算单个 Token 步骤的 KL 散度 和 余弦相似度
-    处理了曹议提到的 "剩余概率平滑分配" 问题
+    [已修复] 严格对齐信息论的 Top-K KL 散度计算
+    1. 绝对不进行局部重归一化 (保持真实的置信度)
+    2. 引入长尾概率质量 (Tail Probability Mass) 处理未见 Token
     """
-    # 找到在两个分布中出现过的所有 Token 的集合的并集
     all_tokens = set(base_dist.keys()).union(set(quant_dist.keys()))
     
-    # 平滑系数：对于没有出现在 Top-256 的 Token，给予一个极小的默认概率
-    EPSILON = 1e-7 
+    P_top = []
+    Q_top = []
     
-    P = [] # 基线 (BF16)
-    Q = [] # 量化 (NVFP4)
+    sum_p_top = 0.0
+    sum_q_top = 0.0
     
+    # 1. 提取 Top-K 交集中的真实绝对概率
     for tok in all_tokens:
-        P.append(base_dist.get(tok, EPSILON))
-        Q.append(quant_dist.get(tok, EPSILON))
+        p_val = base_dist.get(tok, 0.0)
+        q_val = quant_dist.get(tok, 0.0)
+        P_top.append(p_val)
+        Q_top.append(q_val)
+        sum_p_top += p_val
+        sum_q_top += q_val
         
-    P = np.array(P)
-    Q = np.array(Q)
+    # 2. 计算长尾概率 (落在 Top-K 交集之外的所有词汇的概率总和)
+    # 浮点数相加可能极微小地大于 1.0，使用 max(0, x) 兜底
+    p_tail = max(0.0, 1.0 - sum_p_top)
+    q_tail = max(0.0, 1.0 - sum_q_top)
     
-    # 归一化，保证概率总和为 1.0
-    P = P / np.sum(P)
-    Q = Q / np.sum(Q)
+    # 3. 计算 KL 散度
+    kl_div = 0.0
+    EPSILON = 1e-10  # 仅用于防止除以0或log(0)，不改变真实概率质量
     
-    # 1. 计算 KL 散度: sum(P * log(P/Q))
-    # KL越接近0越好
-    kl_div = np.sum(P * np.log(P / Q))
-    
-    # 2. 计算 余弦相似度
-    # 越接近1.000000越好
-    cos_sim = np.dot(P, Q) / (np.linalg.norm(P) * np.linalg.norm(Q))
-    
+    # 计算 Top 集合内的 KL 惩罚
+    for p, q in zip(P_top, Q_top):
+        if p > 0: # 只有 P(x) > 0 时，KL 才有定义
+            q_safe = max(q, EPSILON)
+            kl_div += p * math.log(p / q_safe)
+            
+    # 计算长尾集合的 KL 惩罚 (将所有未见 Token 视为一个整体)
+    if p_tail > 0:
+        q_tail_safe = max(q_tail, EPSILON)
+        kl_div += p_tail * math.log(p_tail / q_tail_safe)
+        
+    # 4. 计算 Cosine Similarity (仅供参考)
+    P_array = np.array(P_top)
+    Q_array = np.array(Q_top)
+    norm_p = np.linalg.norm(P_array)
+    norm_q = np.linalg.norm(Q_array)
+    if norm_p > 0 and norm_q > 0:
+        cos_sim = np.dot(P_array, Q_array) / (norm_p * norm_q)
+    else:
+        cos_sim = 0.0
+        
     return kl_div, cos_sim
 
 def main():
@@ -131,12 +158,25 @@ def main():
             all_cos.append(avg_cos)
             print(f"     [Result] KL 散度: {avg_kl:.6f} | 余弦相似度: {avg_cos:.6f}")
             
-        print("\n" + "="*50)
-        print("🎯 最终量化质量体检报告")
-        print("="*50)
-        print(f"Average KL Divergence ↓ : {np.mean(all_kl):.6f} (越接近0越好，< 0.001 为极佳)")
-        print(f"Average Cosine Sim  ↑ : {np.mean(all_cos):.6f} (越接近1越好，> 0.999 为极佳)")
-        print("="*50)
+        print("\n" + "="*60)
+        print("🎯 最终量化质量体检报告 (严谨信息论版)")
+        print("="*60)
+        final_kl = np.mean(all_kl)
+        final_cos = np.mean(all_cos)
+        print(f"Average KL Divergence ↓ : {final_kl:.6f}")
+        
+        # 增加客观的评判标准提示
+        if final_kl < 0.05:
+            print("   ↳ [评价] 极佳 (Excellent)！分布几乎无损，生成轨迹完美对齐。")
+        elif final_kl < 0.15:
+            print("   ↳ [评价] 优秀 (Good)。存在微小扰动，但不影响主干逻辑和语义。")
+        elif final_kl < 0.30:
+            print("   ↳ [评价] 警告 (Warning)。分布有明显偏移，可能出现长文本失忆或幻觉。")
+        else:
+            print("   ↳ [评价] 崩盘 (Critical)。量化完全破坏了模型，底层算子或权重打包可能存在错误。")
+            
+        print(f"Average Cosine Sim  ↑ : {final_cos:.6f} (注：概率分布的 Cosine 仅供参考)")
+        print("="*60)
 
 if __name__ == "__main__":
     main()
