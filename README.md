@@ -76,7 +76,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 How to kill a sglang process:
 ```bash
-pkill -f sglang
+pkill -f sglang.launch
 ```
 
 See GPU info:
@@ -140,8 +140,8 @@ curl http://localhost:31333/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "MiniCPM-SALA",
-    "messages": [{"role": "user", "content": "What is 32768 * 8 - 1 = ?, give me step by step solution."}],
-    "max_tokens": 512,
+    "messages": [{"role": "user", "content": "Answer the following multiple choice question. The last line of your response should be of the following format: '\''ANSWER: $LETTER'\'' (without quotes) where LETTER is one of ABCD. Think step by step before answering. Which of the following (effective) particles is not associated with a spontaneously-broken symmetry? A) Phonon B) Magnon C) Pion D) Skyrmion "}],
+    "max_tokens": 8192,
     "temperature": 0.7
   }'
 ```
@@ -208,7 +208,7 @@ nohup python3 eval_model.py \
   --concurrency 64 \
   --num_samples 150 \
   --verbose \
-  > eval.log 2>&1 &
+  > /opt/eval.log 2>&1 &
 ```
 
 
@@ -366,6 +366,13 @@ python3 -m sglang.launch_server \
 5. Sparse-quantized model + minicpm_flashinfer → passes only first test ✗
 
 
+
+
+
+
+
+
+
 # NVFP4
 
 
@@ -375,7 +382,6 @@ Working like shit... Still optimizing.
 uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
 
 source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
-
 nohup python /opt/oldMoney-Project/quantization/nvfp4_quantize_sala.py \
     --input /opt/model \
     --output /opt/model_nvfp4_gptq \
@@ -386,18 +392,20 @@ nohup python /opt/oldMoney-Project/quantization/nvfp4_quantize_sala.py \
 
 
 ```bash
-python -m sglang.launch_server \
-    --model /opt/model_nvfp4_mlp_only \
-    --quantization modelopt_fp4 \
+cd /opt
+nohup python3 -m sglang.launch_server \
+    --model /opt/model_nvfp4_gptq \
+    --quantization modelopt \
     --trust-remote-code \
-    --port 31333 \
     --disable-radix-cache \
     --attention-backend minicpm_flashinfer \
-    --chunked-prefill-size 8192 \
+    --chunked-prefill-size 32768 \
     --max-running-requests 32 \
     --skip-server-warmup \
+    --port 31333 \
     --dense-as-sparse \
-    --mem-fraction-static 0.82
+    --mem-fraction-static 0.82 \
+    > server.log 2>&1 &
 ```
 
 
