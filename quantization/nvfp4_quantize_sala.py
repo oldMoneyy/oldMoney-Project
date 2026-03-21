@@ -15,12 +15,6 @@ Strategy:
 
 Output: ModelOpt-compatible checkpoint -> SGLang ModelOptFp4Config.
 
-Usage:
-  python nvfp4_gptq_quant.py \
-      --input /opt/model \
-      --output /opt/model_nvfp4_gptq \
-      --calib-data /opt/ultimate_64_token_balanced.jsonl \
-      --max-samples 64 --max-len 8192
 """
 
 import os
@@ -350,31 +344,33 @@ def nuke_caches():
 
 
 # ====================================================================
-# S6  Disk-Backed Hidden-State Store
+# S6  VRAM-Backed Hidden-State Store (Optimized for 96GB GPU)
 # ====================================================================
 
 class HiddenStateStore:
-    """Store each sample's hidden state as a temp file on disk."""
+    """Store each sample's hidden state directly in VRAM.
+    Zero disk I/O. Maximum speed for high-VRAM GPUs.
+    """
 
     def __init__(self, tmp_dir: str):
-        self.tmp_dir = Path(tmp_dir)
-        self.tmp_dir.mkdir(parents=True, exist_ok=True)
-        self._files: Dict[int, str] = {}
+        # 保留 tmp_dir 参数以兼容后面的代码，但不再使用硬盘
+        self._states: Dict[int, torch.Tensor] = {}
 
     def save(self, idx: int, tensor: torch.Tensor):
-        fpath = str(self.tmp_dir / f"hs_{idx:04d}.pt")
-        torch.save(tensor.cpu(), fpath)
-        self._files[idx] = fpath
+        # .detach().clone() 是核心，保留在显存且防止计算图内存泄漏
+        self._states[idx] = tensor.detach().clone()
 
     def load(self, idx: int, device: torch.device) -> torch.Tensor:
-        return torch.load(self._files[idx], map_location=device,
-                          weights_only=True)
+        # 直接返回显存中的张量，速度极快
+        return self._states[idx]
 
     def cleanup(self):
-        shutil.rmtree(str(self.tmp_dir), ignore_errors=True)
+        self._states.clear()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
     def __len__(self):
-        return len(self._files)
+        return len(self._states)
 
 
 # ====================================================================

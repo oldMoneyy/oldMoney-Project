@@ -126,7 +126,7 @@ nohup python3 -m sglang.launch_server \
     --port 31333 \
     --dense-as-sparse \
     --mem-fraction-static 0.82 \
-    > server.log 2>&1 &
+    > /opt/server.log 2>&1 &
 ```
 
 
@@ -142,7 +142,7 @@ curl http://localhost:31333/v1/chat/completions \
     "model": "MiniCPM-SALA",
     "messages": [{"role": "user", "content": "Answer the following multiple choice question. The last line of your response should be of the following format: '\''ANSWER: $LETTER'\'' (without quotes) where LETTER is one of ABCD. Think step by step before answering. Which of the following (effective) particles is not associated with a spontaneously-broken symmetry? A) Phonon B) Magnon C) Pion D) Skyrmion "}],
     "max_tokens": 8192,
-    "temperature": 0.7
+    "temperature": 0.0
   }'
 ```
 
@@ -203,12 +203,12 @@ python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31333 \
 cd /opt/SOAR-Toolkit
 nohup python3 eval_model.py \
   --api_base http://127.0.0.1:31333 \
-  --model_path /opt/model \
+  --model_path /opt/model_nvfp4_gptq \
   --data_path eval_dataset/perf_public_set.jsonl \
   --concurrency 64 \
   --num_samples 150 \
   --verbose \
-  > /opt/eval.log 2>&1 &
+  > /opt/eval_original_model.log 2>&1 &
 ```
 
 
@@ -293,15 +293,15 @@ Original sparse quantization (# config.sparse_config["dense_len"] = 655360):
 ```bash
 source /opt/oldMoney-Project/quantization/venv/bin/activate
 export LD_LIBRARY_PATH=/opt/oldMoney-Project/quantization/venv/lib/python3.10/site-packages/torch/lib:$LD_LIBRARY_PATH
-nohup python3 opt/oldMoney-Project/quantization/quantiza_gptq_sparse_disk.py \
+nohup python3 /opt/oldMoney-Project/quantization/quantiza_gptq_sparse_gpu.py \
     --input /opt/model \
-    --output /opt/model_gptq_ultimate_64_sparse \
+    --output /opt/model_gptq_sparse \
     --bits 4 \
     --group-size 128 \
     --calib-data /opt/oldMoney-Project/quantization/ultimate_64_token_balanced.jsonl \
     --max-samples 64 \
     --max-len 131072 \
-    > /opt/oldMoney-Project/quantization/gptq_ultimate_64_sparse.log 2>&1 &
+    > /opt/oldMoney-Project/logs/gptq_sparse.log 2>&1 &
 ```
 
 
@@ -387,6 +387,14 @@ nohup python /opt/oldMoney-Project/quantization/nvfp4_quantize_sala.py \
     --output /opt/model_nvfp4_gptq \
     --calib-data /opt/oldMoney-Project/quantization/deadly_32_max_profit.jsonl \
     --max-samples 32 --max-len 131072 \
+    > /opt/oldMoney-Project/logs/nvfp4_quantize_sala.log 2>&1 &
+
+nohup python /opt/oldMoney-Project/quantization/nvfp4_quantize_sala.py \
+    --input /opt/model \
+    --output /opt/model_nvfp4_gptq \
+    --calib-data /opt/oldMoney-Project/quantization/calibration/calib_dataset.jsonl \
+    --max-samples 128 \
+    --max-len 8192 \
     > /opt/oldMoney-Project/quantization/nvfp4_quantize_sala.log 2>&1 &
 ```
 
