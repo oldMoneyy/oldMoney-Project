@@ -1,0 +1,354 @@
+nohup: ignoring input
+[INFO] Using Random Seed: 35207
+======================================================================
+Standalone GPTQ Quantizer for MiniCPM-SALA (Mixed Precision)
+======================================================================
+  Input:           /opt/model
+  Output:          /opt/model_gptq_sparse
+  Default bits:    4
+  Symmetric:       True
+  minicpm4 bits:   (use default)
+  lightning bits:  (use default)
+  layer-bits:      (none)
+  Group size:      128
+  Damping:         0.01
+  Calib data:      /opt/oldMoney-Project/quantization/ultimate_64_token_balanced.jsonl
+  Max samples:     64
+  Max length:      131072
+  Quant lm_head:   False
+
+  Layer    Type                 Bits  
+  ----------------------------------
+  0        minicpm4             W4    
+  1        lightning-attn       W4    
+  2        lightning-attn       W4    
+  3        lightning-attn       W4    
+  4        lightning-attn       W4    
+  5        lightning-attn       W4    
+  6        lightning-attn       W4    
+  7        lightning-attn       W4    
+  8        lightning-attn       W4    
+  9        minicpm4             W4    
+  10       lightning-attn       W4    
+  11       lightning-attn       W4    
+  12       lightning-attn       W4    
+  13       lightning-attn       W4    
+  14       lightning-attn       W4    
+  15       lightning-attn       W4    
+  16       minicpm4             W4    
+  17       minicpm4             W4    
+  18       lightning-attn       W4    
+  19       lightning-attn       W4    
+  20       lightning-attn       W4    
+  21       lightning-attn       W4    
+  22       minicpm4             W4    
+  23       lightning-attn       W4    
+  24       lightning-attn       W4    
+  25       lightning-attn       W4    
+  26       lightning-attn       W4    
+  27       lightning-attn       W4    
+  28       lightning-attn       W4    
+  29       minicpm4             W4    
+  30       minicpm4             W4    
+  31       minicpm4             W4    
+
+  Summary: 32 W4 | 0 W8 | 0 FP16
+======================================================================
+[INFO] Using device: cuda:0
+[INFO] Loading tokenizer from /opt/model...
+[INFO] Loaded 64 calibration samples (max_len=131072)
+[INFO] Loading model from /opt/model (CPU)...
+Skipping import of cpp extensions due to incompatible torch version 2.8.0+cu128 for torchao version 0.16.0             Please see https://github.com/pytorch/ao/issues/2919 for more info
+Current Python version 3.10 is below the recommended 3.11 version. It is recommended to upgrade to Python 3.11 or higher for the best experience.
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loading checkpoint shards:   0%|                                                                                                                         | 0/4 [00:00<?, ?it/s]Loading checkpoint shards: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:00<00:00, 87.59it/s]
+[INFO] Model has 32 layers
+[INFO] Phase 1: Computing initial hidden states (embedding)...
+/opt/oldMoney-Project/quantization/quantiza_gptq_sparse_gpu.py:286: FutureWarning: `torch.distributed.reduce_op` is deprecated, please use `torch.distributed.ReduceOp` instead
+  if isinstance(obj, functools._lru_cache_wrapper):
+
+======================================================================
+[LAYER 0/31] type=minicpm4  bits=4
+======================================================================
+  Linears to quantize: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  Collecting Hessians (64 samples)...
+[W321 07:55:42.124715084 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:55:42.124809333 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:55:42.124828902 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:55:42.124835932 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:55:42.124853322 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:55:42.124863652 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:55:42.124882682 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:55:42.124891722 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:55:42.124905681 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:55:42.124912991 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:55:42.124932451 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:55:42.124939641 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:55:42.124949881 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:55:42.124959811 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:55:42.124969231 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:55:42.124974860 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:56:23.818839146 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:56:23.818912435 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:56:23.818969854 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:56:23.818976794 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:56:23.818989764 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:56:23.818999664 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:56:23.819012924 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:56:23.819022724 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:56:23.819039293 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:56:23.819046823 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:56:23.819076333 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:56:23.819091043 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:56:23.819107903 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:56:23.819115772 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:56:23.819136662 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:56:23.819149022 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:57:00.384117143 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:57:00.384249811 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:57:00.384338480 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:57:00.384364839 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:57:00.384395989 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:57:00.384416609 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:57:00.384474688 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:57:00.384498778 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:57:00.384554937 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:57:00.384572007 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:57:00.384599046 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:57:00.384606786 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:57:00.384638546 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:57:00.384648666 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:57:00.384664005 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:57:00.384672245 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:57:45.562135406 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:57:45.562230695 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:57:45.562325304 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:57:45.562334643 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:57:45.562348963 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:57:45.562356993 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:57:45.562370573 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:57:45.562378693 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:57:45.562398433 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:57:45.562409062 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:57:45.562426442 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:57:45.562434362 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:57:45.562452022 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:57:45.562462152 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:57:45.562490861 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:57:45.562505621 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=2.095736e-05 RelErr=0.2178
+    mlp.down_proj [4096x16384] W4 quantized in 3.0s
+    mlp.gate_proj MSE=5.911151e-06 RelErr=0.1523
+    mlp.gate_proj [16384x4096] W4 quantized in 0.5s
+    mlp.up_proj MSE=8.298013e-06 RelErr=0.1474
+    mlp.up_proj [16384x4096] W4 quantized in 0.5s
+    self_attn.k_proj MSE=3.896492e-06 RelErr=0.1950
+    self_attn.k_proj [256x4096] W4 quantized in 0.5s
+    self_attn.o_gate MSE=1.064600e-05 RelErr=0.1652
+    self_attn.o_gate [4096x4096] W4 quantized in 0.5s
+    self_attn.o_proj MSE=1.247862e-05 RelErr=0.1814
+    self_attn.o_proj [4096x4096] W4 quantized in 0.5s
+    self_attn.q_proj MSE=5.114545e-06 RelErr=0.1613
+    self_attn.q_proj [4096x4096] W4 quantized in 0.5s
+    self_attn.v_proj MSE=8.606605e-06 RelErr=0.1946
+    self_attn.v_proj [256x4096] W4 quantized in 0.5s
+  Updating hidden states for next layer...
+[W321 07:58:00.430134499 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:00.430206668 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:00.430228728 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:00.430238017 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:00.430291737 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:00.430300247 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:00.430314106 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:00.430321166 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:00.430344776 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:00.430351996 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:00.430364536 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:00.430371526 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:00.430383946 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:00.430396965 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:00.430427635 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:00.430434535 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:03.676375799 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:03.676451688 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:03.676524737 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:03.676534107 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:03.676546257 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:03.676564557 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:03.676578697 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:03.676586696 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:03.676608936 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:03.676619876 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:03.676638336 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:03.676655335 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:03.676671735 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:03.676686245 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:03.676721365 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:03.676738794 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:05.599043518 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:05.599123416 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:05.599152776 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:05.599160036 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:05.599171876 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:05.599179096 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:05.599194046 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:05.599200885 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:05.599218995 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:05.599225975 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:05.599237495 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:05.599243995 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:05.599261905 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:05.599268105 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:05.599282714 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:05.599289184 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:09.224886994 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:09.224965023 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:09.225010753 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:09.225022753 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:09.225038672 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:09.225047252 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:09.225061882 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:09.225074582 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:09.225091542 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:09.225105541 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:09.225137951 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:09.225150981 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:09.225172521 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:09.225194080 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:09.225228100 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 07:58:09.225241410 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+  Layer 0 done in 191.7s
+
+======================================================================
+[LAYER 1/31] type=lightning-attn  bits=4
+======================================================================
+  Linears to quantize: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (64 samples)...
+/opt/oldMoney-Project/quantization/quantiza_gptq_sparse_gpu.py:286: FutureWarning: `torch.distributed.reduce_op` is deprecated, please use `torch.distributed.ReduceOp` instead
+  if isinstance(obj, functools._lru_cache_wrapper):
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=1.675744e-05 RelErr=0.1814
+    mlp.down_proj [4096x16384] W4 quantized in 2.7s
+    mlp.gate_proj MSE=8.387941e-06 RelErr=0.1501
+    mlp.gate_proj [16384x4096] W4 quantized in 0.5s
+    mlp.up_proj MSE=8.860945e-06 RelErr=0.1459
+    mlp.up_proj [16384x4096] W4 quantized in 0.5s
+    self_attn.k_proj MSE=7.266333e-06 RelErr=0.1833
+    self_attn.k_proj [4096x4096] W4 quantized in 0.5s
+    self_attn.o_proj MSE=1.080540e-05 RelErr=0.1643
+    self_attn.o_proj [4096x4096] W4 quantized in 0.5s
+    self_attn.q_proj MSE=7.271459e-06 RelErr=0.1796
+    self_attn.q_proj [4096x4096] W4 quantized in 0.5s
+    self_attn.v_proj MSE=9.500223e-06 RelErr=0.1672
+    self_attn.v_proj [4096x4096] W4 quantized in 0.5s
+    self_attn.z_proj MSE=9.065571e-06 RelErr=0.1637
+    self_attn.z_proj [4096x4096] W4 quantized in 0.5s
+  Updating hidden states for next layer...
+  Layer 1 done in 194.3s
+
+======================================================================
+[LAYER 2/31] type=lightning-attn  bits=4
+======================================================================
+  Linears to quantize: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (64 samples)...
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=1.559365e-05 RelErr=0.1688
+    mlp.down_proj [4096x16384] W4 quantized in 2.7s
+    mlp.gate_proj MSE=9.562010e-06 RelErr=0.1423
+    mlp.gate_proj [16384x4096] W4 quantized in 0.5s
+    mlp.up_proj MSE=9.614965e-06 RelErr=0.1422
+    mlp.up_proj [16384x4096] W4 quantized in 0.5s
+    self_attn.k_proj MSE=9.735851e-06 RelErr=0.1648
+    self_attn.k_proj [4096x4096] W4 quantized in 0.5s
+    self_attn.o_proj MSE=1.047137e-05 RelErr=0.1425
+    self_attn.o_proj [4096x4096] W4 quantized in 0.5s
+    self_attn.q_proj MSE=9.740631e-06 RelErr=0.1635
+    self_attn.q_proj [4096x4096] W4 quantized in 0.5s
+    self_attn.v_proj MSE=1.170641e-05 RelErr=0.1518
+    self_attn.v_proj [4096x4096] W4 quantized in 0.5s
+    self_attn.z_proj MSE=9.789281e-06 RelErr=0.1516
+    self_attn.z_proj [4096x4096] W4 quantized in 0.5s
+  Updating hidden states for next layer...
+  Layer 2 done in 192.2s
+
+======================================================================
+[LAYER 3/31] type=lightning-attn  bits=4
+======================================================================
+  Linears to quantize: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (64 samples)...
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=1.146568e-05 RelErr=0.1462
+    mlp.down_proj [4096x16384] W4 quantized in 2.7s
+    mlp.gate_proj MSE=1.092435e-05 RelErr=0.1389
+    mlp.gate_proj [16384x4096] W4 quantized in 0.6s
+    mlp.up_proj MSE=9.657240e-06 RelErr=0.1392
+    mlp.up_proj [16384x4096] W4 quantized in 0.5s
+    self_attn.k_proj MSE=1.143748e-05 RelErr=0.1539
+    self_attn.k_proj [4096x4096] W4 quantized in 0.5s
+    self_attn.o_proj MSE=1.025330e-05 RelErr=0.1366
+    self_attn.o_proj [4096x4096] W4 quantized in 0.5s
+    self_attn.q_proj MSE=1.103931e-05 RelErr=0.1510
+    self_attn.q_proj [4096x4096] W4 quantized in 0.5s
+    self_attn.v_proj MSE=1.189181e-05 RelErr=0.1447
+    self_attn.v_proj [4096x4096] W4 quantized in 0.5s
+    self_attn.z_proj MSE=9.814559e-06 RelErr=0.1424
+    self_attn.z_proj [4096x4096] W4 quantized in 0.5s
+  Updating hidden states for next layer...
+  Layer 3 done in 191.5s
+
+======================================================================
+[LAYER 4/31] type=lightning-attn  bits=4
+======================================================================
+  Linears to quantize: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (64 samples)...
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=1.105356e-05 RelErr=0.1423
+    mlp.down_proj [4096x16384] W4 quantized in 2.8s
+    mlp.gate_proj MSE=1.048300e-05 RelErr=0.1356
+    mlp.gate_proj [16384x4096] W4 quantized in 0.5s
+    mlp.up_proj MSE=9.513664e-06 RelErr=0.1354
+    mlp.up_proj [16384x4096] W4 quantized in 0.5s
+    self_attn.k_proj MSE=8.929024e-06 RelErr=0.1468
+    self_attn.k_proj [4096x4096] W4 quantized in 0.5s
+    self_attn.o_proj MSE=1.004333e-05 RelErr=0.1362
+    self_attn.o_proj [4096x4096] W4 quantized in 0.5s
+    self_attn.q_proj MSE=8.730411e-06 RelErr=0.1456
+    self_attn.q_proj [4096x4096] W4 quantized in 0.5s
+    self_attn.v_proj MSE=1.069619e-05 RelErr=0.1390
+    self_attn.v_proj [4096x4096] W4 quantized in 0.6s
+    self_attn.z_proj MSE=9.221172e-06 RelErr=0.1386
+    self_attn.z_proj [4096x4096] W4 quantized in 0.5s
+  Updating hidden states for next layer...
+  Layer 4 done in 193.1s
+
+======================================================================
+[LAYER 5/31] type=lightning-attn  bits=4
+======================================================================
+  Linears to quantize: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (64 samples)...
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=9.522486e-06 RelErr=0.1326
+    mlp.down_proj [4096x16384] W4 quantized in 2.9s
+    mlp.gate_proj MSE=1.033988e-05 RelErr=0.1333
+    mlp.gate_proj [16384x4096] W4 quantized in 0.5s
+    mlp.up_proj MSE=9.399459e-06 RelErr=0.1337
+    mlp.up_proj [16384x4096] W4 quantized in 0.5s
+    self_attn.k_proj MSE=1.026508e-05 RelErr=0.1468
+    self_attn.k_proj [4096x4096] W4 quantized in 0.5s
+    self_attn.o_proj MSE=1.012005e-05 RelErr=0.1342
+    self_attn.o_proj [4096x4096] W4 quantized in 0.5s
+    self_attn.q_proj MSE=9.715699e-06 RelErr=0.1412
+    self_attn.q_proj [4096x4096] W4 quantized in 0.5s
+    self_attn.v_proj MSE=1.099905e-05 RelErr=0.1378
+    self_attn.v_proj [4096x4096] W4 quantized in 0.5s
+    self_attn.z_proj MSE=8.978138e-06 RelErr=0.1354
+    self_attn.z_proj [4096x4096] W4 quantized in 0.9s
+  Updating hidden states for next layer...
+  Layer 5 done in 205.3s
+
+======================================================================
+[LAYER 6/31] type=lightning-attn  bits=4
+======================================================================
+  Linears to quantize: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (64 samples)...

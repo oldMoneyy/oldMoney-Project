@@ -1,0 +1,154 @@
+===== START ENV PREP Fri Mar 20 11:29:54 UTC 2026 =====
+===== INSTALL TORCH =====
+Using Python 3.10.19 environment at: nvfp4_venv
+Checked 1 package in 3ms
+===== VERIFY TORCH =====
+2.8.0+cu128 12.8
+['sm_70', 'sm_75', 'sm_80', 'sm_86', 'sm_90', 'sm_100', 'sm_120']
+True
+===== INSTALL FLASH ATTN =====
+Using Python 3.10.19 environment at: nvfp4_venv
+Checked 1 package in 4ms
+===== INSTALL PYTHON DEPS =====
+Hit:1 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64  InRelease
+Hit:2 http://security.ubuntu.com/ubuntu noble-security InRelease
+Hit:3 http://archive.ubuntu.com/ubuntu noble InRelease
+Hit:4 http://archive.ubuntu.com/ubuntu noble-updates InRelease
+Hit:5 http://archive.ubuntu.com/ubuntu noble-backports InRelease
+Hit:6 https://ppa.launchpadcontent.net/deadsnakes/ppa/ubuntu noble InRelease
+Reading package lists...
+W: https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/InRelease: Key is stored in legacy trusted.gpg keyring (/etc/apt/trusted.gpg), see the DEPRECATION section in apt-key(8) for details.
+Reading package lists...
+Building dependency tree...
+Reading state information...
+libpcre3-dev is already the newest version (2:8.39-15build1).
+0 upgraded, 0 newly installed, 0 to remove and 96 not upgraded.
+Using Python 3.10.19 environment at: nvfp4_venv
+Checked 2 packages in 2ms
+Using Python 3.10.19 environment at: nvfp4_venv
+Checked 1 package in 6ms
+Using Python 3.10.19 environment at: nvfp4_venv
+Checked 1 package in 2ms
+Using Python 3.10.19 environment at: nvfp4_venv
+Checked 10 packages in 4ms
+Using Python 3.10.19 environment at: nvfp4_venv
+Checked 1 package in 3ms
+Using Python 3.10.19 environment at: nvfp4_venv
+Checked 1 package in 4ms
+Using Python 3.10.19 environment at: nvfp4_venv
+Resolved 88 packages in 56ms
+Uninstalled 2 packages in 144ms
+Installed 2 packages in 171ms
+ - huggingface-hub==0.36.2
+ + huggingface-hub==1.7.2
+ - transformers==4.57.6
+ + transformers==5.3.0
+Using Python 3.10.19 environment at: nvfp4_venv
+Checked 5 packages in 8ms
+Using Python 3.10.19 environment at: nvfp4_venv
+Resolved 18 packages in 10ms
+Uninstalled 2 packages in 124ms
+Installed 2 packages in 157ms
+ - huggingface-hub==1.7.2
+ + huggingface-hub==0.36.2
+ - transformers==5.3.0
+ + transformers==4.57.6
+Requirement already satisfied: pip in ./nvfp4_venv/lib/python3.10/site-packages (26.0.1)
+===== VERIFY GPTQMODEL =====
+
+[33mWARN[0m  Python GIL is enabled: Multi-gpu quant acceleration for MoE models is sub-optimal and multi-core accelerated cpu packing is also disabled. We recommend Python >= 3.13.3t with Pytorch > 2.8 for mult-gpu quantization and multi-cpu packing with env `PYTHON_GIL=0`.
+[33mWARN[0m  Feature `utils/Perplexity` requires Python < 3.14 and Python GIL enabled and Python >= 3.13.3T (T for Threading-Free edition of Python) plus Torch 2.8. Feature is currently skipped/disabled.
+[W320 11:30:03.783279815 Context.cpp:320] Warning: torch.backends.cuda.preferred_linalg_library is an experimental feature. If you see any error or unexpected behavior when this flag is set please file an issue on GitHub. (function operator())
+Skipping import of cpp extensions due to incompatible torch version 2.8.0+cu128 for torchao version 0.16.0             Please see https://github.com/pytorch/ao/issues/2919 for more info
+[32mINFO[0m  ENV: Auto setting PYTORCH_ALLOC_CONF='expandable_segments:True,max_split_size_mb:256,garbage_collection_threshold:0.7' for memory saving.
+[32mINFO[0m  ENV: Auto setting CUDA_DEVICE_ORDER=PCI_BUS_ID for correctness.          
+[32mINFO[0m  
+
+┌─────────────┐    ┌────────────────────────┐    ┌────────────┐    ┌─────────┐
+│ GPT-QModel  │ -> │ ▓▓▓▓▓▓▓▓▓▓▓▓ 16bit     │ -> │ ▒▒▒▒ 8bit  │ -> │ ░░ 4bit │
+└─────────────┘    └────────────────────────┘    └────────────┘    └─────────┘
+GPT-QModel   : 5.8.0
+Transformers : 4.57.6
+Torch        : 2.8.0+cu128
+Triton       : 3.4.0
+GPTQModel OK
+flash_attn OK
+===== PREPARE VENDOR SOURCES =====
+===== CLEAN infllmv2_cuda_impl =====
+===== BUILD infllmv2_cuda_impl =====
+Obtaining file:///opt/oldMoney-Project/vendor/infllmv2_cuda_impl
+  Checking if build backend supports build_editable: started
+  Checking if build backend supports build_editable: finished with status 'done'
+  Preparing editable metadata (pyproject.toml): started
+  Preparing editable metadata (pyproject.toml): finished with status 'done'
+Requirement already satisfied: torch in /opt/oldMoney-Project/quantization/nvfp4_venv/lib/python3.10/site-packages (from infllm_v2==0.0.0) (2.8.0+cu128)
+Requirement already satisfied: packaging in /opt/oldMoney-Project/quantization/nvfp4_venv/lib/python3.10/site-packages (from infllm_v2==0.0.0) (26.0)
+Requirement already satisfied: psutil in /opt/oldMoney-Project/quantization/nvfp4_venv/lib/python3.10/site-packages (from infllm_v2==0.0.0) (7.2.2)
+Requirement already satisfied: filelock in /opt/oldMoney-Project/quantization/nvfp4_venv/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (3.20.0)
+Requirement already satisfied: typing-extensions>=4.10.0 in /opt/oldMoney-Project/quantization/nvfp4_venv/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (4.15.0)
+Requirement already satisfied: sympy>=1.13.3 in /opt/oldMoney-Project/quantization/nvfp4_venv/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (1.14.0)
+Requirement already satisfied: networkx in /opt/oldMoney-Project/quantization/nvfp4_venv/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (3.4.2)
+Requirement already satisfied: jinja2 in /opt/oldMoney-Project/quantization/nvfp4_venv/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (3.1.6)
+Requirement already satisfied: fsspec in /opt/oldMoney-Project/quantization/nvfp4_venv/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (2025.12.0)
+Requirement already satisfied: nvidia-cuda-nvrtc-cu12==12.8.93 in /opt/oldMoney-Project/quantization/nvfp4_venv/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (12.8.93)
+Requirement already satisfied: nvidia-cuda-runtime-cu12==12.8.90 in /opt/oldMoney-Project/quantization/nvfp4_venv/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (12.8.90)
+Requirement already satisfied: nvidia-cuda-cupti-cu12==12.8.90 in /opt/oldMoney-Project/quantization/nvfp4_venv/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (12.8.90)
+Requirement already satisfied: nvidia-cudnn-cu12==9.10.2.21 in /opt/oldMoney-Project/quantization/nvfp4_venv/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (9.10.2.21)
+Requirement already satisfied: nvidia-cublas-cu12==12.8.4.1 in /opt/oldMoney-Project/quantization/nvfp4_venv/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (12.8.4.1)
+Requirement already satisfied: nvidia-cufft-cu12==11.3.3.83 in /opt/oldMoney-Project/quantization/nvfp4_venv/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (11.3.3.83)
+Requirement already satisfied: nvidia-curand-cu12==10.3.9.90 in /opt/oldMoney-Project/quantization/nvfp4_venv/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (10.3.9.90)
+Requirement already satisfied: nvidia-cusolver-cu12==11.7.3.90 in /opt/oldMoney-Project/quantization/nvfp4_venv/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (11.7.3.90)
+Requirement already satisfied: nvidia-cusparse-cu12==12.5.8.93 in /opt/oldMoney-Project/quantization/nvfp4_venv/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (12.5.8.93)
+Requirement already satisfied: nvidia-cusparselt-cu12==0.7.1 in /opt/oldMoney-Project/quantization/nvfp4_venv/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (0.7.1)
+Requirement already satisfied: nvidia-nccl-cu12==2.27.3 in /opt/oldMoney-Project/quantization/nvfp4_venv/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (2.27.3)
+Requirement already satisfied: nvidia-nvtx-cu12==12.8.90 in /opt/oldMoney-Project/quantization/nvfp4_venv/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (12.8.90)
+Requirement already satisfied: nvidia-nvjitlink-cu12==12.8.93 in /opt/oldMoney-Project/quantization/nvfp4_venv/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (12.8.93)
+Requirement already satisfied: nvidia-cufile-cu12==1.13.1.3 in /opt/oldMoney-Project/quantization/nvfp4_venv/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (1.13.1.3)
+Requirement already satisfied: triton==3.4.0 in /opt/oldMoney-Project/quantization/nvfp4_venv/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (3.4.0)
+Requirement already satisfied: setuptools>=40.8.0 in /opt/oldMoney-Project/quantization/nvfp4_venv/lib/python3.10/site-packages (from triton==3.4.0->torch->infllm_v2==0.0.0) (79.0.1)
+Requirement already satisfied: mpmath<1.4,>=1.1.0 in /opt/oldMoney-Project/quantization/nvfp4_venv/lib/python3.10/site-packages (from sympy>=1.13.3->torch->infllm_v2==0.0.0) (1.3.0)
+Requirement already satisfied: MarkupSafe>=2.0 in /opt/oldMoney-Project/quantization/nvfp4_venv/lib/python3.10/site-packages (from jinja2->torch->infllm_v2==0.0.0) (3.0.2)
+Building wheels for collected packages: infllm_v2
+  Building editable for infllm_v2 (pyproject.toml): started
+  Building editable for infllm_v2 (pyproject.toml): still running...
+  Building editable for infllm_v2 (pyproject.toml): finished with status 'done'
+  Created wheel for infllm_v2: filename=infllm_v2-0.0.0-0.editable-cp310-cp310-linux_x86_64.whl size=2813 sha256=bde641c95e30821395cc77eb3d5fb36a4ca42b009decdcc079c5c2237a03ac3b
+  Stored in directory: /tmp/pip-ephem-wheel-cache-iopb8dod/wheels/0a/31/15/4c39206d725d992e36757120f969042638bd2fcc5d40100df3
+Successfully built infllm_v2
+Installing collected packages: infllm_v2
+  Attempting uninstall: infllm_v2
+    Found existing installation: infllm_v2 0.0.0
+    Uninstalling infllm_v2-0.0.0:
+      Successfully uninstalled infllm_v2-0.0.0
+Successfully installed infllm_v2-0.0.0
+===== VERIFY infllm_v2 =====
+infllm_v2 OK
+===== CLEAN sparse_kernel =====
+===== BUILD sparse_kernel =====
+Obtaining file:///opt/oldMoney-Project/vendor/sparse_kernel
+  Checking if build backend supports build_editable: started
+  Checking if build backend supports build_editable: finished with status 'done'
+  Preparing editable metadata (pyproject.toml): started
+  Preparing editable metadata (pyproject.toml): finished with status 'done'
+Building wheels for collected packages: sparse_kernel_extension
+  Building editable for sparse_kernel_extension (pyproject.toml): started
+  Building editable for sparse_kernel_extension (pyproject.toml): still running...
+  Building editable for sparse_kernel_extension (pyproject.toml): finished with status 'done'
+  Created wheel for sparse_kernel_extension: filename=sparse_kernel_extension-0.0.0-0.editable-cp310-cp310-linux_x86_64.whl size=2880 sha256=74e571fcec296e7e539074d3876bb628f9f292a637e343a0b8a3b0121346f50e
+  Stored in directory: /tmp/pip-ephem-wheel-cache-tln3ndj2/wheels/5a/fc/b5/20630ae4221534e4bb61f0ba2b1f0264e835b51d19fa6556e3
+Successfully built sparse_kernel_extension
+Installing collected packages: sparse_kernel_extension
+  Attempting uninstall: sparse_kernel_extension
+    Found existing installation: sparse_kernel_extension 0.0.0
+    Uninstalling sparse_kernel_extension-0.0.0:
+      Successfully uninstalled sparse_kernel_extension-0.0.0
+Successfully installed sparse_kernel_extension-0.0.0
+===== VERIFY sparse_kernel =====
+sparse_kernel_extension OK
+===== FINAL VERIFY =====
+transformers 4.57.6 /opt/oldMoney-Project/quantization/nvfp4_venv/lib/python3.10/site-packages/transformers/__init__.py
+torch 2.8.0+cu128 12.8
+flash_attn OK
+FINAL infllm_v2 OK
+FINAL sparse_kernel_extension OK
+===== DONE ENV PREP Fri Mar 20 11:33:52 UTC 2026 =====

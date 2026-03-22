@@ -210,12 +210,12 @@ python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31333 \
 cd /opt/SOAR-Toolkit
 nohup python3 eval_model.py \
   --api_base http://127.0.0.1:31333 \
-  --model_path /opt/model \
+  --model_path /opt/model_nvfp4_awq_v2 \
   --data_path eval_dataset/perf_public_set.jsonl \
   --concurrency 64 \
   --num_samples 150 \
   --verbose \
-  > /opt/eval_original_model.log 2>&1 &
+  > /opt/oldMoney-Project/logs/eval_awq_model_v3.log 2>&1 &
 ```
 
 
@@ -261,6 +261,8 @@ python -c "from gptqmodel import GPTQModel, QuantizeConfig; print('GPTQModel OK'
 # bash /opt/oldMoney-Project/quantization/gptq_env_prepare.sh
 ```
 
+
+
 Activate the environment:
 ```bash
 source /opt/oldMoney-Project/quantization/venv/bin/activate
@@ -284,32 +286,39 @@ Pure dense quantization:
 ```bash
 source /opt/oldMoney-Project/quantization/venv/bin/activate
 export LD_LIBRARY_PATH=/opt/oldMoney-Project/quantization/venv/lib/python3.10/site-packages/torch/lib:$LD_LIBRARY_PATH
-nohup python3 opt/oldMoney-Project/quantization/quantiza_gptq_dense_disk.py \
+nohup python3 /opt/oldMoney-Project/quantization/GPTQ_int4_flashinfer_dense_gpu.py \
     --input /opt/model \
-    --output /opt/model_gptq_ultimate_64_dense \
+    --output /opt/model_gptq_int4_flashinfer_dense \
     --bits 4 \
     --group-size 128 \
     --calib-data /opt/oldMoney-Project/quantization/ultimate_64_token_balanced.jsonl \
     --max-samples 64 \
     --max-len 131072 \
-    > /opt/oldMoney-Project/quantization/gptq_ultimate_64_dense.log 2>&1 &
+    > /opt/oldMoney-Project/logs/model_gptq_int4_flashinfer_dense.log 2>&1 &
+
+tail -f /opt/oldMoney-Project/logs/model_gptq_int4_flashinfer_dense.log
 ```
+
 
 
 Original sparse quantization (# config.sparse_config["dense_len"] = 655360):
 ```bash
 source /opt/oldMoney-Project/quantization/venv/bin/activate
 export LD_LIBRARY_PATH=/opt/oldMoney-Project/quantization/venv/lib/python3.10/site-packages/torch/lib:$LD_LIBRARY_PATH
-nohup python3 /opt/oldMoney-Project/quantization/quantiza_gptq_sparse_gpu.py \
+nohup python3 /opt/oldMoney-Project/quantization/GPTQ_int4_minicpm_flashinfer_sparse_gpu.py \
     --input /opt/model \
-    --output /opt/model_gptq_sparse \
+    --output /opt/model_gptq_int4_minicpm_flashinfer_sparse \
     --bits 4 \
     --group-size 128 \
     --calib-data /opt/oldMoney-Project/quantization/ultimate_64_token_balanced.jsonl \
     --max-samples 64 \
     --max-len 131072 \
-    > /opt/oldMoney-Project/logs/gptq_sparse.log 2>&1 &
+    > /opt/oldMoney-Project/logs/model_gptq_int4_minicpm_flashinfer_sparse.log 2>&1 &
+
+tail -f /opt/oldMoney-Project/logs/model_gptq_int4_minicpm_flashinfer_sparse.log
 ```
+
+
 
 
 ## Deploy Quantized Models
@@ -380,7 +389,7 @@ python3 -m sglang.launch_server \
 
 
 
-# NVFP4
+# AWQ
 
 
 Working like shit... Still optimizing.
@@ -389,27 +398,55 @@ Working like shit... Still optimizing.
 uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
 
 source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
-nohup python /opt/oldMoney-Project/quantization/nvfp4_quantize_sala.py \
-    --input /opt/model \
-    --output /opt/model_nvfp4_gptq \
-    --calib-data /opt/oldMoney-Project/quantization/deadly_32_max_profit.jsonl \
-    --max-samples 32 --max-len 131072 \
-    > /opt/oldMoney-Project/logs/nvfp4_quantize_sala.log 2>&1 &
+python /opt/oldMoney-Project/quantization/nvfp4_awq.py \
+ --input /opt/model \
+ --output /opt/model_nvfp4_awq_v2 \
+ --calib-data /opt/oldMoney-Project/quantization/calibration/optimal_64.jsonl \
+ --max-samples 64 \
+ --max-len 131072 \
+ --mse-iters 200 \
+ --mse-max-shrink 0.60 \
+ --mse-error-norm 2.0
 
-nohup python /opt/oldMoney-Project/quantization/nvfp4_awq.py \
-    --input /opt/model \
-    --output /opt/model_nvfp4_awq \
-    --calib-data /opt/oldMoney-Project/quantization/calibration/final_merged_calibration.jsonl \
-    --max-samples 96 \
-    --max-len 131072 \
-    > /opt/oldMoney-Project/logs/nvfp4_awq.log 2>&1 &
+source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
+python /opt/oldMoney-Project/quantization/nvfp4_awq.py \
+ --input /opt/model \
+ --output /opt/model_nvfp4_awq_v3 \
+ --calib-data /opt/oldMoney-Project/quantization/calibration/optimal_96.jsonl \
+ --max-samples 64 \
+ --max-len 131072 \
+ --mse-iters 200 \
+ --mse-max-shrink 0.60 \
+ --mse-error-norm 2.0
 ```
+
+
+
+
+
 
 
 ```bash
 cd /opt
+fuser -k -9 31333/tcp
 nohup python3 -m sglang.launch_server \
-    --model /opt/model_nvfp4_awq \
+    --model /opt/model_nvfp4_awq_v2 \
+    --quantization modelopt \
+    --trust-remote-code \
+    --disable-radix-cache \
+    --attention-backend minicpm_flashinfer \
+    --chunked-prefill-size 32768 \
+    --max-running-requests 64 \
+    --skip-server-warmup \
+    --port 31333 \
+    --dense-as-sparse \
+    --mem-fraction-static 0.82 \
+    > /opt/server.log 2>&1 &
+
+cd /opt
+fuser -k -9 31333/tcp
+nohup python3 -m sglang.launch_server \
+    --model /opt/model_nvfp4_awq_v3 \
     --quantization modelopt \
     --trust-remote-code \
     --disable-radix-cache \
@@ -418,10 +455,69 @@ nohup python3 -m sglang.launch_server \
     --max-running-requests 32 \
     --skip-server-warmup \
     --port 31333 \
+    --log-level info \
     --dense-as-sparse \
     --mem-fraction-static 0.82 \
-    > server.log 2>&1 &
+    > /opt/server.log 2>&1 &
+
+# Faster version
+cd /opt
+fuser -k -9 31333/tcp
+export TORCHINDUCTOR_COMPILE_THREADS=20
+export TORCHINDUCTOR_MAX_AUTOTUNE=0
+export TORCHINDUCTOR_COORDINATE_DESCENT_TUNING=0
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+export PYTORCH_ALLOC_CONF=expandable_segments:True
+export OMP_NUM_THREADS=4
+export CUDA_DEVICE_MAX_CONNECTIONS=1
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+export PYTORCH_ALLOC_CONF=expandable_segments:True
+nohup python3 -m sglang.launch_server \
+    --model /opt/model_nvfp4_awq_v2 \
+    --quantization modelopt \
+    --trust-remote-code \
+    --disable-radix-cache \
+    --kv-cache-dtype fp8_e5m2 \
+    --attention-backend minicpm_flashinfer \
+    --chunked-prefill-size 32768 \
+    --max-running-requests 64 \
+    --max-mamba-cache-size 64 \
+    --skip-server-warmup \
+    --port 31333 \
+    --dense-as-sparse \
+    --fuse-topk \
+    --log-level info \
+    --mem-fraction-static 0.82 \
+    --num-continuous-decode-steps 32 \
+    --schedule-policy fcfs \
+    --cuda-graph-max-bs 64 \
+    --torch-compile-max-bs 64 \
+    --enable-torch-compile \
+    > /opt/server.log 2>&1 &
 ```
+
+
+Duration result for `model_nvfp4_awq_v2` with no torch compile on RTX 6000D:
+```text
+============ Serving Benchmark Result ============
+Backend:                                 sglang    
+Traffic request rate:                    inf       
+Max request concurrency:                 not set   
+Successful requests:                     64        
+Benchmark duration (s):                  684.45    
+Total input tokens:                      3885243   
+Total input text tokens:                 3885243   
+Total generated tokens:                  409876    
+Total generated tokens (retokenized):    323190    
+Request throughput (req/s):              0.09      
+Input token throughput (tok/s):          5676.48   
+Output token throughput (tok/s):         598.84    
+Peak output token throughput (tok/s):    1882.00   
+Peak concurrent requests:                64        
+Total token throughput (tok/s):          6275.33   
+Concurrency:                             30.86     
+```
+
 
 
 

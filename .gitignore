@@ -24,7 +24,7 @@ venv/
 *.whl
 
 # Logs
-*.log
+
 nohup.out
 
 # Build artifacts
@@ -34,3 +34,4 @@ dist/
 
 # Large data
 *.jsonl
+submissions/submission_*.tar.gz

@@ -1,0 +1,1179 @@
+nohup: ignoring input
+======================================================================
+  GPTQ-Enhanced NVFP4 Quantiser for MiniCPM-SALA
+  -----------------------------------------------
+  Algorithm : Hessian error compensation + FP4 E2M1 grid
+  Packing   : Direct bitwise (zero re-quantisation)
+  Scales    : Pre-computed from W_orig (no propagation lag)
+  Hessian   : Chunked accumulation (8192 rows / GPU matmul)
+======================================================================
+  Input      : /opt/model
+  Output     : /opt/model_nvfp4_gptq
+  Samples    : 128
+  Max len    : 8192
+  Damp       : 0.01
+  Tmp dir    : /tmp/nvfp4_gptq_hs
+
+  Plan: 24 GPTQ-NVFP4 | 8 BF16
+    [ 0] minicpm4             -> BF16 
+    [ 1] lightning-attn       -> NVFP4
+    [ 2] lightning-attn       -> NVFP4
+    [ 3] lightning-attn       -> NVFP4
+    [ 4] lightning-attn       -> NVFP4
+    [ 5] lightning-attn       -> NVFP4
+    [ 6] lightning-attn       -> NVFP4
+    [ 7] lightning-attn       -> NVFP4
+    [ 8] lightning-attn       -> NVFP4
+    [ 9] minicpm4             -> BF16 
+    [10] lightning-attn       -> NVFP4
+    [11] lightning-attn       -> NVFP4
+    [12] lightning-attn       -> NVFP4
+    [13] lightning-attn       -> NVFP4
+    [14] lightning-attn       -> NVFP4
+    [15] lightning-attn       -> NVFP4
+    [16] minicpm4             -> BF16 
+    [17] minicpm4             -> BF16 
+    [18] lightning-attn       -> NVFP4
+    [19] lightning-attn       -> NVFP4
+    [20] lightning-attn       -> NVFP4
+    [21] lightning-attn       -> NVFP4
+    [22] minicpm4             -> BF16 
+    [23] lightning-attn       -> NVFP4
+    [24] lightning-attn       -> NVFP4
+    [25] lightning-attn       -> NVFP4
+    [26] lightning-attn       -> NVFP4
+    [27] lightning-attn       -> NVFP4
+    [28] lightning-attn       -> NVFP4
+    [29] minicpm4             -> BF16 
+    [30] minicpm4             -> BF16 
+    [31] minicpm4             -> BF16 
+======================================================================
+[INFO] GPU: NVIDIA RTX PRO 6000 Blackwell Workstation Edition (SM120, 95 GB)
+[INFO] 128 calibration samples, 563,231 tokens (avg 4400, max_len=8192)
+[INFO] Loading model (CPU, bf16)...
+Skipping import of cpp extensions due to incompatible torch version 2.8.0+cu128 for torchao version 0.16.0             Please see https://github.com/pytorch/ao/issues/2919 for more info
+Current Python version 3.10 is below the recommended 3.11 version. It is recommended to upgrade to Python 3.11 or higher for the best experience.
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loading checkpoint shards:   0%|                                                                                                                         | 0/4 [00:00<?, ?it/s]Loading checkpoint shards: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:00<00:00, 158.01it/s]
+[INFO] GPTQ-NVFP4: 24 layers | BF16: 8 layers
+
+[Phase 1] Embedding forward...
+/opt/oldMoney-Project/quantization/nvfp4_quantize_sala.py:335: FutureWarning: `torch.distributed.reduce_op` is deprecated, please use `torch.distributed.ReduceOp` instead
+  if isinstance(obj, functools._lru_cache_wrapper):
+  128 hidden states -> /tmp/nvfp4_gptq_hs
+
+======================================================================
+[Layer 0/31] minicpm4 -> BF16
+======================================================================
+  Keeping BF16 (minicpm4 sparse layer)
+  Propagating hidden states...
+[W321 08:41:06.884971436 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 08:41:06.885048115 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 08:41:07.143174109 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 08:41:07.143234548 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 08:41:08.230492165 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 08:41:08.230559394 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+  Layer 0 done in 10.3s
+
+======================================================================
+[Layer 1/31] lightning-attn -> GPTQ-NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (128 samples)...
+/opt/oldMoney-Project/quantization/nvfp4_quantize_sala.py:335: FutureWarning: `torch.distributed.reduce_op` is deprecated, please use `torch.distributed.ReduceOp` instead
+  if isinstance(obj, functools._lru_cache_wrapper):
+/opt/oldMoney-Project/quantization/nvfp4_quantize_sala.py:335: FutureWarning: `torch.distributed.reduce_op` is deprecated, please use `torch.distributed.ReduceOp` instead
+  if isinstance(obj, functools._lru_cache_wrapper):
+  Running GPTQ-FP4 quantisation...
+    mlp.down_proj [4096x16384] 3.5s
+      GPTQ: MSE=9.872e-06  RelErr=0.13926
+      RTN:  MSE=4.461e-06
+      Improvement: -121.3%
+    mlp.gate_proj [16384x4096] 0.6s
+      GPTQ: MSE=4.604e-06  RelErr=0.11124
+      RTN:  MSE=3.267e-06
+      Improvement: -40.9%
+    mlp.up_proj [16384x4096] 0.6s
+      GPTQ: MSE=5.115e-06  RelErr=0.11087
+      RTN:  MSE=3.667e-06
+      Improvement: -39.5%
+    self_attn.k_proj [4096x4096] 0.6s
+      GPTQ: MSE=3.517e-06  RelErr=0.12751
+      RTN:  MSE=1.865e-06
+      Improvement: -88.6%
+    self_attn.o_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.604e-06  RelErr=0.12849
+      RTN:  MSE=3.531e-06
+      Improvement: -87.0%
+    self_attn.q_proj [4096x4096] 0.6s
+      GPTQ: MSE=3.574e-06  RelErr=0.12590
+      RTN:  MSE=1.956e-06
+      Improvement: -82.7%
+    self_attn.v_proj [4096x4096] 0.7s
+      GPTQ: MSE=5.272e-06  RelErr=0.12455
+      RTN:  MSE=2.975e-06
+      Improvement: -77.2%
+    self_attn.z_proj [4096x4096] 0.6s
+      GPTQ: MSE=5.239e-06  RelErr=0.12441
+      RTN:  MSE=2.975e-06
+      Improvement: -76.1%
+  Propagating hidden states...
+  Layer 1 done in 270.7s
+
+======================================================================
+[Layer 2/31] lightning-attn -> GPTQ-NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (128 samples)...
+  Running GPTQ-FP4 quantisation...
+    mlp.down_proj [4096x16384] 3.3s
+      GPTQ: MSE=9.246e-06  RelErr=0.13001
+      RTN:  MSE=4.804e-06
+      Improvement: -92.5%
+    mlp.gate_proj [16384x4096] 0.6s
+      GPTQ: MSE=5.856e-06  RelErr=0.11137
+      RTN:  MSE=4.175e-06
+      Improvement: -40.3%
+    mlp.up_proj [16384x4096] 0.6s
+      GPTQ: MSE=5.720e-06  RelErr=0.10964
+      RTN:  MSE=4.204e-06
+      Improvement: -36.1%
+    self_attn.k_proj [4096x4096] 0.6s
+      GPTQ: MSE=5.257e-06  RelErr=0.12112
+      RTN:  MSE=3.131e-06
+      Improvement: -67.9%
+    self_attn.o_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.675e-06  RelErr=0.11379
+      RTN:  MSE=4.579e-06
+      Improvement: -45.8%
+    self_attn.q_proj [4096x4096] 0.6s
+      GPTQ: MSE=5.286e-06  RelErr=0.12045
+      RTN:  MSE=3.189e-06
+      Improvement: -65.7%
+    self_attn.v_proj [4096x4096] 0.6s
+      GPTQ: MSE=7.166e-06  RelErr=0.11877
+      RTN:  MSE=4.490e-06
+      Improvement: -59.6%
+    self_attn.z_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.150e-06  RelErr=0.12016
+      RTN:  MSE=3.772e-06
+      Improvement: -63.1%
+  Propagating hidden states...
+  Layer 2 done in 270.1s
+
+======================================================================
+[Layer 3/31] lightning-attn -> GPTQ-NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (128 samples)...
+  Running GPTQ-FP4 quantisation...
+    mlp.down_proj [4096x16384] 3.4s
+      GPTQ: MSE=6.593e-06  RelErr=0.11088
+      RTN:  MSE=4.711e-06
+      Improvement: -39.9%
+    mlp.gate_proj [16384x4096] 0.6s
+      GPTQ: MSE=6.831e-06  RelErr=0.10982
+      RTN:  MSE=5.013e-06
+      Improvement: -36.3%
+    mlp.up_proj [16384x4096] 0.6s
+      GPTQ: MSE=5.885e-06  RelErr=0.10869
+      RTN:  MSE=4.408e-06
+      Improvement: -33.5%
+    self_attn.k_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.168e-06  RelErr=0.11305
+      RTN:  MSE=4.240e-06
+      Improvement: -45.5%
+    self_attn.o_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.393e-06  RelErr=0.10788
+      RTN:  MSE=4.857e-06
+      Improvement: -31.6%
+    self_attn.q_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.147e-06  RelErr=0.11269
+      RTN:  MSE=4.254e-06
+      Improvement: -44.5%
+    self_attn.v_proj [4096x4096] 0.6s
+      GPTQ: MSE=7.127e-06  RelErr=0.11205
+      RTN:  MSE=5.016e-06
+      Improvement: -42.1%
+    self_attn.z_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.249e-06  RelErr=0.11361
+      RTN:  MSE=4.286e-06
+      Improvement: -45.8%
+  Propagating hidden states...
+  Layer 3 done in 274.9s
+
+======================================================================
+[Layer 4/31] lightning-attn -> GPTQ-NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (128 samples)...
+  Running GPTQ-FP4 quantisation...
+    mlp.down_proj [4096x16384] 3.5s
+      GPTQ: MSE=6.444e-06  RelErr=0.10864
+      RTN:  MSE=4.805e-06
+      Improvement: -34.1%
+    mlp.gate_proj [16384x4096] 0.6s
+      GPTQ: MSE=6.487e-06  RelErr=0.10663
+      RTN:  MSE=5.054e-06
+      Improvement: -28.4%
+    mlp.up_proj [16384x4096] 0.6s
+      GPTQ: MSE=5.804e-06  RelErr=0.10576
+      RTN:  MSE=4.590e-06
+      Improvement: -26.5%
+    self_attn.k_proj [4096x4096] 0.6s
+      GPTQ: MSE=4.995e-06  RelErr=0.10982
+      RTN:  MSE=3.644e-06
+      Improvement: -37.1%
+    self_attn.o_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.355e-06  RelErr=0.10837
+      RTN:  MSE=4.796e-06
+      Improvement: -32.5%
+    self_attn.q_proj [4096x4096] 0.6s
+      GPTQ: MSE=4.956e-06  RelErr=0.10972
+      RTN:  MSE=3.620e-06
+      Improvement: -36.9%
+    self_attn.v_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.492e-06  RelErr=0.10831
+      RTN:  MSE=4.892e-06
+      Improvement: -32.7%
+    self_attn.z_proj [4096x4096] 0.6s
+      GPTQ: MSE=5.745e-06  RelErr=0.10944
+      RTN:  MSE=4.254e-06
+      Improvement: -35.0%
+  Propagating hidden states...
+  Layer 4 done in 263.3s
+
+======================================================================
+[Layer 5/31] lightning-attn -> GPTQ-NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (128 samples)...
+  Running GPTQ-FP4 quantisation...
+    mlp.down_proj [4096x16384] 3.4s
+      GPTQ: MSE=5.893e-06  RelErr=0.10429
+      RTN:  MSE=4.782e-06
+      Improvement: -23.2%
+    mlp.gate_proj [16384x4096] 0.6s
+      GPTQ: MSE=6.533e-06  RelErr=0.10599
+      RTN:  MSE=5.146e-06
+      Improvement: -27.0%
+    mlp.up_proj [16384x4096] 0.6s
+      GPTQ: MSE=5.829e-06  RelErr=0.10527
+      RTN:  MSE=4.657e-06
+      Improvement: -25.2%
+    self_attn.k_proj [4096x4096] 0.7s
+      GPTQ: MSE=5.471e-06  RelErr=0.10715
+      RTN:  MSE=4.192e-06
+      Improvement: -30.5%
+    self_attn.o_proj [4096x4096] 0.7s
+      GPTQ: MSE=6.206e-06  RelErr=0.10510
+      RTN:  MSE=4.971e-06
+      Improvement: -24.9%
+    self_attn.q_proj [4096x4096] 0.7s
+      GPTQ: MSE=5.597e-06  RelErr=0.10720
+      RTN:  MSE=4.285e-06
+      Improvement: -30.6%
+    self_attn.v_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.543e-06  RelErr=0.10629
+      RTN:  MSE=5.122e-06
+      Improvement: -27.8%
+    self_attn.z_proj [4096x4096] 0.6s
+      GPTQ: MSE=5.645e-06  RelErr=0.10738
+      RTN:  MSE=4.333e-06
+      Improvement: -30.3%
+  Propagating hidden states...
+  Layer 5 done in 277.6s
+
+======================================================================
+[Layer 6/31] lightning-attn -> GPTQ-NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (128 samples)...
+  Running GPTQ-FP4 quantisation...
+    mlp.down_proj [4096x16384] 3.4s
+      GPTQ: MSE=5.987e-06  RelErr=0.10525
+      RTN:  MSE=4.770e-06
+      Improvement: -25.5%
+    mlp.gate_proj [16384x4096] 0.6s
+      GPTQ: MSE=6.323e-06  RelErr=0.10458
+      RTN:  MSE=5.122e-06
+      Improvement: -23.4%
+    mlp.up_proj [16384x4096] 0.6s
+      GPTQ: MSE=5.726e-06  RelErr=0.10390
+      RTN:  MSE=4.691e-06
+      Improvement: -22.1%
+    self_attn.k_proj [4096x4096] 0.6s
+      GPTQ: MSE=5.764e-06  RelErr=0.10578
+      RTN:  MSE=4.500e-06
+      Improvement: -28.1%
+    self_attn.o_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.018e-06  RelErr=0.10378
+      RTN:  MSE=4.936e-06
+      Improvement: -21.9%
+    self_attn.q_proj [4096x4096] 0.6s
+      GPTQ: MSE=5.562e-06  RelErr=0.10591
+      RTN:  MSE=4.348e-06
+      Improvement: -27.9%
+    self_attn.v_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.571e-06  RelErr=0.10482
+      RTN:  MSE=5.280e-06
+      Improvement: -24.4%
+    self_attn.z_proj [4096x4096] 0.7s
+      GPTQ: MSE=5.441e-06  RelErr=0.10650
+      RTN:  MSE=4.245e-06
+      Improvement: -28.2%
+  Propagating hidden states...
+  Layer 6 done in 281.8s
+
+======================================================================
+[Layer 7/31] lightning-attn -> GPTQ-NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (128 samples)...
+  Running GPTQ-FP4 quantisation...
+    mlp.down_proj [4096x16384] 3.3s
+      GPTQ: MSE=6.149e-06  RelErr=0.10559
+      RTN:  MSE=4.852e-06
+      Improvement: -26.7%
+    mlp.gate_proj [16384x4096] 0.6s
+      GPTQ: MSE=6.338e-06  RelErr=0.10485
+      RTN:  MSE=5.097e-06
+      Improvement: -24.4%
+    mlp.up_proj [16384x4096] 0.6s
+      GPTQ: MSE=5.796e-06  RelErr=0.10386
+      RTN:  MSE=4.750e-06
+      Improvement: -22.0%
+    self_attn.k_proj [4096x4096] 0.6s
+      GPTQ: MSE=5.775e-06  RelErr=0.10556
+      RTN:  MSE=4.527e-06
+      Improvement: -27.6%
+    self_attn.o_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.204e-06  RelErr=0.10489
+      RTN:  MSE=4.996e-06
+      Improvement: -24.2%
+    self_attn.q_proj [4096x4096] 0.6s
+      GPTQ: MSE=5.596e-06  RelErr=0.10574
+      RTN:  MSE=4.397e-06
+      Improvement: -27.3%
+    self_attn.v_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.572e-06  RelErr=0.10466
+      RTN:  MSE=5.283e-06
+      Improvement: -24.4%
+    self_attn.z_proj [4096x4096] 0.7s
+      GPTQ: MSE=5.414e-06  RelErr=0.10622
+      RTN:  MSE=4.250e-06
+      Improvement: -27.4%
+  Propagating hidden states...
+  Layer 7 done in 254.4s
+
+======================================================================
+[Layer 8/31] lightning-attn -> GPTQ-NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (128 samples)...
+  Running GPTQ-FP4 quantisation...
+    mlp.down_proj [4096x16384] 3.3s
+      GPTQ: MSE=6.012e-06  RelErr=0.10507
+      RTN:  MSE=4.802e-06
+      Improvement: -25.2%
+    mlp.gate_proj [16384x4096] 0.6s
+      GPTQ: MSE=6.689e-06  RelErr=0.10575
+      RTN:  MSE=5.295e-06
+      Improvement: -26.3%
+    mlp.up_proj [16384x4096] 0.6s
+      GPTQ: MSE=5.941e-06  RelErr=0.10481
+      RTN:  MSE=4.784e-06
+      Improvement: -24.2%
+    self_attn.k_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.129e-06  RelErr=0.10604
+      RTN:  MSE=4.757e-06
+      Improvement: -28.8%
+    self_attn.o_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.462e-06  RelErr=0.10590
+      RTN:  MSE=5.111e-06
+      Improvement: -26.4%
+    self_attn.q_proj [4096x4096] 0.6s
+      GPTQ: MSE=5.918e-06  RelErr=0.10628
+      RTN:  MSE=4.601e-06
+      Improvement: -28.6%
+    self_attn.v_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.818e-06  RelErr=0.10493
+      RTN:  MSE=5.460e-06
+      Improvement: -24.9%
+    self_attn.z_proj [4096x4096] 0.6s
+      GPTQ: MSE=5.603e-06  RelErr=0.10661
+      RTN:  MSE=4.366e-06
+      Improvement: -28.3%
+  Propagating hidden states...
+  Layer 8 done in 257.4s
+
+======================================================================
+[Layer 9/31] minicpm4 -> BF16
+======================================================================
+  Keeping BF16 (minicpm4 sparse layer)
+  Propagating hidden states...
+[W321 09:17:07.423091863 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 09:17:07.423156382 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 09:17:07.709084492 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 09:17:07.709134512 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 09:17:08.905360839 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 09:17:08.905408579 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+  Layer 9 done in 11.1s
+
+======================================================================
+[Layer 10/31] lightning-attn -> GPTQ-NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (128 samples)...
+  Running GPTQ-FP4 quantisation...
+    mlp.down_proj [4096x16384] 3.2s
+      GPTQ: MSE=6.063e-06  RelErr=0.10393
+      RTN:  MSE=4.947e-06
+      Improvement: -22.6%
+    mlp.gate_proj [16384x4096] 0.6s
+      GPTQ: MSE=6.379e-06  RelErr=0.10486
+      RTN:  MSE=5.141e-06
+      Improvement: -24.1%
+    mlp.up_proj [16384x4096] 0.6s
+      GPTQ: MSE=6.093e-06  RelErr=0.10434
+      RTN:  MSE=4.951e-06
+      Improvement: -23.1%
+    self_attn.k_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.483e-06  RelErr=0.10662
+      RTN:  MSE=4.996e-06
+      Improvement: -29.8%
+    self_attn.o_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.341e-06  RelErr=0.10573
+      RTN:  MSE=5.030e-06
+      Improvement: -26.1%
+    self_attn.q_proj [4096x4096] 0.7s
+      GPTQ: MSE=6.049e-06  RelErr=0.10651
+      RTN:  MSE=4.695e-06
+      Improvement: -28.9%
+    self_attn.v_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.638e-06  RelErr=0.10562
+      RTN:  MSE=5.244e-06
+      Improvement: -26.6%
+    self_attn.z_proj [4096x4096] 0.6s
+      GPTQ: MSE=5.682e-06  RelErr=0.10704
+      RTN:  MSE=4.387e-06
+      Improvement: -29.5%
+  Propagating hidden states...
+  Layer 10 done in 262.3s
+
+======================================================================
+[Layer 11/31] lightning-attn -> GPTQ-NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (128 samples)...
+  Running GPTQ-FP4 quantisation...
+    mlp.down_proj [4096x16384] 3.4s
+      GPTQ: MSE=6.322e-06  RelErr=0.10502
+      RTN:  MSE=5.024e-06
+      Improvement: -25.8%
+    mlp.gate_proj [16384x4096] 0.6s
+      GPTQ: MSE=6.342e-06  RelErr=0.10502
+      RTN:  MSE=5.081e-06
+      Improvement: -24.8%
+    mlp.up_proj [16384x4096] 0.6s
+      GPTQ: MSE=6.207e-06  RelErr=0.10436
+      RTN:  MSE=5.034e-06
+      Improvement: -23.3%
+    self_attn.k_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.217e-06  RelErr=0.10651
+      RTN:  MSE=4.791e-06
+      Improvement: -29.8%
+    self_attn.o_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.329e-06  RelErr=0.10486
+      RTN:  MSE=5.097e-06
+      Improvement: -24.2%
+    self_attn.q_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.040e-06  RelErr=0.10653
+      RTN:  MSE=4.681e-06
+      Improvement: -29.0%
+    self_attn.v_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.757e-06  RelErr=0.10554
+      RTN:  MSE=5.356e-06
+      Improvement: -26.2%
+    self_attn.z_proj [4096x4096] 0.6s
+      GPTQ: MSE=5.620e-06  RelErr=0.10697
+      RTN:  MSE=4.350e-06
+      Improvement: -29.2%
+  Propagating hidden states...
+  Layer 11 done in 260.5s
+
+======================================================================
+[Layer 12/31] lightning-attn -> GPTQ-NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (128 samples)...
+  Running GPTQ-FP4 quantisation...
+    mlp.down_proj [4096x16384] 3.3s
+      GPTQ: MSE=6.278e-06  RelErr=0.10383
+      RTN:  MSE=5.120e-06
+      Improvement: -22.6%
+    mlp.gate_proj [16384x4096] 0.6s
+      GPTQ: MSE=6.308e-06  RelErr=0.10548
+      RTN:  MSE=5.012e-06
+      Improvement: -25.9%
+    mlp.up_proj [16384x4096] 0.6s
+      GPTQ: MSE=6.378e-06  RelErr=0.10500
+      RTN:  MSE=5.112e-06
+      Improvement: -24.7%
+    self_attn.k_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.130e-06  RelErr=0.10769
+      RTN:  MSE=4.643e-06
+      Improvement: -32.0%
+    self_attn.o_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.760e-06  RelErr=0.10768
+      RTN:  MSE=5.160e-06
+      Improvement: -31.0%
+    self_attn.q_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.176e-06  RelErr=0.10739
+      RTN:  MSE=4.720e-06
+      Improvement: -30.8%
+    self_attn.v_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.732e-06  RelErr=0.10632
+      RTN:  MSE=5.235e-06
+      Improvement: -28.6%
+    self_attn.z_proj [4096x4096] 0.7s
+      GPTQ: MSE=5.934e-06  RelErr=0.10773
+      RTN:  MSE=4.527e-06
+      Improvement: -31.1%
+  Propagating hidden states...
+  Layer 12 done in 258.9s
+
+======================================================================
+[Layer 13/31] lightning-attn -> GPTQ-NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (128 samples)...
+  Running GPTQ-FP4 quantisation...
+    mlp.down_proj [4096x16384] 3.3s
+      GPTQ: MSE=6.282e-06  RelErr=0.10357
+      RTN:  MSE=5.147e-06
+      Improvement: -22.0%
+    mlp.gate_proj [16384x4096] 0.6s
+      GPTQ: MSE=6.212e-06  RelErr=0.10538
+      RTN:  MSE=4.942e-06
+      Improvement: -25.7%
+    mlp.up_proj [16384x4096] 0.6s
+      GPTQ: MSE=6.423e-06  RelErr=0.10485
+      RTN:  MSE=5.162e-06
+      Improvement: -24.4%
+    self_attn.k_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.811e-06  RelErr=0.10685
+      RTN:  MSE=5.226e-06
+      Improvement: -30.3%
+    self_attn.o_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.106e-06  RelErr=0.10380
+      RTN:  MSE=5.028e-06
+      Improvement: -21.4%
+    self_attn.q_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.497e-06  RelErr=0.10682
+      RTN:  MSE=5.008e-06
+      Improvement: -29.7%
+    self_attn.v_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.832e-06  RelErr=0.10635
+      RTN:  MSE=5.326e-06
+      Improvement: -28.3%
+    self_attn.z_proj [4096x4096] 0.7s
+      GPTQ: MSE=5.681e-06  RelErr=0.10808
+      RTN:  MSE=4.310e-06
+      Improvement: -31.8%
+  Propagating hidden states...
+  Layer 13 done in 256.7s
+
+======================================================================
+[Layer 14/31] lightning-attn -> GPTQ-NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (128 samples)...
+  Running GPTQ-FP4 quantisation...
+    mlp.down_proj [4096x16384] 3.3s
+      GPTQ: MSE=6.486e-06  RelErr=0.10415
+      RTN:  MSE=5.256e-06
+      Improvement: -23.4%
+    mlp.gate_proj [16384x4096] 0.6s
+      GPTQ: MSE=6.064e-06  RelErr=0.10537
+      RTN:  MSE=4.826e-06
+      Improvement: -25.7%
+    mlp.up_proj [16384x4096] 0.6s
+      GPTQ: MSE=6.555e-06  RelErr=0.10469
+      RTN:  MSE=5.277e-06
+      Improvement: -24.2%
+    self_attn.k_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.429e-06  RelErr=0.10717
+      RTN:  MSE=4.890e-06
+      Improvement: -31.5%
+    self_attn.o_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.228e-06  RelErr=0.10484
+      RTN:  MSE=5.018e-06
+      Improvement: -24.1%
+    self_attn.q_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.311e-06  RelErr=0.10735
+      RTN:  MSE=4.809e-06
+      Improvement: -31.2%
+    self_attn.v_proj [4096x4096] 0.7s
+      GPTQ: MSE=6.865e-06  RelErr=0.10595
+      RTN:  MSE=5.392e-06
+      Improvement: -27.3%
+    self_attn.z_proj [4096x4096] 0.7s
+      GPTQ: MSE=5.644e-06  RelErr=0.10779
+      RTN:  MSE=4.301e-06
+      Improvement: -31.2%
+  Propagating hidden states...
+  Layer 14 done in 259.1s
+
+======================================================================
+[Layer 15/31] lightning-attn -> GPTQ-NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (128 samples)...
+  Running GPTQ-FP4 quantisation...
+    mlp.down_proj [4096x16384] 3.3s
+      GPTQ: MSE=6.348e-06  RelErr=0.10472
+      RTN:  MSE=5.111e-06
+      Improvement: -24.2%
+    mlp.gate_proj [16384x4096] 0.6s
+      GPTQ: MSE=6.482e-06  RelErr=0.10650
+      RTN:  MSE=5.062e-06
+      Improvement: -28.1%
+    mlp.up_proj [16384x4096] 0.6s
+      GPTQ: MSE=6.493e-06  RelErr=0.10564
+      RTN:  MSE=5.143e-06
+      Improvement: -26.3%
+    self_attn.k_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.948e-06  RelErr=0.10669
+      RTN:  MSE=5.328e-06
+      Improvement: -30.4%
+    self_attn.o_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.835e-06  RelErr=0.10857
+      RTN:  MSE=5.142e-06
+      Improvement: -32.9%
+    self_attn.q_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.518e-06  RelErr=0.10670
+      RTN:  MSE=5.033e-06
+      Improvement: -29.5%
+    self_attn.v_proj [4096x4096] 0.6s
+      GPTQ: MSE=7.007e-06  RelErr=0.10559
+      RTN:  MSE=5.535e-06
+      Improvement: -26.6%
+    self_attn.z_proj [4096x4096] 0.7s
+      GPTQ: MSE=5.605e-06  RelErr=0.10690
+      RTN:  MSE=4.336e-06
+      Improvement: -29.3%
+  Propagating hidden states...
+  Layer 15 done in 255.1s
+
+======================================================================
+[Layer 16/31] minicpm4 -> BF16
+======================================================================
+  Keeping BF16 (minicpm4 sparse layer)
+  Propagating hidden states...
+[W321 09:43:10.956542363 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 09:43:10.956643823 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 09:43:11.197748727 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 09:43:11.197807156 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 09:43:12.182864719 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 09:43:12.182924338 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+  Layer 16 done in 10.4s
+
+======================================================================
+[Layer 17/31] minicpm4 -> BF16
+======================================================================
+  Keeping BF16 (minicpm4 sparse layer)
+  Propagating hidden states...
+[W321 09:43:21.596816588 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 09:43:21.596878358 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 09:43:21.890631759 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 09:43:21.890704969 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 09:43:22.989554286 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 09:43:22.989628846 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+  Layer 17 done in 10.3s
+
+======================================================================
+[Layer 18/31] lightning-attn -> GPTQ-NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (128 samples)...
+  Running GPTQ-FP4 quantisation...
+    mlp.down_proj [4096x16384] 3.3s
+      GPTQ: MSE=6.202e-06  RelErr=0.10446
+      RTN:  MSE=5.023e-06
+      Improvement: -23.5%
+    mlp.gate_proj [16384x4096] 0.6s
+      GPTQ: MSE=6.749e-06  RelErr=0.10620
+      RTN:  MSE=5.295e-06
+      Improvement: -27.5%
+    mlp.up_proj [16384x4096] 0.6s
+      GPTQ: MSE=6.441e-06  RelErr=0.10557
+      RTN:  MSE=5.109e-06
+      Improvement: -26.1%
+    self_attn.k_proj [4096x4096] 0.6s
+      GPTQ: MSE=7.053e-06  RelErr=0.10685
+      RTN:  MSE=5.362e-06
+      Improvement: -31.5%
+    self_attn.o_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.179e-06  RelErr=0.10300
+      RTN:  MSE=5.163e-06
+      Improvement: -19.7%
+    self_attn.q_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.445e-06  RelErr=0.10675
+      RTN:  MSE=4.955e-06
+      Improvement: -30.1%
+    self_attn.v_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.891e-06  RelErr=0.10579
+      RTN:  MSE=5.418e-06
+      Improvement: -27.2%
+    self_attn.z_proj [4096x4096] 0.7s
+      GPTQ: MSE=5.938e-06  RelErr=0.10726
+      RTN:  MSE=4.568e-06
+      Improvement: -30.0%
+  Propagating hidden states...
+  Layer 18 done in 265.3s
+
+======================================================================
+[Layer 19/31] lightning-attn -> GPTQ-NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (128 samples)...
+  Running GPTQ-FP4 quantisation...
+    mlp.down_proj [4096x16384] 3.2s
+      GPTQ: MSE=6.368e-06  RelErr=0.10429
+      RTN:  MSE=5.172e-06
+      Improvement: -23.1%
+    mlp.gate_proj [16384x4096] 0.6s
+      GPTQ: MSE=6.481e-06  RelErr=0.10574
+      RTN:  MSE=5.116e-06
+      Improvement: -26.7%
+    mlp.up_proj [16384x4096] 0.6s
+      GPTQ: MSE=6.647e-06  RelErr=0.10531
+      RTN:  MSE=5.293e-06
+      Improvement: -25.6%
+    self_attn.k_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.702e-06  RelErr=0.10701
+      RTN:  MSE=5.099e-06
+      Improvement: -31.4%
+    self_attn.o_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.224e-06  RelErr=0.10432
+      RTN:  MSE=5.073e-06
+      Improvement: -22.7%
+    self_attn.q_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.392e-06  RelErr=0.10705
+      RTN:  MSE=4.899e-06
+      Improvement: -30.5%
+    self_attn.v_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.915e-06  RelErr=0.10660
+      RTN:  MSE=5.358e-06
+      Improvement: -29.1%
+    self_attn.z_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.035e-06  RelErr=0.10772
+      RTN:  MSE=4.604e-06
+      Improvement: -31.1%
+  Propagating hidden states...
+  Layer 19 done in 258.6s
+
+======================================================================
+[Layer 20/31] lightning-attn -> GPTQ-NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (128 samples)...
+  Running GPTQ-FP4 quantisation...
+    mlp.down_proj [4096x16384] 3.4s
+      GPTQ: MSE=6.589e-06  RelErr=0.10548
+      RTN:  MSE=5.221e-06
+      Improvement: -26.2%
+    mlp.gate_proj [16384x4096] 0.6s
+      GPTQ: MSE=6.337e-06  RelErr=0.10594
+      RTN:  MSE=4.980e-06
+      Improvement: -27.2%
+    mlp.up_proj [16384x4096] 0.6s
+      GPTQ: MSE=6.788e-06  RelErr=0.10554
+      RTN:  MSE=5.373e-06
+      Improvement: -26.3%
+    self_attn.k_proj [4096x4096] 0.6s
+      GPTQ: MSE=7.162e-06  RelErr=0.10704
+      RTN:  MSE=5.444e-06
+      Improvement: -31.6%
+    self_attn.o_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.185e-06  RelErr=0.10357
+      RTN:  MSE=5.113e-06
+      Improvement: -21.0%
+    self_attn.q_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.583e-06  RelErr=0.10700
+      RTN:  MSE=5.044e-06
+      Improvement: -30.5%
+    self_attn.v_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.845e-06  RelErr=0.10630
+      RTN:  MSE=5.328e-06
+      Improvement: -28.5%
+    self_attn.z_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.031e-06  RelErr=0.10759
+      RTN:  MSE=4.608e-06
+      Improvement: -30.9%
+  Propagating hidden states...
+  Layer 20 done in 261.3s
+
+======================================================================
+[Layer 21/31] lightning-attn -> GPTQ-NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (128 samples)...
+  Running GPTQ-FP4 quantisation...
+    mlp.down_proj [4096x16384] 3.4s
+      GPTQ: MSE=6.672e-06  RelErr=0.10558
+      RTN:  MSE=5.277e-06
+      Improvement: -26.4%
+    mlp.gate_proj [16384x4096] 0.6s
+      GPTQ: MSE=6.420e-06  RelErr=0.10692
+      RTN:  MSE=4.955e-06
+      Improvement: -29.6%
+    mlp.up_proj [16384x4096] 0.6s
+      GPTQ: MSE=6.974e-06  RelErr=0.10655
+      RTN:  MSE=5.425e-06
+      Improvement: -28.6%
+    self_attn.k_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.853e-06  RelErr=0.10967
+      RTN:  MSE=4.987e-06
+      Improvement: -37.4%
+    self_attn.o_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.916e-06  RelErr=0.11032
+      RTN:  MSE=5.030e-06
+      Improvement: -37.5%
+    self_attn.q_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.727e-06  RelErr=0.10949
+      RTN:  MSE=4.933e-06
+      Improvement: -36.4%
+    self_attn.v_proj [4096x4096] 0.6s
+      GPTQ: MSE=7.087e-06  RelErr=0.10811
+      RTN:  MSE=5.326e-06
+      Improvement: -33.1%
+    self_attn.z_proj [4096x4096] 0.7s
+      GPTQ: MSE=6.286e-06  RelErr=0.10954
+      RTN:  MSE=4.637e-06
+      Improvement: -35.6%
+  Propagating hidden states...
+  Layer 21 done in 271.0s
+
+======================================================================
+[Layer 22/31] minicpm4 -> BF16
+======================================================================
+  Keeping BF16 (minicpm4 sparse layer)
+  Propagating hidden states...
+[W321 10:01:07.814259137 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 10:01:07.814338805 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 10:01:07.062963364 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 10:01:07.063019432 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 10:01:08.053812074 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 10:01:08.053870883 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+  Layer 22 done in 10.0s
+
+======================================================================
+[Layer 23/31] lightning-attn -> GPTQ-NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (128 samples)...
+  Running GPTQ-FP4 quantisation...
+    mlp.down_proj [4096x16384] 3.3s
+      GPTQ: MSE=6.695e-06  RelErr=0.10591
+      RTN:  MSE=5.257e-06
+      Improvement: -27.4%
+    mlp.gate_proj [16384x4096] 0.6s
+      GPTQ: MSE=6.244e-06  RelErr=0.10606
+      RTN:  MSE=4.888e-06
+      Improvement: -27.7%
+    mlp.up_proj [16384x4096] 0.6s
+      GPTQ: MSE=6.853e-06  RelErr=0.10559
+      RTN:  MSE=5.417e-06
+      Improvement: -26.5%
+    self_attn.k_proj [4096x4096] 0.6s
+      GPTQ: MSE=7.574e-06  RelErr=0.10767
+      RTN:  MSE=5.708e-06
+      Improvement: -32.7%
+    self_attn.o_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.235e-06  RelErr=0.10487
+      RTN:  MSE=5.020e-06
+      Improvement: -24.2%
+    self_attn.q_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.819e-06  RelErr=0.10753
+      RTN:  MSE=5.188e-06
+      Improvement: -31.4%
+    self_attn.v_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.821e-06  RelErr=0.10666
+      RTN:  MSE=5.288e-06
+      Improvement: -29.0%
+    self_attn.z_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.011e-06  RelErr=0.10816
+      RTN:  MSE=4.552e-06
+      Improvement: -32.0%
+  Propagating hidden states...
+  Layer 23 done in 259.9s
+
+======================================================================
+[Layer 24/31] lightning-attn -> GPTQ-NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (128 samples)...
+  Running GPTQ-FP4 quantisation...
+    mlp.down_proj [4096x16384] 3.3s
+      GPTQ: MSE=7.023e-06  RelErr=0.10802
+      RTN:  MSE=5.286e-06
+      Improvement: -32.9%
+    mlp.gate_proj [16384x4096] 0.6s
+      GPTQ: MSE=6.229e-06  RelErr=0.10640
+      RTN:  MSE=4.835e-06
+      Improvement: -28.8%
+    mlp.up_proj [16384x4096] 0.6s
+      GPTQ: MSE=6.963e-06  RelErr=0.10591
+      RTN:  MSE=5.472e-06
+      Improvement: -27.3%
+    self_attn.k_proj [4096x4096] 0.6s
+      GPTQ: MSE=7.583e-06  RelErr=0.10840
+      RTN:  MSE=5.644e-06
+      Improvement: -34.4%
+    self_attn.o_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.381e-06  RelErr=0.10584
+      RTN:  MSE=5.044e-06
+      Improvement: -26.5%
+    self_attn.q_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.837e-06  RelErr=0.10798
+      RTN:  MSE=5.164e-06
+      Improvement: -32.4%
+    self_attn.v_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.843e-06  RelErr=0.10671
+      RTN:  MSE=5.290e-06
+      Improvement: -29.4%
+    self_attn.z_proj [4096x4096] 0.7s
+      GPTQ: MSE=6.069e-06  RelErr=0.10855
+      RTN:  MSE=4.557e-06
+      Improvement: -33.2%
+  Propagating hidden states...
+  Layer 24 done in 261.0s
+
+======================================================================
+[Layer 25/31] lightning-attn -> GPTQ-NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (128 samples)...
+  Running GPTQ-FP4 quantisation...
+    mlp.down_proj [4096x16384] 3.4s
+      GPTQ: MSE=8.010e-06  RelErr=0.11397
+      RTN:  MSE=5.426e-06
+      Improvement: -47.6%
+    mlp.gate_proj [16384x4096] 0.6s
+      GPTQ: MSE=6.312e-06  RelErr=0.10745
+      RTN:  MSE=4.805e-06
+      Improvement: -31.4%
+    mlp.up_proj [16384x4096] 0.6s
+      GPTQ: MSE=7.233e-06  RelErr=0.10697
+      RTN:  MSE=5.577e-06
+      Improvement: -29.7%
+    self_attn.k_proj [4096x4096] 0.6s
+      GPTQ: MSE=7.464e-06  RelErr=0.10890
+      RTN:  MSE=5.500e-06
+      Improvement: -35.7%
+    self_attn.o_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.733e-06  RelErr=0.10787
+      RTN:  MSE=5.131e-06
+      Improvement: -31.2%
+    self_attn.q_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.954e-06  RelErr=0.10841
+      RTN:  MSE=5.198e-06
+      Improvement: -33.8%
+    self_attn.v_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.940e-06  RelErr=0.10676
+      RTN:  MSE=5.364e-06
+      Improvement: -29.4%
+    self_attn.z_proj [4096x4096] 0.7s
+      GPTQ: MSE=6.190e-06  RelErr=0.10895
+      RTN:  MSE=4.620e-06
+      Improvement: -34.0%
+  Propagating hidden states...
+  Layer 25 done in 257.4s
+
+======================================================================
+[Layer 26/31] lightning-attn -> GPTQ-NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (128 samples)...
+  Running GPTQ-FP4 quantisation...
+    mlp.down_proj [4096x16384] 3.3s
+      GPTQ: MSE=7.628e-06  RelErr=0.11019
+      RTN:  MSE=5.555e-06
+      Improvement: -37.3%
+    mlp.gate_proj [16384x4096] 0.6s
+      GPTQ: MSE=6.483e-06  RelErr=0.10831
+      RTN:  MSE=4.886e-06
+      Improvement: -32.7%
+    mlp.up_proj [16384x4096] 0.6s
+      GPTQ: MSE=7.404e-06  RelErr=0.10775
+      RTN:  MSE=5.643e-06
+      Improvement: -31.2%
+    self_attn.k_proj [4096x4096] 0.6s
+      GPTQ: MSE=9.516e-06  RelErr=0.11575
+      RTN:  MSE=6.173e-06
+      Improvement: -54.1%
+    self_attn.o_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.786e-06  RelErr=0.10654
+      RTN:  MSE=5.302e-06
+      Improvement: -28.0%
+    self_attn.q_proj [4096x4096] 0.6s
+      GPTQ: MSE=7.989e-06  RelErr=0.11257
+      RTN:  MSE=5.534e-06
+      Improvement: -44.4%
+    self_attn.v_proj [4096x4096] 0.6s
+      GPTQ: MSE=7.255e-06  RelErr=0.11391
+      RTN:  MSE=4.873e-06
+      Improvement: -48.9%
+    self_attn.z_proj [4096x4096] 0.6s
+      GPTQ: MSE=7.191e-06  RelErr=0.11275
+      RTN:  MSE=4.995e-06
+      Improvement: -44.0%
+  Propagating hidden states...
+  Layer 26 done in 251.5s
+
+======================================================================
+[Layer 27/31] lightning-attn -> GPTQ-NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (128 samples)...
+  Running GPTQ-FP4 quantisation...
+    mlp.down_proj [4096x16384] 3.2s
+      GPTQ: MSE=7.316e-06  RelErr=0.10710
+      RTN:  MSE=5.639e-06
+      Improvement: -29.7%
+    mlp.gate_proj [16384x4096] 0.6s
+      GPTQ: MSE=6.419e-06  RelErr=0.10812
+      RTN:  MSE=4.854e-06
+      Improvement: -32.2%
+    mlp.up_proj [16384x4096] 0.6s
+      GPTQ: MSE=7.480e-06  RelErr=0.10770
+      RTN:  MSE=5.706e-06
+      Improvement: -31.1%
+    self_attn.k_proj [4096x4096] 0.6s
+      GPTQ: MSE=7.303e-06  RelErr=0.11094
+      RTN:  MSE=5.192e-06
+      Improvement: -40.7%
+    self_attn.o_proj [4096x4096] 0.6s
+      GPTQ: MSE=7.636e-06  RelErr=0.11483
+      RTN:  MSE=5.131e-06
+      Improvement: -48.8%
+    self_attn.q_proj [4096x4096] 0.6s
+      GPTQ: MSE=7.074e-06  RelErr=0.11050
+      RTN:  MSE=5.089e-06
+      Improvement: -39.0%
+    self_attn.v_proj [4096x4096] 0.6s
+      GPTQ: MSE=7.154e-06  RelErr=0.10869
+      RTN:  MSE=5.339e-06
+      Improvement: -34.0%
+    self_attn.z_proj [4096x4096] 0.6s
+      GPTQ: MSE=6.608e-06  RelErr=0.11089
+      RTN:  MSE=4.757e-06
+      Improvement: -38.9%
+  Propagating hidden states...
+  Layer 27 done in 241.0s
+
+======================================================================
+[Layer 28/31] lightning-attn -> GPTQ-NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (128 samples)...
+  Running GPTQ-FP4 quantisation...
+    mlp.down_proj [4096x16384] 3.2s
+      GPTQ: MSE=7.373e-06  RelErr=0.10641
+      RTN:  MSE=5.754e-06
+      Improvement: -28.1%
+    mlp.gate_proj [16384x4096] 0.6s
+      GPTQ: MSE=6.336e-06  RelErr=0.10784
+      RTN:  MSE=4.814e-06
+      Improvement: -31.6%
+    mlp.up_proj [16384x4096] 0.6s
+      GPTQ: MSE=7.519e-06  RelErr=0.10743
+      RTN:  MSE=5.765e-06
+      Improvement: -30.4%
+    self_attn.k_proj [4096x4096] 0.6s
+      GPTQ: MSE=9.269e-06  RelErr=0.12024
+      RTN:  MSE=5.561e-06
+      Improvement: -66.7%
+    self_attn.o_proj [4096x4096] 0.6s
+      GPTQ: MSE=7.656e-06  RelErr=0.11535
+      RTN:  MSE=5.095e-06
+      Improvement: -50.3%
+    self_attn.q_proj [4096x4096] 0.6s
+      GPTQ: MSE=8.062e-06  RelErr=0.11460
+      RTN:  MSE=5.398e-06
+      Improvement: -49.4%
+    self_attn.v_proj [4096x4096] 0.6s
+      GPTQ: MSE=7.487e-06  RelErr=0.11598
+      RTN:  MSE=4.871e-06
+      Improvement: -53.7%
+    self_attn.z_proj [4096x4096] 0.6s
+      GPTQ: MSE=7.417e-06  RelErr=0.11408
+      RTN:  MSE=5.034e-06
+      Improvement: -47.4%
+  Propagating hidden states...
+  Layer 28 done in 245.2s
+
+======================================================================
+[Layer 29/31] minicpm4 -> BF16
+======================================================================
+  Keeping BF16 (minicpm4 sparse layer)
+  Propagating hidden states...
+[W321 10:26:33.557948744 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 10:26:33.558038812 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 10:26:33.822989487 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 10:26:33.823054546 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 10:26:34.818497574 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 10:26:34.818561863 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+  Layer 29 done in 9.7s
+
+======================================================================
+[Layer 30/31] minicpm4 -> BF16
+======================================================================
+  Keeping BF16 (minicpm4 sparse layer)
+  Propagating hidden states...
+[W321 10:26:43.221151220 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 10:26:43.221221659 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 10:26:43.472618270 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 10:26:43.472686529 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 10:26:44.527545294 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 10:26:44.527653222 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+  Layer 30 done in 9.8s
+
+======================================================================
+[Layer 31/31] minicpm4 -> BF16
+======================================================================
+  Keeping BF16 (minicpm4 sparse layer)
+  Propagating hidden states...
+[W321 10:26:52.096824814 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 10:26:52.096892374 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 10:26:53.375104318 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 10:26:53.375188728 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 10:26:54.392506221 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+[W321 10:26:54.392572481 PyInterpreter.cpp:263] Warning: Deallocating Tensor that still has live PyObject references.  This probably happened because you took out a weak reference to Tensor and didn't call _fix_weakref() after dereferencing it.  Subsequent accesses to this tensor via the PyObject will now fail. (function decref)
+  Layer 31 done in 9.9s
+
+[Phase 3] Final norm + lm_head...
+
+[Phase 4] Saving to /opt/model_nvfp4_gptq...
+  Total: 8.49 GB
+  Saved model-00001-of-00003.safetensors
+  Saved model-00002-of-00003.safetensors
+  Saved model-00003-of-00003.safetensors
+
+  +----------------------------------------------+
+  |  GPTQ-NVFP4 Quality Summary                  |
+  +----------------------------------------------+
+  |  Linears quantised:  192                    |
+  |  Avg GPTQ MSE:       6.4675e-06            |
+  |  Avg RTN  MSE:       4.8724e-06            |
+  |  Avg improvement:    -33.6%                |
+  |  Min improvement:    -121.3%                |
+  |  Max improvement:    -19.7%                |
+  +----------------------------------------------+
+  All saved to /opt/model_nvfp4_gptq
+
+[DONE] GPTQ-enhanced NVFP4 quantisation complete!
+
+[INFO] Total: 106.5 min (1.8 hr)

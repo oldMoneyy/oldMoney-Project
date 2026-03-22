@@ -46,7 +46,7 @@ for i in range(NUM_REQUESTS):
         ]
     })
 
-output_path = "/opt/oldmoney/bench/competition_bench.jsonl"
+output_path = "/opt/oldMoney-Project/bench/competition_bench.jsonl"
 with open(output_path, "w") as f:
     for r in requests:
         f.write(json.dumps(r) + "\n")

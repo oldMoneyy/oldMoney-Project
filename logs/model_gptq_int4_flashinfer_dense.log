@@ -1,0 +1,101 @@
+nohup: ignoring input
+[INFO] Using Random Seed: 77837
+======================================================================
+Standalone GPTQ Quantizer for MiniCPM-SALA (Mixed Precision)
+======================================================================
+  Input:           /opt/model
+  Output:          /opt/model_gptq_int4_flashinfer_dense
+  Default bits:    4
+  Symmetric:       True
+  minicpm4 bits:   (use default)
+  lightning bits:  (use default)
+  layer-bits:      (none)
+  Group size:      128
+  Damping:         0.01
+  Calib data:      /opt/oldMoney-Project/quantization/ultimate_64_token_balanced.jsonl
+  Max samples:     64
+  Max length:      131072
+  Quant lm_head:   False
+
+  Layer    Type                 Bits  
+  ----------------------------------
+  0        minicpm4             W4    
+  1        lightning-attn       W4    
+  2        lightning-attn       W4    
+  3        lightning-attn       W4    
+  4        lightning-attn       W4    
+  5        lightning-attn       W4    
+  6        lightning-attn       W4    
+  7        lightning-attn       W4    
+  8        lightning-attn       W4    
+  9        minicpm4             W4    
+  10       lightning-attn       W4    
+  11       lightning-attn       W4    
+  12       lightning-attn       W4    
+  13       lightning-attn       W4    
+  14       lightning-attn       W4    
+  15       lightning-attn       W4    
+  16       minicpm4             W4    
+  17       minicpm4             W4    
+  18       lightning-attn       W4    
+  19       lightning-attn       W4    
+  20       lightning-attn       W4    
+  21       lightning-attn       W4    
+  22       minicpm4             W4    
+  23       lightning-attn       W4    
+  24       lightning-attn       W4    
+  25       lightning-attn       W4    
+  26       lightning-attn       W4    
+  27       lightning-attn       W4    
+  28       lightning-attn       W4    
+  29       minicpm4             W4    
+  30       minicpm4             W4    
+  31       minicpm4             W4    
+
+  Summary: 32 W4 | 0 W8 | 0 FP16
+======================================================================
+[INFO] Using device: cuda:0
+[INFO] Loading tokenizer from /opt/model...
+[INFO] Loaded 64 calibration samples (max_len=131072)
+[INFO] Loading model from /opt/model (CPU)...
+Skipping import of cpp extensions due to incompatible torch version 2.8.0+cu128 for torchao version 0.16.0             Please see https://github.com/pytorch/ao/issues/2919 for more info
+Current Python version 3.10 is below the recommended 3.11 version. It is recommended to upgrade to Python 3.11 or higher for the best experience.
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loading checkpoint shards:   0%|                                                                                                              | 0/4 [00:00<?, ?it/s]Loading checkpoint shards: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:00<00:00, 156.58it/s]
+[INFO] Model has 32 layers
+[INFO] Phase 1: Computing initial hidden states (embedding)...
+/opt/oldMoney-Project/quantization/quantiza_gptq_dense_gpu.py:286: FutureWarning: `torch.distributed.reduce_op` is deprecated, please use `torch.distributed.ReduceOp` instead
+  if isinstance(obj, functools._lru_cache_wrapper):
+
+======================================================================
+[LAYER 0/31] type=minicpm4  bits=4
+======================================================================
+  Linears to quantize: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  Collecting Hessians (64 samples)...
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=2.124550e-05 RelErr=0.2193
+    mlp.down_proj [4096x16384] W4 quantized in 3.0s
+    mlp.gate_proj MSE=5.972264e-06 RelErr=0.1531
+    mlp.gate_proj [16384x4096] W4 quantized in 0.5s
+    mlp.up_proj MSE=8.373228e-06 RelErr=0.1481
+    mlp.up_proj [16384x4096] W4 quantized in 0.5s
+    self_attn.k_proj MSE=3.896492e-06 RelErr=0.1950
+    self_attn.k_proj [256x4096] W4 quantized in 0.5s
+    self_attn.o_gate MSE=1.064600e-05 RelErr=0.1652
+    self_attn.o_gate [4096x4096] W4 quantized in 0.5s
+    self_attn.o_proj MSE=1.294847e-05 RelErr=0.1848
+    self_attn.o_proj [4096x4096] W4 quantized in 0.5s
+    self_attn.q_proj MSE=5.114545e-06 RelErr=0.1613
+    self_attn.q_proj [4096x4096] W4 quantized in 0.5s
+    self_attn.v_proj MSE=8.606605e-06 RelErr=0.1946
+    self_attn.v_proj [256x4096] W4 quantized in 0.5s
+  Updating hidden states for next layer...
+  Layer 0 done in 208.9s
+
+======================================================================
+[LAYER 1/31] type=lightning-attn  bits=4
+======================================================================
+  Linears to quantize: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (64 samples)...
+/opt/oldMoney-Project/quantization/quantiza_gptq_dense_gpu.py:286: FutureWarning: `torch.distributed.reduce_op` is deprecated, please use `torch.distributed.ReduceOp` instead
+  if isinstance(obj, functools._lru_cache_wrapper):

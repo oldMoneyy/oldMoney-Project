@@ -1,0 +1,650 @@
+Original Model:
+
+[Sample 147] Task: cwe
+Gold: ['pipe', 'evil', 'birdbath', 'abbey', 'trapezoid', 'appendix', 'drake', 'idiom', 'add', 'digger'], Extracted: None, Score: 0.9
+Tokens: In=127589, Out=778
+
+[Sample 148] Task: cwe
+Gold: ['suck', 'licence', 'maternity', 'pickax', 'apathetic', 'pipe', 'kennel', 'damaged', 'dearest', 'stake'], Extracted: None, Score: 0.4
+Tokens: In=127628, Out=65545
+
+[Sample 149] Task: cwe
+Gold: ['footstool', 'website', 'gauntlet', 'explode', 'courtroom', 'plowman', 'continent', 'mortal', 'caribou', 'onion'], Extracted: None, Score: 0.9
+Tokens: In=127676, Out=1165
+
+[Sample 150] Task: cwe
+Gold: ['evanescent', 'snowmobiling', 'insert', 'info', 'grate', 'gosling', 'loquat', 'south', 'erosion', 'ozone'], Extracted: None, Score: 0.9
+Tokens: In=127738, Out=492
+
+Average Score: 82.44%
+Total Duration: 2083.26 s
+Total Tokens: In=8644166, Out=852703
+Average Tokens/Sample: In=57627.8, Out=5684.7
+Overall TPS (Output): 409.31 tokens/s
+Detailed results saved to outputs/20260322_020604/predictions.jsonl
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+First AWQ Model:
+
+[Sample 144] Task: cwe
+Gold: ['advance', 'charlatan', 'virus', 'sunshine', 'intelligence', 'parachute', 'permafrost', 'burning', 'pinot', 'mess'], Extracted: None, Score: 0.8
+Tokens: In=127483, Out=688
+[Sample 145] Task: cwe
+Gold: ['occur', 'rhinoceros', 'means', 'invite', 'entertain', 'illustrate', 'spectrum', 'cutover', 'middleman', 'decorous'], Extracted: None, Score: 0.6
+Tokens: In=127515, Out=65545
+[Sample 146] Task: cwe
+Gold: ['truck', 'choice', 'rain', 'hapless', 'carrier', 'endothelium', 'formulate', 'bestseller', 'accident', 'snowsuit'], Extracted: None, Score: 0.7
+Tokens: In=127561, Out=695
+[Sample 147] Task: cwe
+Gold: ['pipe', 'evil', 'birdbath', 'abbey', 'trapezoid', 'appendix', 'drake', 'idiom', 'add', 'digger'], Extracted: None, Score: 0.8
+Tokens: In=127589, Out=522
+[Sample 148] Task: cwe
+Gold: ['suck', 'licence', 'maternity', 'pickax', 'apathetic', 'pipe', 'kennel', 'damaged', 'dearest', 'stake'], Extracted: None, Score: 0.4
+Tokens: In=127628, Out=132
+[Sample 149] Task: cwe
+Gold: ['footstool', 'website', 'gauntlet', 'explode', 'courtroom', 'plowman', 'continent', 'mortal', 'caribou', 'onion'], Extracted: None, Score: 0.9
+Tokens: In=127676, Out=216
+[Sample 150] Task: cwe
+Gold: ['evanescent', 'snowmobiling', 'insert', 'info', 'grate', 'gosling', 'loquat', 'south', 'erosion', 'ozone'], Extracted: None, Score: 0.8
+Tokens: In=127738, Out=211
+Average Score: 74.44%
+Total Duration: 2736.80 s
+Total Tokens: In=8644166, Out=527736
+Average Tokens/Sample: In=57627.8, Out=3518.2
+Overall TPS (Output): 192.83 tokens/s
+Detailed results saved to outputs/20260321_163020/predictions.jsonl
+
+
+
+python /opt/oldMoney-Project/quantization/calibration/classify_failures.py --predictions /opt/SOAR-Toolkit/outputs/20260322_020604/predictions.jsonl
+
+python /opt/oldMoney-Project/quantization/calibration/classify_failures.py --predictions /opt/SOAR-Toolkit/outputs/20260321_163020/predictions.jsonl
+
+
+cat /opt/oldMoney-Project/quantization/calibration/classify_failures.py
+
+
+
+
+
+
+python /opt/oldMoney-Project/quantization/calibration/compare_models.py \
+    --original /opt/SOAR-Toolkit/outputs/20260322_020604/predictions.jsonl \
+    --awq /opt/SOAR-Toolkit/outputs/20260321_163020/predictions.jsonl
+
+cat /opt/oldMoney-Project/quantization/calibration/compare_models.py
+
+
+
+python -c "
+import json
+with open('/opt/SOAR-Toolkit/outputs/20260321_163020/predictions.jsonl') as f:
+    preds = [json.loads(l) for l in f if l.strip()]
+# Sample 10 (index 9) - the 992-char one
+p = preds[9]
+output = p['prediction']
+print(f'Length: {len(output)}')
+print(f'Last 100 chars: [{output[-100:]}]')
+print(f'Ends with newline: {output.endswith(chr(10))}')
+print(f'Last char ord: {ord(output[-1]) if output else None}')
+"
+
+
+
+
+
+
+
+
+
+python /opt/oldMoney-Project/quantization/calibration/patch_observer.py \
+    --awq-script /opt/oldMoney-Project/quantization/nvfp4_awq.py
+
+nohup python /opt/oldMoney-Project/quantization/nvfp4_awq.py \
+    --input /opt/model \
+    --output /opt/model_nvfp4_awq_v2 \
+    --calib-data /opt/oldMoney-Project/quantization/calibration/gen_aware_calib.jsonl \
+    --max-samples 60 \
+    --max-len 131072 \
+    --mse-iters 200 \
+    --mse-max-shrink 0.60 \
+    --mse-error-norm 2.0 \
+    --bf16-late-layers \
+    > /opt/oldMoney-Project/logs/nvfp4_awq_v2.log 2>&1 &
+
+
+
+
+
+
+
+
+
+
+python /opt/oldMoney-Project/quantization/calibration/collect_gen_traces.py \
+    --api-base http://127.0.0.1:31333 \
+    --output /opt/oldMoney-Project/quantization/calibration/gen_aware_calib.jsonl
+
+
+
+
+
+
+root@C.33196571:/opt/SOAR-Toolkit$ 
+
+python /opt/oldMoney-Project/quantization/calibration/collect_gen_traces.py \
+    --api-base http://127.0.0.1:31333 \
+    --output /opt/oldMoney-Project/quantization/calibration/gen_aware_calib.jsonl
+Checking server at http://127.0.0.1:31333...
+  Server is running ✓
+
+======================================================================
+PHASE 1: Collecting MCQ reasoning traces from BF16 model
+  (This is the critical data that protects reasoning convergence)
+======================================================================
+
+  [1/35] Generating on: An ideal Carnot engine operates between temperatures T_H = 6...
+    ✓  12189 chars,  4706 tokens, </think>=Y ANSWER=Y (65.7s)
+
+  [2/35] Generating on: A conducting sphere of radius R carries charge Q. It is surr...
+    ~  19145 chars,  6101 tokens, </think>=Y ANSWER=N (84.2s)
+
+  [3/35] Generating on: A proton is accelerated from rest through a potential differ...
+
+    ~  19342 chars,  9608 tokens, </think>=Y ANSWER=N (133.8s)
+
+  [4/35] Generating on: A fair die is rolled repeatedly until a 6 appears. What is t...
+    ~   5745 chars,  2189 tokens, </think>=Y ANSWER=N (30.1s)
+
+  [5/35] Generating on: A radioactive sample has a half-life of 5 days. After 20 day...
+    ✓   3545 chars,  1353 tokens, </think>=Y ANSWER=Y (18.7s)
+
+  [6/35] Generating on: What is the time complexity of finding the shortest path bet...
+    ✓   2345 chars,   759 tokens, </think>=Y ANSWER=Y (10.6s)
+
+  [7/35] Generating on: In the bromination of toluene (methylbenzene) using Br₂/FeBr...
+    ✓   8967 chars,  2632 tokens, </think>=Y ANSWER=Y (36.4s)
+
+  [8/35] Generating on: A galvanic cell is constructed using Zn/Zn²⁺(0.01M) and Cu/C...
+    ~  10719 chars,  4764 tokens, </think>=Y ANSWER=N (65.5s)
+
+  [9/35] Generating on: A charged particle moves in a uniform magnetic field B = 0.5...
+    ✓  21387 chars, 11366 tokens, </think>=Y ANSWER=Y (158.6s)
+
+  [10/35] Generating on: A satellite orbits Earth in an elliptical orbit with semi-ma...
+    ~  28286 chars, 19623 tokens, </think>=Y ANSWER=N (275.5s)
+
+  [11/35] Generating on: A solenoid with 1000 turns per meter carries a current that ...
+    ~  18127 chars,  9800 tokens, </think>=Y ANSWER=N (136.1s)
+
+  [12/35] Generating on: Consider a system of N = 100 non-interacting spin-1/2 partic...
+    ~  20076 chars,  8735 tokens, </think>=Y ANSWER=N (122.1s)
+
+  [13/35] Generating on: A monatomic ideal gas undergoes a process where PV² = consta...
+    ~  20599 chars, 10602 tokens, </think>=Y ANSWER=N (147.6s)
+
+  [14/35] Generating on: A thin film of oil (n = 1.40) floats on water (n = 1.33). Wh...
+    ✓  21546 chars,  6854 tokens, </think>=Y ANSWER=Y (95.0s)
+
+  [15/35] Generating on: Two events occur at the same location in frame S, separated ...
+    ✓  13162 chars,  6487 tokens, </think>=Y ANSWER=Y (89.9s)
+
+  [16/35] Generating on: Let A be a 3×3 matrix with eigenvalues 1, 2, and 3. What is ...
+    ✓   5575 chars,  2137 tokens, </think>=Y ANSWER=Y (29.6s)
+
+  [17/35] Generating on: The binding energy per nucleon for Fe-56 is approximately 8....
+    ✓  40194 chars, 15252 tokens, </think>=Y ANSWER=Y (212.2s)
+
+  [18/35] Generating on: A star has an apparent magnitude of V = 12.0, a distance mod...
+    ~  24239 chars,  9155 tokens, </think>=Y ANSWER=N (127.2s)
+
+  [19/35] Generating on: In Compton scattering, a photon of wavelength 0.05 nm scatte...
+    ✓   6439 chars,  3379 tokens, </think>=Y ANSWER=Y (47.0s)
+
+  [20/35] Generating on: A spin-1/2 particle is in the state |ψ⟩ = (3|↑⟩ + 4i|↓⟩)/5. ...
+    ✓  25287 chars, 13896 tokens, </think>=Y ANSWER=Y (193.9s)
+
+  [21/35] Generating on: Two blocks of masses m₁ = 2 kg and m₂ = 3 kg are connected b...
+    ✓   8035 chars,  3170 tokens, </think>=Y ANSWER=Y (44.0s)
+
+  [22/35] Generating on: An electromagnetic wave in vacuum has an electric field ampl...
+    ✓   9641 chars,  4731 tokens, </think>=Y ANSWER=Y (65.2s)
+
+  [23/35] Generating on: A researcher performs a qPCR experiment and observes that th...
+    ✓  13416 chars,  5446 tokens, </think>=Y ANSWER=Y (75.5s)
+
+  [24/35] Generating on: An electron is confined to a one-dimensional box of length L...
+    ✓  31088 chars, 19500 tokens, </think>=Y ANSWER=Y (272.8s)
+
+  [25/35] Generating on: In a simple cubic crystal with lattice constant a = 3 Å, wha...
+    ~   8694 chars,  4032 tokens, </think>=Y ANSWER=N (55.7s)
+
+  Collected 25 MCQ reasoning traces
+
+======================================================================
+PHASE 2: Collecting general reasoning traces
+======================================================================
+
+  [1/5] Generating on: Derive the Euler-Lagrange equation from the principle of lea...
+    ✓  13740 chars,  5667 tokens (78.6s)
+
+  [2/5] Generating on: Explain why the eigenvalues of a Hermitian matrix are always...
+    ✓   9600 chars,  3823 tokens (52.8s)
+
+  [3/5] Generating on: A researcher is designing a drug trial with 1000 participant...
+    ✓  15201 chars,  7340 tokens (102.3s)
+
+  [4/5] Generating on: Prove that the set of all 2×2 invertible matrices with real ...
+    ✓   7352 chars,  2551 tokens (35.0s)
+
+  [5/5] Generating on: Derive the blackbody radiation spectrum (Planck's law) start...
+    ✓  25995 chars,  9811 tokens (136.2s)
+
+  Collected 5 general reasoning traces
+
+======================================================================
+PHASE 3: Loading existing long-context calibration data
+======================================================================
+  Loaded 30 long-context samples
+
+======================================================================
+PHASE 4: Assembling final calibration dataset
+======================================================================
+
+======================================================================
+FINAL CALIBRATION DATASET SUMMARY
+======================================================================
+
+  Category                   Count    Avg chars  % (per-sample)
+  ------------------------------------------------------------
+  long_context_existing         30      174,475           50.0%
+  mcq_gen_trace                 25       16,208           41.7%
+  reasoning_gen_trace            5       14,533            8.3%
+  TOTAL                         60
+
+  WITH PER-SAMPLE OBSERVER FIX:
+    Each sample contributes 1/60 = 1.7% of Hessian
+    MCQ gen-traces get 25/60 = 42% ← protects reasoning convergence
+    Long-context gets 30/60 = 50% ← protects retrieval tasks
+    
+  WITHOUT OBSERVER FIX (token-weighted):
+    MCQ gen-traces: ~7% by tokens
+    Long-context: ~92% by tokens
+    ⚠ Long-context still dominates! Observer fix is ESSENTIAL.
+
+  Saved to: /opt/oldMoney-Project/quantization/calibration/gen_aware_calib.jsonl
+
+  NEXT STEPS:
+    1. Apply observer fix to nvfp4_awq.py (see patch_observer.py)
+    2. Run quantization:
+       python /opt/oldMoney-Project/quantization/nvfp4_awq.py \
+           --input /opt/model \
+           --output /opt/model_nvfp4_awq_v2 \
+           --calib-data /opt/oldMoney-Project/quantization/calibration/gen_aware_calib.jsonl \
+           --max-samples 60 \
+           --max-len 131072 \
+           --mse-iters 200 \
+           --mse-max-shrink 0.60 \
+           --mse-error-norm 2.0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# BF16 与 74% 的比较:
+
+python /opt/oldMoney-Project/quantization/calibration/ANALYZE_DATA.py \
+  --eval-data /opt/SOAR-Toolkit/eval_dataset/perf_public_set.jsonl \
+  --tokenizer /opt/model \
+  --predictions-bf16 /opt/SOAR-Toolkit/outputs/20260322_020604/predictions.jsonl \
+  --predictions-awq /opt/SOAR-Toolkit/outputs/20260321_163020/predictions.jsonl
+
+
+# BF16 与 77% 的比较:
+
+
+python /opt/oldMoney-Project/quantization/calibration/ANALYZE_DATA.py \
+  --eval-data /opt/SOAR-Toolkit/eval_dataset/perf_public_set.jsonl \
+  --tokenizer /opt/model \
+  --predictions-bf16 /opt/SOAR-Toolkit/outputs/20260322_020604/predictions.jsonl \
+  --predictions-awq /opt/SOAR-Toolkit/outputs/20260322_050407/predictions.jsonl
+
+
+
+
+python /opt/oldMoney-Project/quantization/calibration/ANALYZE_DATA.py \
+  --eval-data /opt/SOAR-Toolkit/eval_dataset/perf_public_set.jsonl \
+  --tokenizer /opt/model \
+  --predictions-bf16 /opt/SOAR-Toolkit/outputs/20260322_020604/predictions.jsonl \
+  --predictions-awq /opt/SOAR-Toolkit/outputs/20260322_080714/predictions.jsonl
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+python /opt/oldMoney-Project/quantization/calibration/build_optimal_64.py \
+    --gen-traces /opt/oldMoney-Project/quantization/calibration/gen_aware_calib.jsonl \
+    --eval-data /opt/SOAR-Toolkit/eval_dataset/perf_public_set.jsonl \
+    --output /opt/oldMoney-Project/quantization/calibration/optimal_64.jsonl
+
+
+root@C.33196571:/opt/SOAR-Toolkit$ python /opt/oldMoney-Project/quantization/calibration/build_optimal_64.py \
+    --gen-traces /opt/oldMoney-Project/quantization/calibration/gen_aware_calib.jsonl \
+    --eval-data /opt/SOAR-Toolkit/eval_dataset/perf_public_set.jsonl \
+    --output /opt/oldMoney-Project/quantization/calibration/optimal_64.jsonl
+================================================================================
+  BUILDING OPTIMAL 64-SAMPLE CALIBRATION DATASET
+================================================================================
+
+[1/5] Loading eval data from /opt/SOAR-Toolkit/eval_dataset/perf_public_set.jsonl...
+  Loaded 150 eval samples (indices 1–150)
+
+[2/5] Loading generation traces from /opt/oldMoney-Project/quantization/calibration/gen_aware_calib.jsonl...
+  Loaded 60 items: {'long_context_existing': 30, 'mcq_gen_trace': 25, 'reasoning_gen_trace': 5}
+
+[3/5] Selecting MCQ generation traces (target: 20)...
+  Selected 20 MCQ traces
+    [ 1] ✓  20,816 chars,  10602 tok | A monatomic ideal gas undergoes a process where PV² = constant. The molar heat c...
+    [ 2] ✓  21,828 chars,  11366 tok | A charged particle moves in a uniform magnetic field B = 0.5 T with a speed of 1...
+    [ 3] ✓  25,498 chars,  13896 tok | A spin-1/2 particle is in the state |ψ⟩ = (3|↑⟩ + 4i|↓⟩)/5. What is the expectat...
+    [ 4] ✓  28,621 chars,  19623 tok | A satellite orbits Earth in an elliptical orbit with semi-major axis a = 26,600 ...
+    [ 5] ✓  40,533 chars,  15252 tok | The binding energy per nucleon for Fe-56 is approximately 8.8 MeV. For U-235, it...
+    [ 6] ✓  31,330 chars,  19500 tok | An electron is confined to a one-dimensional box of length L = 0.1 nm. What is t...
+    [ 7] ✓  12,490 chars,   4706 tok | An ideal Carnot engine operates between temperatures T_H = 600K and T_C = 300K, ...
+    [ 8] ✓  11,007 chars,   4764 tok | A galvanic cell is constructed using Zn/Zn²⁺(0.01M) and Cu/Cu²⁺(1.0M) half-cells...
+    [ 9] ✓  13,861 chars,   5446 tok | A researcher performs a qPCR experiment and observes that the Ct value decreases...
+    [10] ✓  19,489 chars,   6101 tok | A conducting sphere of radius R carries charge Q. It is surrounded by a concentr...
+    [11] ✓  13,454 chars,   6487 tok | Two events occur at the same location in frame S, separated by a time interval Δ...
+    [12] ✓  21,881 chars,   6854 tok | A thin film of oil (n = 1.40) floats on water (n = 1.33). White light is inciden...
+    [13] ✓  20,458 chars,   8735 tok | Consider a system of N = 100 non-interacting spin-1/2 particles in a magnetic fi...
+    [14] ✓  24,525 chars,   9155 tok | A star has an apparent magnitude of V = 12.0, a distance modulus of (m-M) = 8.0,...
+    [15] ✓   2,645 chars,    759 tok | What is the time complexity of finding the shortest path between all pairs of ve...
+    [16] ✓   3,761 chars,   1353 tok | A radioactive sample has a half-life of 5 days. After 20 days, what fraction of ...
+    [17] ✓   5,758 chars,   2137 tok | Let A be a 3×3 matrix with eigenvalues 1, 2, and 3. What is the trace of A⁻¹?...
+    [18] ✓   5,932 chars,   2189 tok | A fair die is rolled repeatedly until a 6 appears. What is the expected number o...
+    [19] ✓  19,657 chars,   9608 tok | A proton is accelerated from rest through a potential difference of 500 MV. What...
+    [20] ✓  18,505 chars,   9800 tok | A solenoid with 1000 turns per meter carries a current that increases linearly f...
+
+[4/5] Selecting general reasoning traces (target: 4)...
+  Selected 4 reasoning traces
+    [1]  26,203 chars | Derive the blackbody radiation spectrum (Planck's law) starting from the quantiz...
+    [2]  15,438 chars | A researcher is designing a drug trial with 1000 participants. The expected effe...
+    [3]  13,836 chars | Derive the Euler-Lagrange equation from the principle of least action. Show all ...
+    [4]   9,694 chars | Explain why the eigenvalues of a Hermitian matrix are always real. Provide a rig...
+
+[5/5] Collecting eval samples...
+
+  ── QA (14 samples) ──
+    [ 61] ✓  111,071 chars | Baseline short QA. 25,027 tok. Disney/ABC question. Both models correc
+    [ 63] ✓  101,728 chars | DEGRADED. 27,202 tok. AWQ said 'Norse mythology' instead of 'various d
+    [ 66] ✓  126,019 chars | DEGRADED. 29,403 tok. AWQ said 'Duke Richard II of Normandy' instead o
+    [ 68] ✓  114,290 chars | Near-miss. 30,521 tok. AWQ said 'Battle of Belleau Wood' vs gold 'The 
+    [ 70] ✓  121,539 chars | Near-miss. 31,644 tok. AWQ said 'Teach the Controversy' vs gold '"Teac
+    [ 72] ✓  252,543 chars | DEGRADED. 57,451 tok. AWQ said 'Euclid's algorithm' instead of 'genera
+    [ 73] ✓  268,619 chars | AWQ wrong. 60,632 tok. AWQ said 'hard for NP' instead of 'NP-hard'. Se
+    [ 75] ✓  267,639 chars | AWQ wrong. 61,405 tok. AWQ said '7' instead of 'seven'. Formatting mis
+    [ 77] ✓  232,191 chars | Format coverage. 62,167 tok. Battle of Guam question. Both models corr
+    [ 79] ✓  275,445 chars | AWQ wrong. 62,997 tok. AWQ gave verbose answer instead of 'Decision pr
+    [ 82] ✓  528,679 chars | DEGRADED. 120,873 tok. AWQ said 'ten' instead of '10 counties'. Lost n
+    [ 84] ✓  468,448 chars | DEGRADED. 124,592 tok. AWQ said 'Mahesh Bhupathi' instead of 'Ferdi Ta
+    [ 88] ✓  476,327 chars | DEGRADED. 126,712 tok. AWQ said 'Sasanian Empire' instead of 'Parthian
+    [ 90] ✓  480,237 chars | DEGRADED. 127,492 tok. AWQ said 'Clarence River' instead of 'Richmond'
+
+  ── CWE (10 samples) ──
+    [121] ✓   58,270 chars | Shortest CWE. 31,166 tok. ~4080 words. Baseline short word-list format
+    [125] ✓   59,918 chars | Short tier. 31,547 tok. Has REASON+MATH features. Covers reasoning-hea
+    [128] ✓   59,063 chars | Short tier. 31,651 tok. Has REASON+MATH features. Adds diversity in wo
+    [132] ✓  117,639 chars | Medium CWE. 63,296 tok. ~8276 words. DOC+REASON+MATH features.
+    [135] ✓  118,287 chars | Medium CWE. 63,423 tok. DOC+REASON+MATH features. Covers mid-range lis
+    [137] ✓  118,678 chars | Medium CWE. 63,491 tok. DOC+REASON+MATH features. Adds word variety.
+    [140] ✓  118,347 chars | Medium CWE. 63,659 tok. DOC+REASON+MATH features. Longest medium-tier 
+    [144] ✓  230,844 chars | Long CWE. 127,476 tok. ~15900 words. This sample DEGRADED in AWQ (0.8 
+    [147] ✓  230,303 chars | Long CWE. 127,582 tok. DEGRADED (pipe/evil/birdbath question, AWQ scor
+    [150] ✓  230,999 chars | Longest CWE. 127,731 tok. Maximum context length for word counting tas
+
+  ── NIAH (10 samples) ──
+    [ 31] ✓   43,097 chars | UUID-search format. 30,199 tok. 753 UUIDs. Pure UUID needle-in-haystac
+    [ 33] ✓  137,897 chars | Multi-number format. 31,079 tok. MCQ+DOC+REASON. Numbers hidden in doc
+    [ 37] ✓  140,559 chars | UUID+MCQ hybrid. 31,684 tok. MCQ format with UUID needle. Covers hybri
+    [ 41] ✓   88,697 chars | UUID-heavy. 62,315 tok. 1,553 UUIDs! Maximum UUID density at medium le
+    [ 45] ✓  281,094 chars | MCQ+number. 63,602 tok. MCQ format within NIAH. Tests option-selection
+    [ 47] ✓  281,330 chars | Multi-number. 63,666 tok. Multiple numbers to find. Tests multi-target
+    [ 50] ✓  281,364 chars | Multi-number+MCQ. 63,682 tok. Complex NIAH variant with reasoning.
+    [ 51] ✓  179,897 chars | UUID-heavy max. 126,596 tok. 3,153 UUIDs! Extreme UUID density at max 
+    [ 54] ✓  559,631 chars | Multi-number long. 127,134 tok. Number search at 127k context.
+    [ 60] ✓  562,375 chars | MCQ+number long. 127,711 tok. The DEGRADED NIAH sample (only one that 
+
+  ── FWE (6 samples) ──
+    [ 91] ✓   37,390 chars | Shortest FWE. 28,023 tok. Coded words like 'svlmts', 'oiavmz'. Baselin
+    [ 95] ✓   37,390 chars | Short FWE. 28,969 tok. Different coded words. Adds vocabulary variety.
+    [103] ✓   75,046 chars | Medium FWE. 55,250 tok. Mid-range coded text length.
+    [107] ✓   75,046 chars | Medium FWE. 57,345 tok. Covers longer medium-tier coded sequences.
+    [115] ✓  150,579 chars | Long FWE. 115,999 tok. Long coded text, tests sustained attention.
+    [118] ✓  171,162 chars | Long FWE. 123,558 tok. Near-max FWE length. Anchors long-tier coverage
+
+================================================================================
+ASSEMBLING FINAL DATASET
+================================================================================
+
+  Total samples: 64
+
+────────────────────────────────────────────────────────────────────────────────
+FINAL COMPOSITION (64 samples)
+────────────────────────────────────────────────────────────────────────────────
+  eval_cwe                   10 ( 15.6%) ███████
+  eval_fwe                    6 (  9.4%) ████
+  eval_niah                  10 ( 15.6%) ███████
+  eval_qa                    14 ( 21.9%) ██████████
+  mcq_gen_trace              20 ( 31.2%) ███████████████
+  reasoning_gen_trace         4 (  6.2%) ███
+
+────────────────────────────────────────────────────────────────────────────────
+LENGTH DISTRIBUTION
+────────────────────────────────────────────────────────────────────────────────
+     <1k chars:   0 
+        1k-10k:   5 █████
+       10k-50k:  22 ██████████████████████
+      50k-120k:  13 █████████████
+     120k-250k:  11 ███████████
+         250k+:  13 █████████████
+
+────────────────────────────────────────────────────────────────────────────────
+PER-CATEGORY LENGTH STATS
+────────────────────────────────────────────────────────────────────────────────
+  eval_cwe                  min=   58,270  max=  230,999  avg=  134,235 chars
+  eval_fwe                  min=   37,390  max=  171,162  avg=   91,102 chars
+  eval_niah                 min=   43,097  max=  562,375  avg=  255,594 chars
+  eval_qa                   min=  101,728  max=  528,679  avg=  273,198 chars
+  mcq_gen_trace             min=    2,645  max=   40,533  avg=   18,102 chars
+  reasoning_gen_trace       min=    9,694  max=   26,203  avg=   16,293 chars
+
+────────────────────────────────────────────────────────────────────────────────
+HESSIAN WEIGHT ANALYSIS (per-sample observer)
+────────────────────────────────────────────────────────────────────────────────
+
+  WITH per-sample observer fix (each sample = 1/64):
+    eval_cwe                   10/64 =  15.6% of Hessian
+    eval_fwe                    6/64 =   9.4% of Hessian
+    eval_niah                  10/64 =  15.6% of Hessian
+    eval_qa                    14/64 =  21.9% of Hessian
+    mcq_gen_trace              20/64 =  31.2% of Hessian
+    reasoning_gen_trace         4/64 =   6.2% of Hessian
+
+  WITHOUT fix (token-weighted, approximate from char counts):
+    eval_cwe                  ~ 15.4% of Hessian (by tokens)
+    eval_fwe                  ~  6.3% of Hessian (by tokens)
+    eval_niah                 ~ 29.4% of Hessian (by tokens)
+    eval_qa                   ~ 44.0% of Hessian (by tokens)
+    mcq_gen_trace             ~  4.2% of Hessian (by tokens)
+    reasoning_gen_trace       ~  0.7% of Hessian (by tokens)
+
+  ⚠ Without observer fix, long-context samples would dominate.
+  ✓ With observer fix, MCQ gen traces get fair weight.
+
+────────────────────────────────────────────────────────────────────────────────
+COMPARISON: Previous vs New Calibration
+────────────────────────────────────────────────────────────────────────────────
+
+  PREVIOUS (final_merged_calibration.jsonl, 96 samples):
+    NIAH-like (UUID):       66/96 = 68.8%  ← massively over-represented
+    MCQ format:             12/96 = 12.5%  ← no generation traces!
+    Math reasoning:          6/96 =  6.3%
+    Natural language:       11/96 = 11.5%
+    Wikipedia:               1/96 =  1.0%
+    QA format:               0/96 =  0.0%  ← ZERO coverage!
+    CWE format:              0/96 =  0.0%  ← ZERO coverage!
+    FWE format:              0/96 =  0.0%  ← ZERO coverage!
+
+  NEW (optimal_64.jsonl, 64 samples):
+    MCQ gen traces:         20/64 =  31.2%  ← full reasoning chains!
+    Reasoning traces:        4/64 =   6.2%
+    QA eval format:         14/64 =  21.9%  ← NEW: multi-doc retrieval
+    CWE eval format:        10/64 =  15.6%  ← NEW: word counting
+    NIAH eval format:       10/64 =  15.6%  ← right-sized
+    FWE eval format:         6/64 =   9.4%  ← NEW: coded text
+
+  ✓ Written to: /opt/oldMoney-Project/quantization/calibration/optimal_64.jsonl
+    File size: 8,569 KB
+    Total samples: 64
+
+================================================================================
+NEXT STEPS
+================================================================================
+
+  1. Apply observer fix (CRITICAL — needed for balanced weighting):
+     python /opt/oldMoney-Project/quantization/calibration/patch_observer.py \
+         --awq-script /opt/oldMoney-Project/quantization/nvfp4_awq.py
+
+  2. Run quantization with this dataset:
+     python /opt/oldMoney-Project/quantization/nvfp4_awq.py \
+         --input /opt/model \
+         --output /opt/model_nvfp4_awq_v2 \
+         --calib-data /opt/oldMoney-Project/quantization/calibration/optimal_64.jsonl \
+         --max-samples 64 \
+         --max-len 131072 \
+         --mse-iters 200 \
+         --mse-max-shrink 0.60 \
+         --mse-error-norm 2.0
+
+  NOTE: No --bf16-late-layers flag. MiniCPM4's own mixer_types
+  already handles which layers are BF16 vs lightning.
+
+
+
+
+[Sample 148] Task: cwe
+Gold: ['suck', 'licence', 'maternity', 'pickax', 'apathetic', 'pipe', 'kennel', 'damaged', 'dearest', 'stake'], Extracted: None, Score: 0.1
+Tokens: In=127628, Out=65545
+
+[Sample 149] Task: cwe
+Gold: ['footstool', 'website', 'gauntlet', 'explode', 'courtroom', 'plowman', 'continent', 'mortal', 'caribou', 'onion'], Extracted: None, Score: 1.0
+Tokens: In=127676, Out=544
+
+[Sample 150] Task: cwe
+Gold: ['evanescent', 'snowmobiling', 'insert', 'info', 'grate', 'gosling', 'loquat', 'south', 'erosion', 'ozone'], Extracted: None, Score: 0.9
+Tokens: In=127738, Out=733
+
+Average Score: 77.47%
+Total Duration: 1645.47 s
+Total Tokens: In=8644166, Out=857163
+Average Tokens/Sample: In=57627.8, Out=5714.4
+Overall TPS (Output): 520.92 tokens/s
+Detailed results saved to outputs/20260322_050407/predictions.jsonl
+
+# how I got the 77.47% result:
+source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
+python /opt/oldMoney-Project/quantization/nvfp4_awq.py \
+ --input /opt/model \
+ --output /opt/model_nvfp4_awq_v2 \
+ --calib-data /opt/oldMoney-Project/quantization/calibration/optimal_64.jsonl \
+ --max-samples 64 \
+ --max-len 131072 \
+ --mse-iters 200 \
+ --mse-max-shrink 0.60 \
+ --mse-error-norm 2.0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,503 @@
+nohup: ignoring input
+======================================================================
+  Activation-Aware NVFP4 Quantiser for MiniCPM-SALA
+  (Perfectly matched for Blackwell FP8-Scales & Group=16)
+======================================================================
+[INFO] 96 samples, 4,135,365 tokens (max_len=131072)
+[INFO] Loading model (CPU, bf16)...
+Skipping import of cpp extensions due to incompatible torch version 2.8.0+cu128 for torchao version 0.16.0             Please see https://github.com/pytorch/ao/issues/2919 for more info
+Current Python version 3.10 is below the recommended 3.11 version. It is recommended to upgrade to Python 3.11 or higher for the best experience.
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loading checkpoint shards:   0%|                                                                                                              | 0/4 [00:00<?, ?it/s]Loading checkpoint shards: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:00<00:00, 158.33it/s]
+
+[Phase 1] Embedding forward...
+
+======================================================================
+[Layer 0/31] -> BF16
+======================================================================
+  Keeping BF16 (sparse layer)
+  Layer 0 done in 11.8s
+
+======================================================================
+[Layer 1/31] -> Act-Aware NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (96 samples)...
+    [qkv] fused global_sf=7603.6243 (max_amax=0.353516)
+    [gate_up] fused global_sf=3822.9333 (max_amax=0.703125)
+  Running Act-Aware MSE-RTN (Protecting Outliers)...
+    mlp.down_proj [4096x16384] 0.6s | Act-Aware MSE=4.234e-06
+    mlp.gate_proj [16384x4096] 0.5s | Act-Aware MSE=2.968e-06
+    mlp.up_proj [16384x4096] 0.5s | Act-Aware MSE=3.326e-06
+    self_attn.k_proj [4096x4096] 0.1s | Act-Aware MSE=1.895e-06
+    self_attn.o_proj [4096x4096] 0.1s | Act-Aware MSE=3.390e-06
+    self_attn.q_proj [4096x4096] 0.1s | Act-Aware MSE=1.989e-06
+    self_attn.v_proj [4096x4096] 0.1s | Act-Aware MSE=3.018e-06
+    self_attn.z_proj [4096x4096] 0.1s | Act-Aware MSE=3.004e-06
+  Layer 1 done in 37.1s
+
+======================================================================
+[Layer 2/31] -> Act-Aware NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (96 samples)...
+    [qkv] fused global_sf=4327.8491 (max_amax=0.621094)
+    [gate_up] fused global_sf=5571.8866 (max_amax=0.482422)
+  Running Act-Aware MSE-RTN (Protecting Outliers)...
+    mlp.down_proj [4096x16384] 0.6s | Act-Aware MSE=4.625e-06
+    mlp.gate_proj [16384x4096] 0.5s | Act-Aware MSE=3.787e-06
+    mlp.up_proj [16384x4096] 0.5s | Act-Aware MSE=3.787e-06
+    self_attn.k_proj [4096x4096] 0.1s | Act-Aware MSE=3.132e-06
+    self_attn.o_proj [4096x4096] 0.1s | Act-Aware MSE=4.287e-06
+    self_attn.q_proj [4096x4096] 0.1s | Act-Aware MSE=3.186e-06
+    self_attn.v_proj [4096x4096] 0.1s | Act-Aware MSE=4.483e-06
+    self_attn.z_proj [4096x4096] 0.1s | Act-Aware MSE=3.765e-06
+  Layer 2 done in 36.6s
+
+======================================================================
+[Layer 3/31] -> Act-Aware NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (96 samples)...
+    [qkv] fused global_sf=2763.5663 (max_amax=0.972656)
+    [gate_up] fused global_sf=5881.4359 (max_amax=0.457031)
+  Running Act-Aware MSE-RTN (Protecting Outliers)...
+    mlp.down_proj [4096x16384] 0.6s | Act-Aware MSE=4.324e-06
+    mlp.gate_proj [16384x4096] 0.5s | Act-Aware MSE=4.511e-06
+    mlp.up_proj [16384x4096] 0.5s | Act-Aware MSE=3.923e-06
+    self_attn.k_proj [4096x4096] 0.1s | Act-Aware MSE=3.991e-06
+    self_attn.o_proj [4096x4096] 0.1s | Act-Aware MSE=4.502e-06
+    self_attn.q_proj [4096x4096] 0.1s | Act-Aware MSE=4.012e-06
+    self_attn.v_proj [4096x4096] 0.1s | Act-Aware MSE=4.695e-06
+    self_attn.z_proj [4096x4096] 0.1s | Act-Aware MSE=4.039e-06
+  Layer 3 done in 36.8s
+
+======================================================================
+[Layer 4/31] -> Act-Aware NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (96 samples)...
+    [qkv] fused global_sf=3493.0355 (max_amax=0.769531)
+    [gate_up] fused global_sf=4327.8491 (max_amax=0.621094)
+  Running Act-Aware MSE-RTN (Protecting Outliers)...
+    mlp.down_proj [4096x16384] 0.6s | Act-Aware MSE=4.404e-06
+    mlp.gate_proj [16384x4096] 0.5s | Act-Aware MSE=4.539e-06
+    mlp.up_proj [16384x4096] 0.5s | Act-Aware MSE=4.085e-06
+    self_attn.k_proj [4096x4096] 0.1s | Act-Aware MSE=3.459e-06
+    self_attn.o_proj [4096x4096] 0.1s | Act-Aware MSE=4.401e-06
+    self_attn.q_proj [4096x4096] 0.1s | Act-Aware MSE=3.444e-06
+    self_attn.v_proj [4096x4096] 0.1s | Act-Aware MSE=4.612e-06
+    self_attn.z_proj [4096x4096] 0.1s | Act-Aware MSE=4.027e-06
+  Layer 4 done in 37.1s
+
+======================================================================
+[Layer 5/31] -> Act-Aware NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (96 samples)...
+    [qkv] fused global_sf=2440.1702 (max_amax=1.101562)
+    [gate_up] fused global_sf=4047.8118 (max_amax=0.664062)
+  Running Act-Aware MSE-RTN (Protecting Outliers)...
+    mlp.down_proj [4096x16384] 0.6s | Act-Aware MSE=4.322e-06
+    mlp.gate_proj [16384x4096] 0.5s | Act-Aware MSE=4.609e-06
+    mlp.up_proj [16384x4096] 0.5s | Act-Aware MSE=4.132e-06
+    self_attn.k_proj [4096x4096] 0.1s | Act-Aware MSE=3.912e-06
+    self_attn.o_proj [4096x4096] 0.1s | Act-Aware MSE=4.543e-06
+    self_attn.q_proj [4096x4096] 0.1s | Act-Aware MSE=4.005e-06
+    self_attn.v_proj [4096x4096] 0.1s | Act-Aware MSE=4.733e-06
+    self_attn.z_proj [4096x4096] 0.1s | Act-Aware MSE=4.029e-06
+  Layer 5 done in 36.8s
+
+======================================================================
+[Layer 6/31] -> Act-Aware NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (96 samples)...
+    [qkv] fused global_sf=2606.5455 (max_amax=1.031250)
+    [gate_up] fused global_sf=4327.8491 (max_amax=0.621094)
+  Running Act-Aware MSE-RTN (Protecting Outliers)...
+    mlp.down_proj [4096x16384] 0.6s | Act-Aware MSE=4.342e-06
+    mlp.gate_proj [16384x4096] 0.5s | Act-Aware MSE=4.588e-06
+    mlp.up_proj [16384x4096] 0.6s | Act-Aware MSE=4.170e-06
+    self_attn.k_proj [4096x4096] 0.1s | Act-Aware MSE=4.167e-06
+    self_attn.o_proj [4096x4096] 0.1s | Act-Aware MSE=4.489e-06
+    self_attn.q_proj [4096x4096] 0.1s | Act-Aware MSE=4.023e-06
+    self_attn.v_proj [4096x4096] 0.1s | Act-Aware MSE=4.812e-06
+    self_attn.z_proj [4096x4096] 0.1s | Act-Aware MSE=3.913e-06
+  Layer 6 done in 37.1s
+
+======================================================================
+[Layer 7/31] -> Act-Aware NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (96 samples)...
+    [qkv] fused global_sf=2324.7568 (max_amax=1.156250)
+    [gate_up] fused global_sf=4071.7633 (max_amax=0.660156)
+  Running Act-Aware MSE-RTN (Protecting Outliers)...
+    mlp.down_proj [4096x16384] 0.6s | Act-Aware MSE=4.469e-06
+    mlp.gate_proj [16384x4096] 0.5s | Act-Aware MSE=4.578e-06
+    mlp.up_proj [16384x4096] 0.5s | Act-Aware MSE=4.229e-06
+    self_attn.k_proj [4096x4096] 0.1s | Act-Aware MSE=4.183e-06
+    self_attn.o_proj [4096x4096] 0.1s | Act-Aware MSE=4.538e-06
+    self_attn.q_proj [4096x4096] 0.1s | Act-Aware MSE=4.055e-06
+    self_attn.v_proj [4096x4096] 0.1s | Act-Aware MSE=4.821e-06
+    self_attn.z_proj [4096x4096] 0.1s | Act-Aware MSE=3.906e-06
+  Layer 7 done in 37.0s
+
+======================================================================
+[Layer 8/31] -> Act-Aware NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (96 samples)...
+    [qkv] fused global_sf=3171.0968 (max_amax=0.847656)
+    [gate_up] fused global_sf=3085.7758 (max_amax=0.871094)
+  Running Act-Aware MSE-RTN (Protecting Outliers)...
+    mlp.down_proj [4096x16384] 0.6s | Act-Aware MSE=4.416e-06
+    mlp.gate_proj [16384x4096] 0.5s | Act-Aware MSE=4.745e-06
+    mlp.up_proj [16384x4096] 0.5s | Act-Aware MSE=4.252e-06
+    self_attn.k_proj [4096x4096] 0.1s | Act-Aware MSE=4.414e-06
+    self_attn.o_proj [4096x4096] 0.1s | Act-Aware MSE=4.633e-06
+    self_attn.q_proj [4096x4096] 0.1s | Act-Aware MSE=4.261e-06
+    self_attn.v_proj [4096x4096] 0.1s | Act-Aware MSE=4.977e-06
+    self_attn.z_proj [4096x4096] 0.1s | Act-Aware MSE=4.032e-06
+  Layer 8 done in 37.0s
+
+======================================================================
+[Layer 9/31] -> BF16
+======================================================================
+  Keeping BF16 (sparse layer)
+  Layer 9 done in 11.8s
+
+======================================================================
+[Layer 10/31] -> Act-Aware NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (96 samples)...
+    [qkv] fused global_sf=2457.6000 (max_amax=1.093750)
+    [gate_up] fused global_sf=4327.8491 (max_amax=0.621094)
+  Running Act-Aware MSE-RTN (Protecting Outliers)...
+    mlp.down_proj [4096x16384] 0.6s | Act-Aware MSE=4.542e-06
+    mlp.gate_proj [16384x4096] 0.5s | Act-Aware MSE=4.606e-06
+    mlp.up_proj [16384x4096] 0.6s | Act-Aware MSE=4.414e-06
+    self_attn.k_proj [4096x4096] 0.1s | Act-Aware MSE=4.605e-06
+    self_attn.o_proj [4096x4096] 0.1s | Act-Aware MSE=4.636e-06
+    self_attn.q_proj [4096x4096] 0.1s | Act-Aware MSE=4.317e-06
+    self_attn.v_proj [4096x4096] 0.1s | Act-Aware MSE=4.781e-06
+    self_attn.z_proj [4096x4096] 0.1s | Act-Aware MSE=4.058e-06
+  Layer 10 done in 36.9s
+
+======================================================================
+[Layer 11/31] -> Act-Aware NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (96 samples)...
+    [qkv] fused global_sf=1849.8065 (max_amax=1.453125)
+    [gate_up] fused global_sf=4355.2405 (max_amax=0.617188)
+  Running Act-Aware MSE-RTN (Protecting Outliers)...
+    mlp.down_proj [4096x16384] 0.6s | Act-Aware MSE=4.647e-06
+    mlp.gate_proj [16384x4096] 0.5s | Act-Aware MSE=4.567e-06
+    mlp.up_proj [16384x4096] 0.5s | Act-Aware MSE=4.491e-06
+    self_attn.k_proj [4096x4096] 0.1s | Act-Aware MSE=4.423e-06
+    self_attn.o_proj [4096x4096] 0.1s | Act-Aware MSE=4.630e-06
+    self_attn.q_proj [4096x4096] 0.1s | Act-Aware MSE=4.306e-06
+    self_attn.v_proj [4096x4096] 0.1s | Act-Aware MSE=4.860e-06
+    self_attn.z_proj [4096x4096] 0.1s | Act-Aware MSE=3.998e-06
+  Layer 11 done in 36.7s
+
+======================================================================
+[Layer 12/31] -> Act-Aware NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (96 samples)...
+    [qkv] fused global_sf=2340.5714 (max_amax=1.148438)
+    [gate_up] fused global_sf=3822.9333 (max_amax=0.703125)
+  Running Act-Aware MSE-RTN (Protecting Outliers)...
+    mlp.down_proj [4096x16384] 0.6s | Act-Aware MSE=4.709e-06
+    mlp.gate_proj [16384x4096] 0.5s | Act-Aware MSE=4.506e-06
+    mlp.up_proj [16384x4096] 0.5s | Act-Aware MSE=4.561e-06
+    self_attn.k_proj [4096x4096] 0.1s | Act-Aware MSE=4.339e-06
+    self_attn.o_proj [4096x4096] 0.1s | Act-Aware MSE=4.721e-06
+    self_attn.q_proj [4096x4096] 0.1s | Act-Aware MSE=4.406e-06
+    self_attn.v_proj [4096x4096] 0.1s | Act-Aware MSE=4.854e-06
+    self_attn.z_proj [4096x4096] 0.1s | Act-Aware MSE=4.222e-06
+  Layer 12 done in 37.0s
+
+======================================================================
+[Layer 13/31] -> Act-Aware NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (96 samples)...
+    [qkv] fused global_sf=2567.6418 (max_amax=1.046875)
+    [gate_up] fused global_sf=3822.9333 (max_amax=0.703125)
+  Running Act-Aware MSE-RTN (Protecting Outliers)...
+    mlp.down_proj [4096x16384] 0.6s | Act-Aware MSE=4.721e-06
+    mlp.gate_proj [16384x4096] 0.5s | Act-Aware MSE=4.435e-06
+    mlp.up_proj [16384x4096] 0.5s | Act-Aware MSE=4.600e-06
+    self_attn.k_proj [4096x4096] 0.1s | Act-Aware MSE=4.816e-06
+    self_attn.o_proj [4096x4096] 0.1s | Act-Aware MSE=4.562e-06
+    self_attn.q_proj [4096x4096] 0.1s | Act-Aware MSE=4.605e-06
+    self_attn.v_proj [4096x4096] 0.1s | Act-Aware MSE=4.873e-06
+    self_attn.z_proj [4096x4096] 0.1s | Act-Aware MSE=3.971e-06
+  Layer 13 done in 37.0s
+
+======================================================================
+[Layer 14/31] -> Act-Aware NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (96 samples)...
+    [qkv] fused global_sf=2730.6667 (max_amax=0.984375)
+    [gate_up] fused global_sf=4195.9024 (max_amax=0.640625)
+  Running Act-Aware MSE-RTN (Protecting Outliers)...
+    mlp.down_proj [4096x16384] 0.6s | Act-Aware MSE=4.885e-06
+    mlp.gate_proj [16384x4096] 0.5s | Act-Aware MSE=4.340e-06
+    mlp.up_proj [16384x4096] 0.5s | Act-Aware MSE=4.719e-06
+    self_attn.k_proj [4096x4096] 0.1s | Act-Aware MSE=4.548e-06
+    self_attn.o_proj [4096x4096] 0.1s | Act-Aware MSE=4.544e-06
+    self_attn.q_proj [4096x4096] 0.1s | Act-Aware MSE=4.465e-06
+    self_attn.v_proj [4096x4096] 0.1s | Act-Aware MSE=4.930e-06
+    self_attn.z_proj [4096x4096] 0.1s | Act-Aware MSE=3.980e-06
+  Layer 14 done in 37.2s
+
+======================================================================
+[Layer 15/31] -> Act-Aware NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (96 samples)...
+    [qkv] fused global_sf=2606.5455 (max_amax=1.031250)
+    [gate_up] fused global_sf=4000.7442 (max_amax=0.671875)
+  Running Act-Aware MSE-RTN (Protecting Outliers)...
+    mlp.down_proj [4096x16384] 0.6s | Act-Aware MSE=4.726e-06
+    mlp.gate_proj [16384x4096] 0.5s | Act-Aware MSE=4.544e-06
+    mlp.up_proj [16384x4096] 0.5s | Act-Aware MSE=4.596e-06
+    self_attn.k_proj [4096x4096] 0.1s | Act-Aware MSE=4.943e-06
+    self_attn.o_proj [4096x4096] 0.1s | Act-Aware MSE=4.657e-06
+    self_attn.q_proj [4096x4096] 0.1s | Act-Aware MSE=4.645e-06
+    self_attn.v_proj [4096x4096] 0.1s | Act-Aware MSE=5.042e-06
+    self_attn.z_proj [4096x4096] 0.1s | Act-Aware MSE=4.008e-06
+  Layer 15 done in 37.2s
+
+======================================================================
+[Layer 16/31] -> BF16
+======================================================================
+  Keeping BF16 (sparse layer)
+  Layer 16 done in 12.1s
+
+======================================================================
+[Layer 17/31] -> BF16
+======================================================================
+  Keeping BF16 (sparse layer)
+  Layer 17 done in 11.9s
+
+======================================================================
+[Layer 18/31] -> Act-Aware NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (96 samples)...
+    [qkv] fused global_sf=2234.1818 (max_amax=1.203125)
+    [gate_up] fused global_sf=3423.5224 (max_amax=0.785156)
+  Running Act-Aware MSE-RTN (Protecting Outliers)...
+    mlp.down_proj [4096x16384] 0.6s | Act-Aware MSE=4.596e-06
+    mlp.gate_proj [16384x4096] 0.5s | Act-Aware MSE=4.746e-06
+    mlp.up_proj [16384x4096] 0.5s | Act-Aware MSE=4.555e-06
+    self_attn.k_proj [4096x4096] 0.1s | Act-Aware MSE=4.956e-06
+    self_attn.o_proj [4096x4096] 0.1s | Act-Aware MSE=4.643e-06
+    self_attn.q_proj [4096x4096] 0.1s | Act-Aware MSE=4.552e-06
+    self_attn.v_proj [4096x4096] 0.1s | Act-Aware MSE=4.909e-06
+    self_attn.z_proj [4096x4096] 0.1s | Act-Aware MSE=4.181e-06
+  Layer 18 done in 37.3s
+
+======================================================================
+[Layer 19/31] -> Act-Aware NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (96 samples)...
+    [qkv] fused global_sf=2843.5041 (max_amax=0.945312)
+    [gate_up] fused global_sf=3185.7778 (max_amax=0.843750)
+  Running Act-Aware MSE-RTN (Protecting Outliers)...
+    mlp.down_proj [4096x16384] 0.6s | Act-Aware MSE=4.779e-06
+    mlp.gate_proj [16384x4096] 0.5s | Act-Aware MSE=4.585e-06
+    mlp.up_proj [16384x4096] 0.5s | Act-Aware MSE=4.715e-06
+    self_attn.k_proj [4096x4096] 0.1s | Act-Aware MSE=4.706e-06
+    self_attn.o_proj [4096x4096] 0.1s | Act-Aware MSE=4.602e-06
+    self_attn.q_proj [4096x4096] 0.1s | Act-Aware MSE=4.492e-06
+    self_attn.v_proj [4096x4096] 0.1s | Act-Aware MSE=4.884e-06
+    self_attn.z_proj [4096x4096] 0.1s | Act-Aware MSE=4.227e-06
+  Layer 19 done in 36.8s
+
+======================================================================
+[Layer 20/31] -> Act-Aware NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (96 samples)...
+    [qkv] fused global_sf=2529.8824 (max_amax=1.062500)
+    [gate_up] fused global_sf=3389.7931 (max_amax=0.792969)
+  Running Act-Aware MSE-RTN (Protecting Outliers)...
+    mlp.down_proj [4096x16384] 0.6s | Act-Aware MSE=4.911e-06
+    mlp.gate_proj [16384x4096] 0.5s | Act-Aware MSE=4.464e-06
+    mlp.up_proj [16384x4096] 0.5s | Act-Aware MSE=4.797e-06
+    self_attn.k_proj [4096x4096] 0.1s | Act-Aware MSE=5.024e-06
+    self_attn.o_proj [4096x4096] 0.1s | Act-Aware MSE=4.627e-06
+    self_attn.q_proj [4096x4096] 0.1s | Act-Aware MSE=4.628e-06
+    self_attn.v_proj [4096x4096] 0.1s | Act-Aware MSE=4.852e-06
+    self_attn.z_proj [4096x4096] 0.1s | Act-Aware MSE=4.226e-06
+  Layer 20 done in 36.8s
+
+======================================================================
+[Layer 21/31] -> Act-Aware NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (96 samples)...
+    [qkv] fused global_sf=2774.7097 (max_amax=0.968750)
+    [gate_up] fused global_sf=2688.0000 (max_amax=1.000000)
+  Running Act-Aware MSE-RTN (Protecting Outliers)...
+    mlp.down_proj [4096x16384] 0.6s | Act-Aware MSE=5.049e-06
+    mlp.gate_proj [16384x4096] 0.5s | Act-Aware MSE=4.463e-06
+    mlp.up_proj [16384x4096] 0.5s | Act-Aware MSE=4.856e-06
+    self_attn.k_proj [4096x4096] 0.1s | Act-Aware MSE=4.721e-06
+    self_attn.o_proj [4096x4096] 0.1s | Act-Aware MSE=4.588e-06
+    self_attn.q_proj [4096x4096] 0.1s | Act-Aware MSE=4.653e-06
+    self_attn.v_proj [4096x4096] 0.1s | Act-Aware MSE=4.991e-06
+    self_attn.z_proj [4096x4096] 0.1s | Act-Aware MSE=4.356e-06
+  Layer 21 done in 37.1s
+
+======================================================================
+[Layer 22/31] -> BF16
+======================================================================
+  Keeping BF16 (sparse layer)
+  Layer 22 done in 11.8s
+
+======================================================================
+[Layer 23/31] -> Act-Aware NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (96 samples)...
+    [qkv] fused global_sf=1764.4308 (max_amax=1.523438)
+    [gate_up] fused global_sf=3185.7778 (max_amax=0.843750)
+  Running Act-Aware MSE-RTN (Protecting Outliers)...
+    mlp.down_proj [4096x16384] 0.6s | Act-Aware MSE=5.002e-06
+    mlp.gate_proj [16384x4096] 0.5s | Act-Aware MSE=4.418e-06
+    mlp.up_proj [16384x4096] 0.5s | Act-Aware MSE=4.866e-06
+    self_attn.k_proj [4096x4096] 0.1s | Act-Aware MSE=5.279e-06
+    self_attn.o_proj [4096x4096] 0.1s | Act-Aware MSE=4.606e-06
+    self_attn.q_proj [4096x4096] 0.1s | Act-Aware MSE=4.771e-06
+    self_attn.v_proj [4096x4096] 0.1s | Act-Aware MSE=4.830e-06
+    self_attn.z_proj [4096x4096] 0.1s | Act-Aware MSE=4.190e-06
+  Layer 23 done in 36.8s
+
+======================================================================
+[Layer 24/31] -> Act-Aware NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (96 samples)...
+    [qkv] fused global_sf=2191.4904 (max_amax=1.226562)
+    [gate_up] fused global_sf=3308.3077 (max_amax=0.812500)
+  Running Act-Aware MSE-RTN (Protecting Outliers)...
+    mlp.down_proj [4096x16384] 0.6s | Act-Aware MSE=5.120e-06
+    mlp.gate_proj [16384x4096] 0.5s | Act-Aware MSE=4.393e-06
+    mlp.up_proj [16384x4096] 0.5s | Act-Aware MSE=4.936e-06
+    self_attn.k_proj [4096x4096] 0.1s | Act-Aware MSE=5.237e-06
+    self_attn.o_proj [4096x4096] 0.1s | Act-Aware MSE=4.590e-06
+    self_attn.q_proj [4096x4096] 0.1s | Act-Aware MSE=4.777e-06
+    self_attn.v_proj [4096x4096] 0.1s | Act-Aware MSE=4.862e-06
+    self_attn.z_proj [4096x4096] 0.1s | Act-Aware MSE=4.231e-06
+  Layer 24 done in 36.8s
+
+======================================================================
+[Layer 25/31] -> Act-Aware NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (96 samples)...
+    [qkv] fused global_sf=2219.7677 (max_amax=1.210938)
+    [gate_up] fused global_sf=3113.7014 (max_amax=0.863281)
+  Running Act-Aware MSE-RTN (Protecting Outliers)...
+    mlp.down_proj [4096x16384] 0.6s | Act-Aware MSE=5.457e-06
+    mlp.gate_proj [16384x4096] 0.5s | Act-Aware MSE=4.394e-06
+    mlp.up_proj [16384x4096] 0.5s | Act-Aware MSE=5.058e-06
+    self_attn.k_proj [4096x4096] 0.1s | Act-Aware MSE=5.119e-06
+    self_attn.o_proj [4096x4096] 0.1s | Act-Aware MSE=4.632e-06
+    self_attn.q_proj [4096x4096] 0.1s | Act-Aware MSE=4.825e-06
+    self_attn.v_proj [4096x4096] 0.1s | Act-Aware MSE=4.923e-06
+    self_attn.z_proj [4096x4096] 0.1s | Act-Aware MSE=4.283e-06
+  Layer 25 done in 37.2s
+
+======================================================================
+[Layer 26/31] -> Act-Aware NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (96 samples)...
+    [qkv] fused global_sf=2097.9512 (max_amax=1.281250)
+    [gate_up] fused global_sf=4170.4727 (max_amax=0.644531)
+  Running Act-Aware MSE-RTN (Protecting Outliers)...
+    mlp.down_proj [4096x16384] 0.6s | Act-Aware MSE=5.348e-06
+    mlp.gate_proj [16384x4096] 0.5s | Act-Aware MSE=4.422e-06
+    mlp.up_proj [16384x4096] 0.5s | Act-Aware MSE=5.077e-06
+    self_attn.k_proj [4096x4096] 0.1s | Act-Aware MSE=5.935e-06
+    self_attn.o_proj [4096x4096] 0.1s | Act-Aware MSE=4.866e-06
+    self_attn.q_proj [4096x4096] 0.1s | Act-Aware MSE=5.261e-06
+    self_attn.v_proj [4096x4096] 0.1s | Act-Aware MSE=4.680e-06
+    self_attn.z_proj [4096x4096] 0.1s | Act-Aware MSE=4.745e-06
+  Layer 26 done in 37.1s
+
+======================================================================
+[Layer 27/31] -> Act-Aware NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (96 samples)...
+    [qkv] fused global_sf=2493.2174 (max_amax=1.078125)
+    [gate_up] fused global_sf=3699.6129 (max_amax=0.726562)
+  Running Act-Aware MSE-RTN (Protecting Outliers)...
+    mlp.down_proj [4096x16384] 0.6s | Act-Aware MSE=5.370e-06
+    mlp.gate_proj [16384x4096] 0.5s | Act-Aware MSE=4.393e-06
+    mlp.up_proj [16384x4096] 0.5s | Act-Aware MSE=5.138e-06
+    self_attn.k_proj [4096x4096] 0.1s | Act-Aware MSE=4.896e-06
+    self_attn.o_proj [4096x4096] 0.1s | Act-Aware MSE=4.744e-06
+    self_attn.q_proj [4096x4096] 0.1s | Act-Aware MSE=4.787e-06
+    self_attn.v_proj [4096x4096] 0.1s | Act-Aware MSE=4.950e-06
+    self_attn.z_proj [4096x4096] 0.1s | Act-Aware MSE=4.457e-06
+  Layer 27 done in 37.1s
+
+======================================================================
+[Layer 28/31] -> Act-Aware NVFP4
+======================================================================
+  Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (96 samples)...
+    [qkv] fused global_sf=2797.2683 (max_amax=0.960938)
+    [gate_up] fused global_sf=2248.7843 (max_amax=1.195312)
+  Running Act-Aware MSE-RTN (Protecting Outliers)...
+    mlp.down_proj [4096x16384] 0.6s | Act-Aware MSE=5.462e-06
+    mlp.gate_proj [16384x4096] 0.5s | Act-Aware MSE=4.368e-06
+    mlp.up_proj [16384x4096] 0.5s | Act-Aware MSE=5.198e-06
+    self_attn.k_proj [4096x4096] 0.1s | Act-Aware MSE=5.637e-06
+    self_attn.o_proj [4096x4096] 0.1s | Act-Aware MSE=4.772e-06
+    self_attn.q_proj [4096x4096] 0.1s | Act-Aware MSE=5.400e-06
+    self_attn.v_proj [4096x4096] 0.1s | Act-Aware MSE=4.920e-06
+    self_attn.z_proj [4096x4096] 0.1s | Act-Aware MSE=5.051e-06
+  Layer 28 done in 37.0s
+
+======================================================================
+[Layer 29/31] -> BF16
+======================================================================
+  Keeping BF16 (sparse layer)
+  Layer 29 done in 11.9s
+
+======================================================================
+[Layer 30/31] -> BF16
+======================================================================
+  Keeping BF16 (sparse layer)
+  Layer 30 done in 11.9s
+
+======================================================================
+[Layer 31/31] -> BF16
+======================================================================
+  Keeping BF16 (sparse layer)
+  Layer 31 done in 12.0s
+
+[Phase 4] Saving to /opt/model_nvfp4_awq (Total: 8.49 GB)...
+  Saved model-00001-of-00003.safetensors
+  Saved model-00002-of-00003.safetensors
+  Saved model-00003-of-00003.safetensors
+  Patched config.json with quantization_config and 8 exclude_modules.
+
+[DONE] Activation-Aware NVFP4 quantisation complete!
+
+[INFO] Total time: 16.9 min
