@@ -32,6 +32,8 @@ git push -u origin main
 
 Mock the process on SOAR official server:
 ```bash
+# Contest server GPU:
+# https://www.techpowerup.com/gpu-specs/rtx-6000d.c4363
 cd /opt/oldMoney-Project/submissions
 bash simulate_soar.sh submission_20260322.tar.gz
 ```
