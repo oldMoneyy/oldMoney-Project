@@ -237,37 +237,8 @@ nohup python3 eval_model.py \
 
 First time to prepare:
 ```bash
-cd /opt/oldMoney-Project/quantization
-mkdir venv
-python -m venv venv/
-source /opt/oldMoney-Project/quantization/venv/bin/activate
-export LD_LIBRARY_PATH=/opt/oldMoney-Project/quantization/venv/lib/python3.10/site-packages/torch/lib:$LD_LIBRARY_PATH
-
-uv pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cu128
-# 2. Verify Blackwell support
-python -c "import torch; print(torch.cuda.get_arch_list()); print(torch._C._GLIBCXX_USE_CXX11_ABI)"
-
-wget https://github.com/Dao-AILab/flash-attention/releases/download/v2.8.3/flash_attn-2.8.3+cu12torch2.8cxx11abiTRUE-cp310-cp310-linux_x86_64.whl
-uv pip install flash_attn-2.8.3+cu12torch2.8cxx11abiTRUE-cp310-cp310-linux_x86_64.whl
-
-apt-get update && apt-get install -y libpcre3-dev
-uv pip install python-pcre regex
-uv pip install flash-linear-attention
-uv pip install tokenicer
-uv pip install Pillow thefuzz numpy scipy tqdm safetensors sentencepiece protobuf huggingface-hub packaging
-uv pip install tvm
-uv pip install gptqmodel --no-deps
-
-# Install its lightweight deps
-uv pip install accelerate datasets threadpoolctl logbar device-smi
-uv pip install "transformers<5.0"
-pip install --upgrade pip
-
-# Verify it imports
-python -c "from gptqmodel import GPTQModel, QuantizeConfig; print('GPTQModel OK')"
-
-# or
-# bash /opt/oldMoney-Project/quantization/gptq_env_prepare.sh
+bash /opt/oldMoney-Project/quantization/GPTQ_INT4_env.sh
+tail -f /opt/oldMoney-Project/logs/GPTQ_INT4_env.log
 ```
 
 
@@ -398,14 +369,23 @@ python3 -m sglang.launch_server \
 
 
 
+
+
+
 # AWQ
 
+Prepare environment for AWQ:
+```bash
+bash /opt/oldMoney-Project/quantization/AWQ_NVFP4_env.sh
+tail -f /opt/oldMoney-Project/logs/AWQ_NVFP4_env.log
+```
 
 Working like shit... Still optimizing.
 
 ```bash
 uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
 
+export TRITON_PTXAS_PATH="$(which ptxas)"
 source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
 python /opt/oldMoney-Project/quantization/nvfp4_awq.py \
  --input /opt/model \
@@ -430,7 +410,12 @@ python /opt/oldMoney-Project/quantization/nvfp4_awq.py \
 ```
 
 
+## KL Divergence Quick Evaluation
 
+```bash
+
+
+```
 
 
 

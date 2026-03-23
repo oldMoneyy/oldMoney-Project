@@ -1,0 +1,442 @@
+python /opt/oldMoney-Project/bench/long_context_test_case.py
+fuser -k -9 31333/tcp
+python3 -m sglang.launch_server \
+    --model /opt/model_nvfp4_awq_v2 \
+    --quantization modelopt \
+    --trust-remote-code \
+    --disable-radix-cache \
+    --attention-backend minicpm_flashinfer \
+    --chunked-prefill-size 32768 \
+    --max-running-requests 64 \
+    --port 31333 \
+    --dense-as-sparse \
+    --mem-fraction-static 0.82
+
+
+=============================================================================================================================================
+
+
+python3 -m sglang.launch_server \
+    --model /opt/model_nvfp4_awq_v2 \
+    --quantization modelopt \
+    --trust-remote-code \
+    --disable-radix-cache \
+    --attention-backend minicpm_flashinfer \
+    --chunked-prefill-size 32768 \
+    --max-running-requests 64 \
+    --port 31333 \
+    --disable-cuda-graph \
+    --mem-fraction-static 0.82
+
+
+
+=============================================================================================================================================
+
+
+python3 -m sglang.launch_server \
+    --model /opt/model_nvfp4_awq_v2 \
+    --quantization modelopt \
+    --trust-remote-code \
+    --disable-radix-cache \
+    --attention-backend minicpm_flashinfer \
+    --chunked-prefill-size 32768 \
+    --max-running-requests 64 \
+    --port 31333 \
+    --mem-fraction-static 0.82
+
+Running Test 1 - Capital of France (Prefill Focus) (~80,075 chars / ~20,018 tokens)
+   ✅ Completed
+      Duration        : 4.36 seconds
+      Tokens/sec      : 57.3 t/s
+      Response length : 912 chars
+      Tokens used     : 17527 prompt + 250 completion
+      Preview         : Paris
+
+Running Test 2 - Needle in Haystack (Prefill Focus) (~350,086 chars / ~87,521 tokens)
+   ✅ Completed
+      Duration        : 10.35 seconds
+      Tokens/sec      : 34.7 t/s
+      Response length : 1,265 chars
+      Tokens used     : 75034 prompt + 359 completion
+      Preview         : BLUE-TIGER-42
+
+Running Test 3 - Multi-document (Prefill Focus) (~604,943 chars / ~151,235 tokens)
+   ✅ Completed
+      Duration        : 21.77 seconds
+      Tokens/sec      : 16.6 t/s
+      Response length : 1,390 chars
+      Tokens used     : 212892 prompt + 361 completion
+      Preview         : Alice Zhang, 1987
+
+Running Test 4 - Long Generation (Decode Focus) (~486 chars / ~121 tokens)
+   ✅ Completed
+      Duration        : 48.60 seconds
+      Tokens/sec      : 84.3 t/s
+      Response length : 18,422 chars
+      Tokens used     : 102 prompt + 4096 completion
+      Preview         : # The Unfinished Ascent: A Comprehensive History of Human Space Exploration  ## I. The Dawn of the Cosmos: Early Astronomy and the Seed of Ambition  Human fascination with the heavens is as ancient as civilization itself. From the earliest star charts etched on cave walls to the meticulous observati...
+
+✅ Benchmark finished!
+
+=============================================================================================================================================
+
+python3 -m sglang.launch_server \
+    --model /opt/model_nvfp4_awq_v2 \
+    --quantization modelopt \
+    --trust-remote-code \
+    --disable-radix-cache \
+    --attention-backend minicpm_flashinfer \
+    --chunked-prefill-size 32768 \
+    --max-running-requests 64 \
+    --port 31333 \
+    --mem-fraction-static 0.82 \
+    --kv-cache-dtype fp8_e5m2
+
+Running Test 1 - Capital of France (Prefill Focus) (~80,075 chars / ~20,018 tokens)
+   ✅ Completed
+      Duration        : 5.06 seconds
+      Tokens/sec      : 61.3 t/s
+      Response length : 1,209 chars
+      Tokens used     : 17527 prompt + 310 completion
+      Preview         : Paris
+
+Running Test 2 - Needle in Haystack (Prefill Focus) (~350,086 chars / ~87,521 tokens)
+   ✅ Completed
+      Duration        : 11.00 seconds
+      Tokens/sec      : 38.1 t/s
+      Response length : 1,460 chars
+      Tokens used     : 75034 prompt + 419 completion
+      Preview         : BLUE-TIGER-42
+
+Running Test 3 - Multi-document (Prefill Focus) (~604,943 chars / ~151,235 tokens)
+   ✅ Completed
+      Duration        : 22.42 seconds
+      Tokens/sec      : 19.4 t/s
+      Response length : 1,652 chars
+      Tokens used     : 212892 prompt + 434 completion
+      Preview         : Alice Zhang, 1987
+
+Running Test 4 - Long Generation (Decode Focus) (~486 chars / ~121 tokens)
+   ✅ Completed
+      Duration        : 48.62 seconds
+      Tokens/sec      : 84.2 t/s
+      Response length : 15,088 chars
+      Tokens used     : 102 prompt + 4096 completion
+      Preview         : ## The Voyage Beyond: A Comprehensive History of Human Space Exploration  Human space exploration represents one of the most profound and transformative endeavors in our species' history. It is the culmination of millennia of scientific inquiry, philosophical curiosity, geopolitical rivalry, and sta...
+
+✅ Benchmark finished!
+
+=============================================================================================================================================
+export TORCHINDUCTOR_COMPILE_THREADS=20
+export TORCHINDUCTOR_MAX_AUTOTUNE=0
+export TORCHINDUCTOR_COORDINATE_DESCENT_TUNING=0
+export TORCHINDUCTOR_CACHE_DIR="/tmp/pt_cache"
+export TRITON_CACHE_DIR="/tmp/triton_cache"
+mkdir -p $TORCHINDUCTOR_CACHE_DIR $TRITON_CACHE_DIR
+python3 -m sglang.launch_server \
+    --model /opt/model_nvfp4_awq_v2 \
+    --quantization modelopt \
+    --trust-remote-code \
+    --disable-radix-cache \
+    --attention-backend minicpm_flashinfer \
+    --chunked-prefill-size 32768 \
+    --max-running-requests 64 \
+    --port 31333 \
+    --mem-fraction-static 0.82 \
+    --enable-torch-compile
+
+=============================================================================================================================================
+
+
+python3 -m sglang.launch_server \
+    --model /opt/model_nvfp4_awq_v2 \
+    --quantization modelopt \
+    --trust-remote-code \
+    --disable-radix-cache \
+    --attention-backend minicpm_flashinfer \
+    --chunked-prefill-size 32768 \
+    --max-running-requests 64 \
+    --port 31333 \
+    --mem-fraction-static 0.82 \
+    --fuse-topk \
+    --enable-mixed-chunk 
+
+
+Running Test 1 - Capital of France (Prefill Focus) (~80,075 chars / ~20,018 tokens)
+   ✅ Completed
+      Duration        : 4.35 seconds
+      Tokens/sec      : 57.4 t/s
+      Response length : 912 chars
+      Tokens used     : 17527 prompt + 250 completion
+      Preview         : Paris
+
+Running Test 2 - Needle in Haystack (Prefill Focus) (~350,086 chars / ~87,521 tokens)
+   ✅ Completed
+      Duration        : 10.41 seconds
+      Tokens/sec      : 34.5 t/s
+      Response length : 1,265 chars
+      Tokens used     : 75034 prompt + 359 completion
+      Preview         : BLUE-TIGER-42
+
+Running Test 3 - Multi-document (Prefill Focus) (~604,943 chars / ~151,235 tokens)
+   ✅ Completed
+      Duration        : 21.72 seconds
+      Tokens/sec      : 16.6 t/s
+      Response length : 1,390 chars
+      Tokens used     : 212892 prompt + 361 completion
+      Preview         : Alice Zhang, 1987
+
+Running Test 4 - Long Generation (Decode Focus) (~486 chars / ~121 tokens)
+   ✅ Completed
+      Duration        : 48.52 seconds
+      Tokens/sec      : 84.4 t/s
+      Response length : 18,422 chars
+      Tokens used     : 102 prompt + 4096 completion
+      Preview         : # The Unfinished Ascent: A Comprehensive History of Human Space Exploration  ## I. The Dawn of the Cosmos: Early Astronomy and the Seed of Ambition  Human fascination with the heavens is as ancient as civilization itself. From the earliest star charts etched on cave walls to the meticulous observati...
+
+✅ Benchmark finished!
+
+
+=============================================================================================================================================
+
+python3 -m sglang.launch_server \
+    --model /opt/model_nvfp4_awq_v2 \
+    --quantization modelopt \
+    --trust-remote-code \
+    --disable-radix-cache \
+    --attention-backend minicpm_flashinfer \
+    --chunked-prefill-size 32768 \
+    --max-running-requests 64 \
+    --port 31333 \
+    --mem-fraction-static 0.82 \
+    --fuse-topk 
+
+
+=============================================================================================================================================
+
+export PYTORCH_ALLOC_CONF=expandable_segments:True
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+python3 -m sglang.launch_server \
+    --model /opt/model_nvfp4_awq_v2 \
+    --quantization modelopt \
+    --trust-remote-code \
+    --disable-radix-cache \
+    --attention-backend minicpm_flashinfer \
+    --chunked-prefill-size 32768 \
+    --max-running-requests 64 \
+    --port 31333 \
+    --mem-fraction-static 0.78
+
+Running Test 1 - Capital of France (Prefill Focus) (~80,075 chars / ~20,018 tokens)
+   ✅ Completed
+      Duration        : 4.38 seconds
+      Tokens/sec      : 57.1 t/s
+      Response length : 912 chars
+      Tokens used     : 17527 prompt + 250 completion
+      Preview         : Paris
+
+Running Test 2 - Needle in Haystack (Prefill Focus) (~350,086 chars / ~87,521 tokens)
+   ✅ Completed
+      Duration        : 10.42 seconds
+      Tokens/sec      : 34.4 t/s
+      Response length : 1,265 chars
+      Tokens used     : 75034 prompt + 359 completion
+      Preview         : BLUE-TIGER-42
+
+Running Test 3 - Multi-document (Prefill Focus) (~604,943 chars / ~151,235 tokens)
+   ✅ Completed
+      Duration        : 21.70 seconds
+      Tokens/sec      : 16.6 t/s
+      Response length : 1,390 chars
+      Tokens used     : 212892 prompt + 361 completion
+      Preview         : Alice Zhang, 1987
+
+Running Test 4 - Long Generation (Decode Focus) (~486 chars / ~121 tokens)
+   ✅ Completed
+      Duration        : 48.50 seconds
+      Tokens/sec      : 84.5 t/s
+      Response length : 18,422 chars
+      Tokens used     : 102 prompt + 4096 completion
+      Preview         : # The Unfinished Ascent: A Comprehensive History of Human Space Exploration  ## I. The Dawn of the Cosmos: Early Astronomy and the Seed of Ambition  Human fascination with the heavens is as ancient as civilization itself. From the earliest star charts etched on cave walls to the meticulous observati...
+
+✅ Benchmark finished!
+
+============ Serving Benchmark Result ============
+Backend:                                 sglang    
+Traffic request rate:                    inf       
+Max request concurrency:                 not set   
+Successful requests:                     64        
+Benchmark duration (s):                  899.30    
+Total input tokens:                      3885243   
+Total input text tokens:                 3885243   
+Total generated tokens:                  409876    
+Total generated tokens (retokenized):    376346    
+Request throughput (req/s):              0.07      
+Input token throughput (tok/s):          4320.29   
+Output token throughput (tok/s):         455.77    
+Peak output token throughput (tok/s):    1723.00   
+Peak concurrent requests:                64        
+Total token throughput (tok/s):          4776.06   
+Concurrency:                             35.62   
+
+
+=============================================================================================================================================
+
+export PYTORCH_ALLOC_CONF=expandable_segments:True
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+python3 -m sglang.launch_server \
+    --model /opt/model_nvfp4_awq_v2 \
+    --quantization modelopt \
+    --trust-remote-code \
+    --disable-radix-cache \
+    --attention-backend minicpm_flashinfer \
+    --chunked-prefill-size 32768 \
+    --max-running-requests 64 \
+    --port 31333 \
+    --mem-fraction-static 0.82 \
+    --kv-cache-dtype fp8_e5m2 \
+    --max-mamba-cache-size 64
+
+Running Test 1 - Capital of France (Prefill Focus) (~80,075 chars / ~20,018 tokens)
+   ✅ Completed
+      Duration        : 4.41 seconds
+      Tokens/sec      : 59.1 t/s
+      Response length : 1,005 chars
+      Tokens used     : 17527 prompt + 261 completion
+      Preview         : Paris
+
+Running Test 2 - Needle in Haystack (Prefill Focus) (~350,086 chars / ~87,521 tokens)
+   ✅ Completed
+      Duration        : 11.23 seconds
+      Tokens/sec      : 37.3 t/s
+      Response length : 1,460 chars
+      Tokens used     : 75034 prompt + 419 completion
+      Preview         : BLUE-TIGER-42
+
+Running Test 3 - Multi-document (Prefill Focus) (~604,943 chars / ~151,235 tokens)
+   ✅ Completed
+      Duration        : 22.55 seconds
+      Tokens/sec      : 19.2 t/s
+      Response length : 1,652 chars
+      Tokens used     : 212892 prompt + 434 completion
+      Preview         : Alice Zhang, 1987
+
+Running Test 4 - Long Generation (Decode Focus) (~486 chars / ~121 tokens)
+   ✅ Completed
+      Duration        : 48.62 seconds
+      Tokens/sec      : 84.2 t/s
+      Response length : 15,088 chars
+      Tokens used     : 102 prompt + 4096 completion
+      Preview         : ## The Voyage Beyond: A Comprehensive History of Human Space Exploration  Human space exploration represents one of the most profound and transformative endeavors in our species' history. It is the culmination of millennia of scientific inquiry, philosophical curiosity, geopolitical rivalry, and sta...
+
+✅ Benchmark finished!
+
+
+
+
+
+
+=============================================================================================================================================
+
+export PYTORCH_ALLOC_CONF=expandable_segments:True
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+python3 -m sglang.launch_server \
+    --model /opt/model_nvfp4_awq_v2 \
+    --quantization modelopt \
+    --trust-remote-code \
+    --disable-radix-cache \
+    --attention-backend minicpm_flashinfer \
+    --chunked-prefill-size 32768 \
+    --max-running-requests 64 \
+    --port 31333 \
+    --mem-fraction-static 0.82 \
+    --max-mamba-cache-size 64
+
+
+============ Serving Benchmark Result ============
+Backend:                                 sglang    
+Traffic request rate:                    inf       
+Max request concurrency:                 not set   
+Successful requests:                     64        
+Benchmark duration (s):                  904.83    
+Total input tokens:                      3885243   
+Total input text tokens:                 3885243   
+Total generated tokens:                  409876    
+Total generated tokens (retokenized):    405270    
+Request throughput (req/s):              0.07      
+Input token throughput (tok/s):          4293.90   
+Output token throughput (tok/s):         452.99    
+Peak output token throughput (tok/s):    1854.00   
+Peak concurrent requests:                64        
+Total token throughput (tok/s):          4746.89   
+Concurrency:                             35.80     
+
+
+=============================================================================================================================================
+
+python3 -m sglang.launch_server \
+    --model /opt/model_nvfp4_awq_v2 \
+    --quantization modelopt \
+    --trust-remote-code \
+    --disable-radix-cache \
+    --attention-backend minicpm_flashinfer \
+    --chunked-prefill-size 32768 \
+    --max-running-requests 64 \
+    --skip-server-warmup \
+    --port 31333 \
+    --dense-as-sparse \
+    --mem-fraction-static 0.82 
+
+
+============ Serving Benchmark Result ============
+Backend:                                 sglang    
+Traffic request rate:                    inf       
+Max request concurrency:                 not set   
+Successful requests:                     64        
+Benchmark duration (s):                  823.90    
+Total input tokens:                      3885243   
+Total input text tokens:                 3885243   
+Total generated tokens:                  409876    
+Total generated tokens (retokenized):    404406    
+Request throughput (req/s):              0.08      
+Input token throughput (tok/s):          4715.68   
+Output token throughput (tok/s):         497.48    
+Peak output token throughput (tok/s):    1853.00   
+Peak concurrent requests:                64        
+Total token throughput (tok/s):          5213.17   
+Concurrency:                             33.03     
+
+
+=============================================================================================================================================
+
+
+python3 -m sglang.launch_server \
+    --model /opt/model_nvfp4_awq_v2 \
+    --quantization modelopt \
+    --trust-remote-code \
+    --disable-radix-cache \
+    --attention-backend minicpm_flashinfer \
+    --chunked-prefill-size 32768 \
+    --max-running-requests 64 \
+    --skip-server-warmup \
+    --port 31333 \
+    --mem-fraction-static 0.82 
+
+
+============ Serving Benchmark Result ============
+Backend:                                 sglang    
+Traffic request rate:                    inf       
+Max request concurrency:                 not set   
+Successful requests:                     64        
+Benchmark duration (s):                  904.20    
+Total input tokens:                      3885243   
+Total input text tokens:                 3885243   
+Total generated tokens:                  409876    
+Total generated tokens (retokenized):    400337    
+Request throughput (req/s):              0.07      
+Input token throughput (tok/s):          4296.90   
+Output token throughput (tok/s):         453.30    
+Peak output token throughput (tok/s):    1845.00   
+Peak concurrent requests:                64        
+Total token throughput (tok/s):          4750.21   
+Concurrency:                             35.80    
