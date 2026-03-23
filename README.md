@@ -1,6 +1,6 @@
 
 
-
+# Pull, Push and Mocking
 
 Once access the server:
 
@@ -29,6 +29,13 @@ git commit -m "What are the commits about"
 git remote set-url origin https://oldMoneyy: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@github.com/oldMoneyy/oldMoney-Project.git
 git push -u origin main
 ```
+
+Mock the process on SOAR official server:
+```bash
+cd /opt/oldMoney-Project/submissions
+bash simulate_soar.sh submission_20260322.tar.gz
+```
+
 
 # TODO
 1. Support `--kv-cache-dtype fp8_e5m2` for minicpm backend (**DONE**).
