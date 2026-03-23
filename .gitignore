@@ -7,6 +7,7 @@ quantization/ultimate_64_token_balanced.jsonl
 **/.ipynb_checkpoints
 vendor/logs
 
+**/.ipynb_checkpoints/
 quantization/.ipynb_checkpoints
 
 # Model weights
@@ -33,5 +34,4 @@ build/
 dist/
 
 # Large data
-*.jsonl
 submissions/submission_*.tar.gz
