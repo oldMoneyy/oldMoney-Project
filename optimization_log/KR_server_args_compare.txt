@@ -2,7 +2,7 @@ fuser -k -9 31333/tcp
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 nohup python3 -m sglang.launch_server \
-    --model /opt/model_nvfp4_awq_v2 \
+    --model /opt/model_nvfp4_awq_lmlp4_m16 \
     --quantization modelopt \
     --trust-remote-code \
     --disable-radix-cache \
@@ -18,9 +18,60 @@ nohup python3 -m sglang.launch_server \
 
 
 
+Running Test 1 - Capital of France (Prefill Focus) (~80,075 chars / ~20,018 tokens)
+   ✅ Completed
+      Duration        : 3.65 seconds
+      Tokens/sec      : 73.9 t/s
+      Response length : 1,019 chars
+      Tokens used     : 17527 prompt + 270 completion
+      Preview         : Paris
+
+Running Test 2 - Needle in Haystack (Prefill Focus) (~350,086 chars / ~87,521 tokens)
+   ✅ Completed
+      Duration        : 6.63 seconds
+      Tokens/sec      : 39.4 t/s
+      Response length : 897 chars
+      Tokens used     : 75034 prompt + 261 completion
+      Preview         : BLUE-TIGER-42
+
+Running Test 3 - Multi-document (Prefill Focus) (~604,943 chars / ~151,235 tokens)
+   ✅ Completed
+      Duration        : 15.94 seconds
+      Tokens/sec      : 24.3 t/s
+      Response length : 1,314 chars
+      Tokens used     : 212892 prompt + 388 completion
+      Preview         : Alice Zhang, 1987
+
+Running Test 4 - Long Generation (Decode Focus) (~486 chars / ~121 tokens)
+   ✅ Completed
+      Duration        : 24.96 seconds
+      Tokens/sec      : 100.9 t/s
+      Response length : 11,215 chars
+      Tokens used     : 102 prompt + 2519 completion
+      Preview         : ## The Unfolding Tapestry: A Comprehensive History of Human Space Exploration  The human journey into the cosmos is not merely a chronicle of technological triumphs, but a profound narrative of our innate curiosity, our relentless pursuit of knowledge, and our ever-evolving relationship with the bou...
+
+✅ Benchmark finished!
 
 
 
+
+============ Serving Benchmark Result ============
+Backend:                                 sglang    
+Traffic request rate:                    inf       
+Max request concurrency:                 not set   
+Successful requests:                     64        
+Benchmark duration (s):                  630.57    
+Total input tokens:                      3885243   
+Total input text tokens:                 3885243   
+Total generated tokens:                  409876    
+Total generated tokens (retokenized):    392653    
+Request throughput (req/s):              0.10      
+Input token throughput (tok/s):          6161.43   
+Output token throughput (tok/s):         650.00    
+Peak output token throughput (tok/s):    2229.00   
+Peak concurrent requests:                64        
+Total token throughput (tok/s):          6811.44   
+Concurrency:                             30.42     
 
 
 
@@ -42,6 +93,7 @@ nohup python3 -m sglang.launch_server \
     --chunked-prefill-size 32768 \
     --max-running-requests 64 \
     --port 31333 \
+    --dense-as-sparse \
     --mem-fraction-static 0.82 \
     --max-mamba-cache-size 64 \
     > /opt/server.log 2>&1 &

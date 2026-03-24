@@ -223,12 +223,12 @@ python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31333 \
 cd /opt/SOAR-Toolkit
 nohup python3 eval_model.py \
   --api_base http://127.0.0.1:31333 \
-  --model_path /opt/model_nvfp4_awq_v2 \
+  --model_path /opt/model_nvfp4_awq_lmlp4_m16 \
   --data_path eval_dataset/perf_public_set.jsonl \
   --concurrency 64 \
   --num_samples 150 \
   --verbose \
-  > /opt/oldMoney-Project/logs/eval_awq_model_v3.log 2>&1 &
+  > /opt/oldMoney-Project/logs/eval_awq_model_v2.log 2>&1 &
 ```
 
 
@@ -391,7 +391,7 @@ uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
 
 export TRITON_PTXAS_PATH="$(which ptxas)"
 source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
-python /opt/oldMoney-Project/quantization/nvfp4_awq.py \
+python /opt/oldMoney-Project/quantization/AWQ_L_4_Mini_16.py \
  --input /opt/model \
  --output /opt/model_nvfp4_awq_v2 \
  --calib-data /opt/oldMoney-Project/quantization/calibration/optimal_64.jsonl \
@@ -402,7 +402,7 @@ python /opt/oldMoney-Project/quantization/nvfp4_awq.py \
  --mse-error-norm 2.0
 
 source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
-python /opt/oldMoney-Project/quantization/nvfp4_awq.py \
+python /opt/oldMoney-Project/quantization/AWQ_L_4_Mini_16.py \
  --input /opt/model \
  --output /opt/model_nvfp4_awq_v3 \
  --calib-data /opt/oldMoney-Project/quantization/calibration/optimal_96.jsonl \
@@ -411,6 +411,31 @@ python /opt/oldMoney-Project/quantization/nvfp4_awq.py \
  --mse-iters 200 \
  --mse-max-shrink 0.60 \
  --mse-error-norm 2.0
+
+export TRITON_PTXAS_PATH="$(which ptxas)"
+source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
+python /opt/oldMoney-Project/quantization/AWQ_L_MLP_4_MiniAttn_16.py \
+ --input /opt/model \
+ --output /opt/model_nvfp4_awq_lmlp4_m16 \
+ --calib-data /opt/oldMoney-Project/quantization/calibration/optimal_64.jsonl \
+ --max-samples 64 \
+ --max-len 131072 \
+ --mse-iters 200 \
+ --mse-max-shrink 0.60 \
+ --mse-error-norm 2.0
+
+export TRITON_PTXAS_PATH="$(which ptxas)"
+source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
+nohup python /opt/oldMoney-Project/quantization/AWQ_MLP_4_Attn_16.py \
+ --input /opt/model \
+ --output /opt/model_awq_mlp4_attn16 \
+ --calib-data /opt/oldMoney-Project/quantization/calibration/optimal_64.jsonl \
+ --max-samples 64 \
+ --max-len 131072 \
+ --mse-iters 200 \
+ --mse-max-shrink 0.60 \
+ --mse-error-norm 2.0 \
+ > /opt/oldMoney-Project/logs/model_awq_mlp4_attn16.log 2>&1 &
 ```
 
 
@@ -458,40 +483,6 @@ nohup python3 -m sglang.launch_server \
     --mem-fraction-static 0.82 \
     > /opt/server.log 2>&1 &
 
-# Faster version
-cd /opt
-fuser -k -9 31333/tcp
-export TORCHINDUCTOR_COMPILE_THREADS=20
-export TORCHINDUCTOR_MAX_AUTOTUNE=0
-export TORCHINDUCTOR_COORDINATE_DESCENT_TUNING=0
-export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
-export PYTORCH_ALLOC_CONF=expandable_segments:True
-export OMP_NUM_THREADS=4
-export CUDA_DEVICE_MAX_CONNECTIONS=1
-export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
-export PYTORCH_ALLOC_CONF=expandable_segments:True
-nohup python3 -m sglang.launch_server \
-    --model /opt/model_nvfp4_awq_v2 \
-    --quantization modelopt \
-    --trust-remote-code \
-    --disable-radix-cache \
-    --kv-cache-dtype fp8_e5m2 \
-    --attention-backend minicpm_flashinfer \
-    --chunked-prefill-size 32768 \
-    --max-running-requests 64 \
-    --max-mamba-cache-size 64 \
-    --skip-server-warmup \
-    --port 31333 \
-    --dense-as-sparse \
-    --fuse-topk \
-    --log-level info \
-    --mem-fraction-static 0.82 \
-    --num-continuous-decode-steps 32 \
-    --schedule-policy fcfs \
-    --cuda-graph-max-bs 64 \
-    --torch-compile-max-bs 64 \
-    --enable-torch-compile \
-    > /opt/server.log 2>&1 &
 ```
 
 

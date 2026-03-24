@@ -1,0 +1,307 @@
+nohup: ignoring input
+======================================================================
+  GOLDEN STRATEGY NVFP4 Quantiser for MiniCPM-SALA
+  (ALL MLP = NVFP4 | ALL Attention = BF16)
+======================================================================
+[INFO] Loading model (CPU, bf16)...
+Skipping import of cpp extensions due to incompatible torch version 2.8.0+cu128 for torchao version 0.16.0             Please see https://github.com/pytorch/ao/issues/2919 for more info
+Current Python version 3.10 is below the recommended 3.11 version. It is recommended to upgrade to Python 3.11 or higher for the best experience.
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loading checkpoint shards:   0%|                                                                                                               | 0/4 [00:00<?, ?it/s]Loading checkpoint shards: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:00<00:00, 107.16it/s]
+
+[Phase 1] Embedding forward...
+
+======================================================================
+[Layer 0/31] minicpm4 -> Golden Strategy (NVFP4 MLP + BF16 Attn)
+======================================================================
+  Linears to NVFP4 (MLP):  ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Linears to BF16 (Attn):  ['self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  Collecting Activations (64 samples)...
+  Running Act-Aware MSE-RTN...
+  Layer 0 done in 22.6s
+
+======================================================================
+[Layer 1/31] lightning-attn -> Golden Strategy (NVFP4 MLP + BF16 Attn)
+======================================================================
+  Linears to NVFP4 (MLP):  ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Linears to BF16 (Attn):  ['self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (64 samples)...
+  Running Act-Aware MSE-RTN...
+  Layer 1 done in 24.3s
+
+======================================================================
+[Layer 2/31] lightning-attn -> Golden Strategy (NVFP4 MLP + BF16 Attn)
+======================================================================
+  Linears to NVFP4 (MLP):  ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Linears to BF16 (Attn):  ['self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (64 samples)...
+  Running Act-Aware MSE-RTN...
+  Layer 2 done in 24.1s
+
+======================================================================
+[Layer 3/31] lightning-attn -> Golden Strategy (NVFP4 MLP + BF16 Attn)
+======================================================================
+  Linears to NVFP4 (MLP):  ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Linears to BF16 (Attn):  ['self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (64 samples)...
+  Running Act-Aware MSE-RTN...
+  Layer 3 done in 23.9s
+
+======================================================================
+[Layer 4/31] lightning-attn -> Golden Strategy (NVFP4 MLP + BF16 Attn)
+======================================================================
+  Linears to NVFP4 (MLP):  ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Linears to BF16 (Attn):  ['self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (64 samples)...
+  Running Act-Aware MSE-RTN...
+  Layer 4 done in 24.0s
+
+======================================================================
+[Layer 5/31] lightning-attn -> Golden Strategy (NVFP4 MLP + BF16 Attn)
+======================================================================
+  Linears to NVFP4 (MLP):  ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Linears to BF16 (Attn):  ['self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (64 samples)...
+  Running Act-Aware MSE-RTN...
+  Layer 5 done in 23.9s
+
+======================================================================
+[Layer 6/31] lightning-attn -> Golden Strategy (NVFP4 MLP + BF16 Attn)
+======================================================================
+  Linears to NVFP4 (MLP):  ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Linears to BF16 (Attn):  ['self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (64 samples)...
+  Running Act-Aware MSE-RTN...
+  Layer 6 done in 23.9s
+
+======================================================================
+[Layer 7/31] lightning-attn -> Golden Strategy (NVFP4 MLP + BF16 Attn)
+======================================================================
+  Linears to NVFP4 (MLP):  ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Linears to BF16 (Attn):  ['self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (64 samples)...
+  Running Act-Aware MSE-RTN...
+  Layer 7 done in 24.2s
+
+======================================================================
+[Layer 8/31] lightning-attn -> Golden Strategy (NVFP4 MLP + BF16 Attn)
+======================================================================
+  Linears to NVFP4 (MLP):  ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Linears to BF16 (Attn):  ['self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (64 samples)...
+  Running Act-Aware MSE-RTN...
+  Layer 8 done in 23.9s
+
+======================================================================
+[Layer 9/31] minicpm4 -> Golden Strategy (NVFP4 MLP + BF16 Attn)
+======================================================================
+  Linears to NVFP4 (MLP):  ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Linears to BF16 (Attn):  ['self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  Collecting Activations (64 samples)...
+  Running Act-Aware MSE-RTN...
+  Layer 9 done in 22.2s
+
+======================================================================
+[Layer 10/31] lightning-attn -> Golden Strategy (NVFP4 MLP + BF16 Attn)
+======================================================================
+  Linears to NVFP4 (MLP):  ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Linears to BF16 (Attn):  ['self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (64 samples)...
+  Running Act-Aware MSE-RTN...
+  Layer 10 done in 24.0s
+
+======================================================================
+[Layer 11/31] lightning-attn -> Golden Strategy (NVFP4 MLP + BF16 Attn)
+======================================================================
+  Linears to NVFP4 (MLP):  ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Linears to BF16 (Attn):  ['self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (64 samples)...
+  Running Act-Aware MSE-RTN...
+  Layer 11 done in 23.9s
+
+======================================================================
+[Layer 12/31] lightning-attn -> Golden Strategy (NVFP4 MLP + BF16 Attn)
+======================================================================
+  Linears to NVFP4 (MLP):  ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Linears to BF16 (Attn):  ['self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (64 samples)...
+  Running Act-Aware MSE-RTN...
+  Layer 12 done in 23.9s
+
+======================================================================
+[Layer 13/31] lightning-attn -> Golden Strategy (NVFP4 MLP + BF16 Attn)
+======================================================================
+  Linears to NVFP4 (MLP):  ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Linears to BF16 (Attn):  ['self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (64 samples)...
+  Running Act-Aware MSE-RTN...
+  Layer 13 done in 24.1s
+
+======================================================================
+[Layer 14/31] lightning-attn -> Golden Strategy (NVFP4 MLP + BF16 Attn)
+======================================================================
+  Linears to NVFP4 (MLP):  ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Linears to BF16 (Attn):  ['self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (64 samples)...
+  Running Act-Aware MSE-RTN...
+  Layer 14 done in 24.2s
+
+======================================================================
+[Layer 15/31] lightning-attn -> Golden Strategy (NVFP4 MLP + BF16 Attn)
+======================================================================
+  Linears to NVFP4 (MLP):  ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Linears to BF16 (Attn):  ['self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (64 samples)...
+  Running Act-Aware MSE-RTN...
+  Layer 15 done in 24.2s
+
+======================================================================
+[Layer 16/31] minicpm4 -> Golden Strategy (NVFP4 MLP + BF16 Attn)
+======================================================================
+  Linears to NVFP4 (MLP):  ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Linears to BF16 (Attn):  ['self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  Collecting Activations (64 samples)...
+  Running Act-Aware MSE-RTN...
+  Layer 16 done in 22.8s
+
+======================================================================
+[Layer 17/31] minicpm4 -> Golden Strategy (NVFP4 MLP + BF16 Attn)
+======================================================================
+  Linears to NVFP4 (MLP):  ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Linears to BF16 (Attn):  ['self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  Collecting Activations (64 samples)...
+  Running Act-Aware MSE-RTN...
+  Layer 17 done in 22.5s
+
+======================================================================
+[Layer 18/31] lightning-attn -> Golden Strategy (NVFP4 MLP + BF16 Attn)
+======================================================================
+  Linears to NVFP4 (MLP):  ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Linears to BF16 (Attn):  ['self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (64 samples)...
+  Running Act-Aware MSE-RTN...
+  Layer 18 done in 24.1s
+
+======================================================================
+[Layer 19/31] lightning-attn -> Golden Strategy (NVFP4 MLP + BF16 Attn)
+======================================================================
+  Linears to NVFP4 (MLP):  ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Linears to BF16 (Attn):  ['self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (64 samples)...
+  Running Act-Aware MSE-RTN...
+  Layer 19 done in 24.3s
+
+======================================================================
+[Layer 20/31] lightning-attn -> Golden Strategy (NVFP4 MLP + BF16 Attn)
+======================================================================
+  Linears to NVFP4 (MLP):  ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Linears to BF16 (Attn):  ['self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (64 samples)...
+  Running Act-Aware MSE-RTN...
+  Layer 20 done in 24.1s
+
+======================================================================
+[Layer 21/31] lightning-attn -> Golden Strategy (NVFP4 MLP + BF16 Attn)
+======================================================================
+  Linears to NVFP4 (MLP):  ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Linears to BF16 (Attn):  ['self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (64 samples)...
+  Running Act-Aware MSE-RTN...
+  Layer 21 done in 24.3s
+
+======================================================================
+[Layer 22/31] minicpm4 -> Golden Strategy (NVFP4 MLP + BF16 Attn)
+======================================================================
+  Linears to NVFP4 (MLP):  ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Linears to BF16 (Attn):  ['self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  Collecting Activations (64 samples)...
+  Running Act-Aware MSE-RTN...
+  Layer 22 done in 22.5s
+
+======================================================================
+[Layer 23/31] lightning-attn -> Golden Strategy (NVFP4 MLP + BF16 Attn)
+======================================================================
+  Linears to NVFP4 (MLP):  ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Linears to BF16 (Attn):  ['self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (64 samples)...
+  Running Act-Aware MSE-RTN...
+  Layer 23 done in 24.2s
+
+======================================================================
+[Layer 24/31] lightning-attn -> Golden Strategy (NVFP4 MLP + BF16 Attn)
+======================================================================
+  Linears to NVFP4 (MLP):  ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Linears to BF16 (Attn):  ['self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (64 samples)...
+  Running Act-Aware MSE-RTN...
+  Layer 24 done in 24.3s
+
+======================================================================
+[Layer 25/31] lightning-attn -> Golden Strategy (NVFP4 MLP + BF16 Attn)
+======================================================================
+  Linears to NVFP4 (MLP):  ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Linears to BF16 (Attn):  ['self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (64 samples)...
+  Running Act-Aware MSE-RTN...
+  Layer 25 done in 24.4s
+
+======================================================================
+[Layer 26/31] lightning-attn -> Golden Strategy (NVFP4 MLP + BF16 Attn)
+======================================================================
+  Linears to NVFP4 (MLP):  ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Linears to BF16 (Attn):  ['self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (64 samples)...
+  Running Act-Aware MSE-RTN...
+  Layer 26 done in 24.2s
+
+======================================================================
+[Layer 27/31] lightning-attn -> Golden Strategy (NVFP4 MLP + BF16 Attn)
+======================================================================
+  Linears to NVFP4 (MLP):  ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Linears to BF16 (Attn):  ['self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (64 samples)...
+  Running Act-Aware MSE-RTN...
+  Layer 27 done in 24.3s
+
+======================================================================
+[Layer 28/31] lightning-attn -> Golden Strategy (NVFP4 MLP + BF16 Attn)
+======================================================================
+  Linears to NVFP4 (MLP):  ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Linears to BF16 (Attn):  ['self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Activations (64 samples)...
+  Running Act-Aware MSE-RTN...
+  Layer 28 done in 24.1s
+
+======================================================================
+[Layer 29/31] minicpm4 -> Golden Strategy (NVFP4 MLP + BF16 Attn)
+======================================================================
+  Linears to NVFP4 (MLP):  ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Linears to BF16 (Attn):  ['self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  Collecting Activations (64 samples)...
+  Running Act-Aware MSE-RTN...
+  Layer 29 done in 22.6s
+
+======================================================================
+[Layer 30/31] minicpm4 -> Golden Strategy (NVFP4 MLP + BF16 Attn)
+======================================================================
+  Linears to NVFP4 (MLP):  ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Linears to BF16 (Attn):  ['self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  Collecting Activations (64 samples)...
+  Running Act-Aware MSE-RTN...
+  Layer 30 done in 22.5s
+
+======================================================================
+[Layer 31/31] minicpm4 -> Golden Strategy (NVFP4 MLP + BF16 Attn)
+======================================================================
+  Linears to NVFP4 (MLP):  ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Linears to BF16 (Attn):  ['self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  Collecting Activations (64 samples)...
+  Running Act-Aware MSE-RTN...
+  Layer 31 done in 22.7s
+
+[Phase 4] Saving to /opt/model_awq_mlp4_attn16 (Total: 9.03 GB)...
+  Patched config.json with quantization_config and 32 exclude_modules.
+
+[DONE] Golden Strategy NVFP4 quantisation complete!
+
+[INFO] Total time: 13.3 min
