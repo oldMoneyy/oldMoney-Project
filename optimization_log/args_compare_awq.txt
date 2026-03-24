@@ -32,7 +32,8 @@ python3 -m sglang.launch_server \
 
 =============================================================================================================================================
 
-
+export PYTORCH_ALLOC_CONF=expandable_segments:True
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 python3 -m sglang.launch_server \
     --model /opt/model_nvfp4_awq_v2 \
     --quantization modelopt \
