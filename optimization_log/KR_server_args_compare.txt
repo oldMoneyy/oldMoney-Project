@@ -1,0 +1,275 @@
+export PYTORCH_ALLOC_CONF=expandable_segments:True
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+python3 -m sglang.launch_server \
+    --model /opt/model_nvfp4_awq_v2 \
+    --quantization modelopt \
+    --trust-remote-code \
+    --disable-radix-cache \
+    --attention-backend minicpm_flashinfer \
+    --chunked-prefill-size 32768 \
+    --max-running-requests 64 \
+    --port 31333 \
+    --mem-fraction-static 0.82 \
+    --max-mamba-cache-size 64
+
+
+============ Serving Benchmark Result ============
+Backend:                                 sglang    
+Traffic request rate:                    inf       
+Max request concurrency:                 not set   
+Successful requests:                     64        
+Benchmark duration (s):                  724.99    
+Total input tokens:                      3885243   
+Total input text tokens:                 3885243   
+Total generated tokens:                  409876    
+Total generated tokens (retokenized):    403982    
+Request throughput (req/s):              0.09      
+Input token throughput (tok/s):          5359.02   
+Output token throughput (tok/s):         565.35    
+Peak output token throughput (tok/s):    2072.00   
+Peak concurrent requests:                64        
+Total token throughput (tok/s):          5924.37   
+Concurrency:                             32.44     
+
+
+Running Test 1 - Capital of France (Prefill Focus) (~80,075 chars / ~20,018 tokens)
+   ✅ Completed
+      Duration        : 3.96 seconds
+      Tokens/sec      : 68.7 t/s
+      Response length : 1,028 chars
+      Tokens used     : 17527 prompt + 272 completion
+      Preview         : Paris
+
+Running Test 2 - Needle in Haystack (Prefill Focus) (~350,086 chars / ~87,521 tokens)
+   ✅ Completed
+      Duration        : 7.77 seconds
+      Tokens/sec      : 40.5 t/s
+      Response length : 1,228 chars
+      Tokens used     : 75034 prompt + 315 completion
+      Preview         : BLUE-TIGER-42
+
+Running Test 3 - Multi-document (Prefill Focus) (~604,943 chars / ~151,235 tokens)
+   ✅ Completed
+      Duration        : 18.74 seconds
+      Tokens/sec      : 26.1 t/s
+      Response length : 1,778 chars
+      Tokens used     : 212892 prompt + 489 completion
+      Preview         : Alice Zhang, 1987
+
+Running Test 4 - Long Generation (Decode Focus) (~486 chars / ~121 tokens)
+   ✅ Completed
+      Duration        : 44.07 seconds
+      Tokens/sec      : 92.9 t/s
+      Response length : 19,520 chars
+      Tokens used     : 102 prompt + 4096 completion
+      Preview         : # The Unfolding Tapestry: A Comprehensive History of Human Space Exploration  ## I. The Dawn of the Cosmic Gaze: Early Astronomy and the Foundations of Space Thought  The human fascination with the heavens is as ancient as civilization itself. Long before the first rockets were ever conceived, human...
+
+✅ Benchmark finished!
+
+
+=================================================================================================================
+
+# OPTIMAL
+
+export PYTORCH_ALLOC_CONF=expandable_segments:True
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+python3 -m sglang.launch_server \
+    --model /opt/model_nvfp4_awq_v2 \
+    --quantization modelopt \
+    --trust-remote-code \
+    --disable-radix-cache \
+    --attention-backend minicpm_flashinfer \
+    --chunked-prefill-size 32768 \
+    --max-running-requests 64 \
+    --port 31333 \
+    --dense-as-sparse \
+    --mem-fraction-static 0.82 \
+    --max-mamba-cache-size 64
+
+
+Running Test 1 - Capital of France (Prefill Focus) (~80,075 chars / ~20,018 tokens)
+   ✅ Completed
+      Duration        : 4.42 seconds
+      Tokens/sec      : 67.4 t/s
+      Response length : 1,117 chars
+      Tokens used     : 17527 prompt + 298 completion
+      Preview         : Paris
+
+Running Test 2 - Needle in Haystack (Prefill Focus) (~350,086 chars / ~87,521 tokens)
+   ✅ Completed
+      Duration        : 8.17 seconds
+      Tokens/sec      : 38.6 t/s
+      Response length : 1,228 chars
+      Tokens used     : 75034 prompt + 315 completion
+      Preview         : BLUE-TIGER-42
+
+Running Test 3 - Multi-document (Prefill Focus) (~604,943 chars / ~151,235 tokens)
+   ✅ Completed
+      Duration        : 18.26 seconds
+      Tokens/sec      : 26.8 t/s
+      Response length : 1,778 chars
+      Tokens used     : 212892 prompt + 489 completion
+      Preview         : Alice Zhang, 1987
+
+Running Test 4 - Long Generation (Decode Focus) (~486 chars / ~121 tokens)
+   ✅ Completed
+      Duration        : 33.36 seconds
+      Tokens/sec      : 92.3 t/s
+      Response length : 13,813 chars
+      Tokens used     : 102 prompt + 3080 completion
+      Preview         : ## The Unfolding Tapestry: A Comprehensive History of Human Space Exploration  The human journey into space is not merely a technological endeavor but a profound chapter in our species' quest for understanding, survival, and expansion. It represents the culmination of millennia of observation, the f...
+
+✅ Benchmark finished!
+
+
+============ Serving Benchmark Result ============
+Backend:                                 sglang    
+Traffic request rate:                    inf       
+Max request concurrency:                 not set   
+Successful requests:                     64        
+Benchmark duration (s):                  682.75    
+Total input tokens:                      3885243   
+Total input text tokens:                 3885243   
+Total generated tokens:                  409876    
+Total generated tokens (retokenized):    376388    
+Request throughput (req/s):              0.09      
+Input token throughput (tok/s):          5690.54   
+Output token throughput (tok/s):         600.33    
+Peak output token throughput (tok/s):    1990.00   
+Peak concurrent requests:                64        
+Total token throughput (tok/s):          6290.86   
+Concurrency:                             30.77     
+
+
+
+
+=================================================================================================================
+
+
+
+export PYTORCH_ALLOC_CONF=expandable_segments:True
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+python3 -m sglang.launch_server \
+    --model /opt/model_nvfp4_awq_v2 \
+    --quantization modelopt \
+    --trust-remote-code \
+    --disable-radix-cache \
+    --attention-backend minicpm_flashinfer \
+    --chunked-prefill-size 32768 \
+    --max-running-requests 64 \
+    --port 31333 \
+    --dense-as-sparse \
+    --kv-cache-dtype fp8_e5m2 \
+    --mem-fraction-static 0.82 \
+    --max-mamba-cache-size 64
+
+============ Serving Benchmark Result ============
+Backend:                                 sglang    
+Traffic request rate:                    inf       
+Max request concurrency:                 not set   
+Successful requests:                     64        
+Benchmark duration (s):                  680.46    
+Total input tokens:                      3885243   
+Total input text tokens:                 3885243   
+Total generated tokens:                  409876    
+Total generated tokens (retokenized):    312083    
+Request throughput (req/s):              0.09      
+Input token throughput (tok/s):          5709.69   
+Output token throughput (tok/s):         602.35    
+Peak output token throughput (tok/s):    1935.00   
+Peak concurrent requests:                64        
+Total token throughput (tok/s):          6312.04   
+Concurrency:                             30.53     
+
+
+
+
+
+=================================================================================================================
+
+
+fuser -k -9 31333/tcp
+export TORCHINDUCTOR_COMPILE_THREADS=20
+export TORCHINDUCTOR_MAX_AUTOTUNE=0
+export TORCHINDUCTOR_COORDINATE_DESCENT_TUNING=0
+export TORCHINDUCTOR_CACHE_DIR="/tmp/pt_cache"
+export TRITON_CACHE_DIR="/tmp/triton_cache"
+mkdir -p $TORCHINDUCTOR_CACHE_DIR $TRITON_CACHE_DIR
+nohup python3 -m sglang.launch_server \
+    --model /opt/model_nvfp4_awq_v2 \
+    --quantization modelopt \
+    --trust-remote-code \
+    --disable-radix-cache \
+    --attention-backend minicpm_flashinfer \
+    --chunked-prefill-size 32768 \
+    --max-running-requests 64 \
+    --port 31333 \
+    --dense-as-sparse \
+    --mem-fraction-static 0.82 \
+    --max-mamba-cache-size 64 \
+    --enable-torch-compile \
+    > /opt/server.log 2>&1 &
+
+
+============ Serving Benchmark Result ============
+Backend:                                 sglang    
+Traffic request rate:                    inf       
+Max request concurrency:                 not set   
+Successful requests:                     64        
+Benchmark duration (s):                  834.14    
+Total input tokens:                      3885243   
+Total input text tokens:                 3885243   
+Total generated tokens:                  409876    
+Total generated tokens (retokenized):    317409    
+Request throughput (req/s):              0.08      
+Input token throughput (tok/s):          4657.80   
+Output token throughput (tok/s):         491.38    
+Peak output token throughput (tok/s):    1860.00   
+Peak concurrent requests:                64        
+Total token throughput (tok/s):          5149.17   
+Concurrency:                             29.08     
+
+
+
+
+
+
+
+
+
+fuser -k -9 31333/tcp
+export PYTORCH_ALLOC_CONF=expandable_segments:True
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+nohup python3 -m sglang.launch_server \
+    --model /opt/model_nvfp4_awq_v2 \
+    --quantization modelopt \
+    --trust-remote-code \
+    --disable-radix-cache \
+    --attention-backend minicpm_flashinfer \
+    --chunked-prefill-size 32768 \
+    --max-running-requests 64 \
+    --port 31333 \
+    --dense-as-sparse \
+    --mem-fraction-static 0.8 \
+    --max-mamba-cache-size 128 \
+    > /opt/server.log 2>&1 &
+
+============ Serving Benchmark Result ============
+Backend:                                 sglang    
+Traffic request rate:                    inf       
+Max request concurrency:                 not set   
+Successful requests:                     64        
+Benchmark duration (s):                  688.42    
+Total input tokens:                      3885243   
+Total input text tokens:                 3885243   
+Total generated tokens:                  409876    
+Total generated tokens (retokenized):    401628    
+Request throughput (req/s):              0.09      
+Input token throughput (tok/s):          5643.68   
+Output token throughput (tok/s):         595.38    
+Peak output token throughput (tok/s):    1985.00   
+Peak concurrent requests:                64        
+Total token throughput (tok/s):          6239.07   
+Concurrency:                             30.76     
+
+
