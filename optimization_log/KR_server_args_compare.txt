@@ -1,3 +1,221 @@
+fuser -k -9 31333/tcp
+export PYTORCH_ALLOC_CONF=expandable_segments:True
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+nohup python3 -m sglang.launch_server \
+    --model /opt/model_nvfp4_awq_v2 \
+    --quantization modelopt \
+    --trust-remote-code \
+    --disable-radix-cache \
+    --attention-backend minicpm_flashinfer \
+    --chunked-prefill-size 32768 \
+    --max-running-requests 64 \
+    --port 31333 \
+    --dense-as-sparse \
+    --mem-fraction-static 0.82 \
+    --max-mamba-cache-size 64 \
+    > /opt/server.log 2>&1 &
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+fuser -k -9 31333/tcp
+export PYTORCH_ALLOC_CONF=expandable_segments:True
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+nohup python3 -m sglang.launch_server \
+    --model /opt/model_nvfp4_awq_v2 \
+    --quantization modelopt \
+    --trust-remote-code \
+    --disable-radix-cache \
+    --attention-backend minicpm_flashinfer \
+    --chunked-prefill-size 32768 \
+    --max-running-requests 64 \
+    --port 31333 \
+    --mem-fraction-static 0.82 \
+    --max-mamba-cache-size 64 \
+    > /opt/server.log 2>&1 &
+
+
+
+
+
+
+
+
+
+
+fuser -k -9 31333/tcp
+export PYTORCH_ALLOC_CONF=expandable_segments:True
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+nohup python3 -m sglang.launch_server \
+    --model-path /opt/model_gptq_int4_flashinfer_dense \
+    --port 31333 \
+    --quantization gptq_marlin \
+    --dtype float16 \
+    --disable-radix-cache \
+    --kv-cache-dtype fp8_e5m2 \
+    --attention-backend flashinfer \
+    --chunked-prefill-size 32768 \
+    --mem-fraction-static 0.82 \
+    --max-mamba-cache-size 64 \
+    --fuse-topk \
+    --max-running-requests 64 \
+    --log-level info \
+    --num-continuous-decode-steps 2 \
+    --enable-mixed-chunk \
+    --enable-torch-compile \
+    > /opt/server.log 2>&1 &
+
+
+Running Test 1 - Capital of France (Prefill Focus) (~80,075 chars / ~20,018 tokens)
+   ✅ Completed
+      Duration        : 1.87 seconds
+      Tokens/sec      : 77.5 t/s
+      Response length : 567 chars
+      Tokens used     : 17527 prompt + 145 completion
+      Preview         : Paris
+
+Running Test 2 - Needle in Haystack (Prefill Focus) (~350,086 chars / ~87,521 tokens)
+   ✅ Completed
+      Duration        : 8.51 seconds
+      Tokens/sec      : 61.5 t/s
+      Response length : 1,937 chars
+      Tokens used     : 75034 prompt + 523 completion
+      Preview         : BLUE-TIGER-42
+
+Running Test 3 - Multi-document (Prefill Focus) (~604,943 chars / ~151,235 tokens)
+   ✅ Completed
+      Duration        : 25.39 seconds
+      Tokens/sec      : 18.6 t/s
+      Response length : 1,703 chars
+      Tokens used     : 212892 prompt + 471 completion
+      Preview         : Alice Zhang, 1987
+
+Running Test 4 - Long Generation (Decode Focus) (~486 chars / ~121 tokens)
+   ✅ Completed
+      Duration        : 14.07 seconds
+      Tokens/sec      : 209.3 t/s
+      Response length : 13,051 chars
+      Tokens used     : 102 prompt + 2945 completion
+      Preview         : # The Unfolding Saga: A Comprehensive History of Human Space Exploration  ## I. The Dawn of the Cosmic Gaze: Early Astronomy and the Seed of Ambition  Human fascination with the heavens is as ancient as civilization itself. The earliest astronomers were not scientists but priests and kings, observin...
+
+✅ Benchmark finished!
+
+
+
+[2026-03-24 08:27:52] Decode batch, #running-req: 1, #full token: 68898, full token usage: 0.00, mamba num: 1, mamba usage: 0.02, cuda graph: True, gen throughput (token/s): 205.23, #queue-req: 0, 
+[2026-03-24 08:27:52] Decode batch, #running-req: 1, #full token: 68941, full token usage: 0.00, mamba num: 1, mamba usage: 0.02, cuda graph: True, gen throughput (token/s): 205.32, #queue-req: 0, 
+[2026-03-24 08:27:53] Decode batch, #running-req: 1, #full token: 68984, full token usage: 0.00, mamba num: 1, mamba usage: 0.02, cuda graph: True, gen throughput (token/s): 205.34, #queue-req: 0, 
+[2026-03-24 08:27:53] Decode batch, #running-req: 1, #full token: 69027, full token usage: 0.00, mamba num: 1, mamba usage: 0.02, cuda graph: True, gen throughput (token/s): 205.26, #queue-req: 0, 
+[2026-03-24 08:27:53] Decode batch, #running-req: 1, #full token: 69071, full token usage: 0.00, mamba num: 1, mamba usage: 0.02, cuda graph: True, gen throughput (token/s): 205.24, #queue-req: 0, 
+[2026-03-24 08:27:53] Decode batch, #running-req: 1, #full token: 69113, full token usage: 0.00, mamba num: 1, mamba usage: 0.02, cuda graph: True, gen throughput (token/s): 205.16, #queue-req: 0, 
+[2026-03-24 08:27:53] Decode batch, #running-req: 1, #full token: 69157, full token usage: 0.00, mamba num: 1, mamba usage: 0.02, cuda graph: True, gen throughput (token/s): 205.31, #queue-req: 0, 
+[2026-03-24 08:27:53] Decode batch, #running-req: 1, #full token: 69199, full token usage: 0.00, mamba num: 1, mamba usage: 0.02, cuda graph: True, gen throughput (token/s): 205.27, #queue-req: 0, 
+[2026-03-24 08:27:54] Decode batch, #running-req: 1, #full token: 69243, full token usage: 0.00, mamba num: 1, mamba usage: 0.02, cuda graph: True, gen throughput (token/s): 205.19, #queue-req: 0, 
+[2026-03-24 08:27:54] Decode batch, #running-req: 1, #full token: 69286, full token usage: 0.00, mamba num: 1, mamba usage: 0.02, cuda graph: True, gen throughput (token/s): 203.18, #queue-req: 0, 
+[2026-03-24 08:27:54] Decode batch, #running-req: 1, #full token: 69329, full token usage: 0.00, mamba num: 1, mamba usage: 0.02, cuda graph: True, gen throughput (token/s): 197.13, #queue-req: 0, 
+[2026-03-24 08:27:54] Decode batch, #running-req: 1, #full token: 69372, full token usage: 0.00, mamba num: 1, mamba usage: 0.02, cuda graph: True, gen throughput (token/s): 197.03, #queue-req: 0, 
+[2026-03-24 08:27:54] Decode batch, #running-req: 1, #full token: 69416, full token usage: 0.00, mamba num: 1, mamba usage: 0.02, cuda graph: True, gen throughput (token/s): 197.16, #queue-req: 0, 
+[2026-03-24 08:27:55] Decode batch, #running-req: 1, #full token: 69458, full token usage: 0.00, mamba num: 1, mamba usage: 0.02, cuda graph: True, gen throughput (token/s): 197.09, #queue-req: 0, 
+[2026-03-24 08:27:55] Decode batch, #running-req: 1, #full token: 69502, full token usage: 0.00, mamba num: 1, mamba usage: 0.02, cuda graph: True, gen throughput (token/s): 197.07, #queue-req: 0, 
+
+
+
+[2026-03-24 08:19:45] Prefill batch, #new-seq: 2, #new-token: 32710, #cached-token: 0, full token usage: 0.19, mamba usage: 0.92, #running-req: 58, #queue-req: 3, 
+[2026-03-24 08:19:48] Prefill batch, #new-seq: 1, #new-token: 32709, #cached-token: 0, full token usage: 0.20, mamba usage: 0.94, #running-req: 59, #queue-req: 3, 
+[2026-03-24 08:19:51] Prefill batch, #new-seq: 1, #new-token: 32709, #cached-token: 0, full token usage: 0.20, mamba usage: 0.94, #running-req: 59, #queue-req: 3, 
+[2026-03-24 08:19:54] Prefill batch, #new-seq: 1, #new-token: 32709, #cached-token: 0, full token usage: 0.20, mamba usage: 0.94, #running-req: 59, #queue-req: 3, 
+[2026-03-24 08:19:57] Prefill batch, #new-seq: 1, #new-token: 32709, #cached-token: 0, full token usage: 0.20, mamba usage: 0.94, #running-req: 59, #queue-req: 3, 
+[2026-03-24 08:20:01] Prefill batch, #new-seq: 2, #new-token: 32709, #cached-token: 0, full token usage: 0.20, mamba usage: 0.94, #running-req: 59, #queue-req: 2, 
+[2026-03-24 08:20:04] Prefill batch, #new-seq: 1, #new-token: 32708, #cached-token: 0, full token usage: 0.21, mamba usage: 0.95, #running-req: 60, #queue-req: 2, 
+[2026-03-24 08:20:07] Prefill batch, #new-seq: 1, #new-token: 32708, #cached-token: 0, full token usage: 0.21, mamba usage: 0.95, #running-req: 60, #queue-req: 2, 
+[2026-03-24 08:20:10] Prefill batch, #new-seq: 1, #new-token: 32708, #cached-token: 0, full token usage: 0.21, mamba usage: 0.95, #running-req: 60, #queue-req: 2, 
+[2026-03-24 08:20:13] Prefill batch, #new-seq: 2, #new-token: 32708, #cached-token: 0, full token usage: 0.21, mamba usage: 0.95, #running-req: 60, #queue-req: 1, 
+[2026-03-24 08:20:16] Prefill batch, #new-seq: 1, #new-token: 32707, #cached-token: 0, full token usage: 0.21, mamba usage: 0.97, #running-req: 61, #queue-req: 1, 
+[2026-03-24 08:20:19] Prefill batch, #new-seq: 1, #new-token: 32707, #cached-token: 0, full token usage: 0.22, mamba usage: 0.97, #running-req: 61, #queue-req: 1, 
+[2026-03-24 08:20:22] Prefill batch, #new-seq: 1, #new-token: 32707, #cached-token: 0, full token usage: 0.22, mamba usage: 0.97, #running-req: 61, #queue-req: 1, 
+[2026-03-24 08:20:25] Prefill batch, #new-seq: 1, #new-token: 32707, #cached-token: 0, full token usage: 0.22, mamba usage: 0.97, #running-req: 61, #queue-req: 1, 
+[2026-03-24 08:20:29] Prefill batch, #new-seq: 2, #new-token: 32707, #cached-token: 0, full token usage: 0.22, mamba usage: 0.97, #running-req: 61, #queue-req: 0, 
+[2026-03-24 08:20:32] Prefill batch, #new-seq: 1, #new-token: 32706, #cached-token: 0, full token usage: 0.22, mamba usage: 0.98, #running-req: 62, #queue-req: 0, 
+[2026-03-24 08:20:34] Prefill batch, #new-seq: 1, #new-token: 32706, #cached-token: 0, full token usage: 0.23, mamba usage: 0.98, #running-req: 62, #queue-req: 0, 
+[2026-03-24 08:20:37] Prefill batch, #new-seq: 1, #new-token: 32706, #cached-token: 0, full token usage: 0.23, mamba usage: 0.98, #running-req: 62, #queue-req: 0, 
+[2026-03-24 08:20:41] Prefill batch, #new-seq: 1, #new-token: 25363, #cached-token: 0, full token usage: 0.23, mamba usage: 0.98, #running-req: 62, #queue-req: 0, 
+[2026-03-24 08:20:46] Decode batch, #running-req: 59, #full token: 4006385, full token usage: 0.22, mamba num: 59, mamba usage: 0.92, cuda graph: True, gen throughput (token/s): 7.30, #queue-req: 0, 
+[2026-03-24 08:20:47] Decode batch, #running-req: 56, #full token: 3736722, full token usage: 0.21, mamba num: 56, mamba usage: 0.88, cuda graph: True, gen throughput (token/s): 1961.07, #queue-req: 0, 
+[2026-03-24 08:20:48] Decode batch, #running-req: 53, #full token: 3457403, full token usage: 0.19, mamba num: 53, mamba usage: 0.83, cuda graph: True, gen throughput (token/s): 1988.52, #queue-req: 0, 
+[2026-03-24 08:20:49] Decode batch, #running-req: 50, #full token: 3097202, full token usage: 0.17, mamba num: 50, mamba usage: 0.78, cuda graph: True, gen throughput (token/s): 1949.66, #queue-req: 0, 
+[2026-03-24 08:20:50] Decode batch, #running-req: 50, #full token: 3097941, full token usage: 0.17, mamba num: 49, mamba usage: 0.77, cuda graph: True, gen throughput (token/s): 1927.28, #queue-req: 0, 
+[2026-03-24 08:20:51] Decode batch, #running-req: 48, #full token: 3095548, full token usage: 0.17, mamba num: 48, mamba usage: 0.75, cuda graph: True, gen throughput (token/s): 1910.58, #queue-req: 0, 
+[2026-03-24 08:20:52] Decode batch, #running-req: 45, #full token: 2936944, full token usage: 0.16, mamba num: 45, mamba usage: 0.70, cuda graph: True, gen throughput (token/s): 2035.43, #queue-req: 0, 
+[2026-03-24 08:20:53] Decode batch, #running-req: 43, #full token: 2800611, full token usage: 0.16, mamba num: 43, mamba usage: 0.67, cuda graph: True, gen throughput (token/s): 1917.01, #queue-req: 0, 
+[2026-03-24 08:20:54] Decode batch, #running-req: 43, #full token: 2802476, full token usage: 0.16, mamba num: 43, mamba usage: 0.67, cuda graph: True, gen throughput (token/s): 1891.82, #queue-req: 0, 
+[2026-03-24 08:20:55] Decode batch, #running-req: 42, #full token: 2800307, full token usage: 0.16, mamba num: 42, mamba usage: 0.66, cuda graph: True, gen throughput (token/s): 1878.92, #queue-req: 0, 
+[2026-03-24 08:20:56] Decode batch, #running-req: 42, #full token: 2802124, full token usage: 0.16, mamba num: 42, mamba usage: 0.66, cuda graph: True, gen throughput (token/s): 1845.04, #queue-req: 0, 
+[2026-03-24 08:20:57] Decode batch, #running-req: 42, #full token: 2803933, full token usage: 0.16, mamba num: 42, mamba usage: 0.66, cuda graph: True, gen throughput (token/s): 1842.95, #queue-req: 0, 
+
+
+============ Serving Benchmark Result ============
+Backend:                                 sglang    
+Traffic request rate:                    inf       
+Max request concurrency:                 not set   
+Successful requests:                     64        
+Benchmark duration (s):                  617.37    
+Total input tokens:                      3885243   
+Total input text tokens:                 3885243   
+Total generated tokens:                  409876    
+Total generated tokens (retokenized):    364215    
+Request throughput (req/s):              0.10      
+Input token throughput (tok/s):          6293.21   
+Output token throughput (tok/s):         663.91    
+Peak output token throughput (tok/s):    2164.00   
+Peak concurrent requests:                64        
+Total token throughput (tok/s):          6957.12   
+Concurrency:                             41.93     
+
+
+
+python /opt/oldMoney-Project/bench/long_context_test_case.py
+
+echo "=== S1 (concurrency 1) ==="
+python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31333 \
+    --dataset-name custom --dataset-path /opt/oldMoney-Project/bench/competition_bench_32.jsonl \
+    --num-prompts 32 --flush-cache --max-concurrency 1
+
+echo "=== S8 (concurrency 8) ==="
+python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31333 \
+    --dataset-name custom --dataset-path /opt/oldMoney-Project/bench/competition_bench_32.jsonl \
+    --num-prompts 32 --flush-cache --max-concurrency 8
+
+echo "=== Smax (unlimited) ==="
+python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31333 \
+    --dataset-name custom --dataset-path /opt/oldMoney-Project/bench/competition_bench_64.jsonl \
+    --num-prompts 64 --flush-cache
+
+
+
+
+
+
+
+
+
+
+
+
+=================================================================================================================
+
+
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 python3 -m sglang.launch_server \

@@ -192,22 +192,26 @@ python /opt/oldMoney-Project/bench/profile_prefill.py
 
 
 ## Performance Test
+Generate the performance test set:
+```bash
+python /opt/oldMoney-Project/bench/gen_competition_bench.py
+```
 
 Concurrency test aligned with SOAR official metric:
 ```bash
 echo "=== S1 (concurrency 1) ==="
 python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31333 \
-    --dataset-name custom --dataset-path /opt/oldMoney-Project/bench/competition_bench.jsonl \
-    --num-prompts 64 --flush-cache --max-concurrency 1
+    --dataset-name custom --dataset-path /opt/oldMoney-Project/bench/competition_bench_32.jsonl \
+    --num-prompts 32 --flush-cache --max-concurrency 1
 
 echo "=== S8 (concurrency 8) ==="
 python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31333 \
-    --dataset-name custom --dataset-path /opt/oldMoney-Project/bench/competition_bench.jsonl \
-    --num-prompts 64 --flush-cache --max-concurrency 8
+    --dataset-name custom --dataset-path /opt/oldMoney-Project/bench/competition_bench_32.jsonl \
+    --num-prompts 32 --flush-cache --max-concurrency 8
 
 echo "=== Smax (unlimited) ==="
 python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31333 \
-    --dataset-name custom --dataset-path /opt/oldMoney-Project/bench/competition_bench.jsonl \
+    --dataset-name custom --dataset-path /opt/oldMoney-Project/bench/competition_bench_64.jsonl \
     --num-prompts 64 --flush-cache
 ```
 

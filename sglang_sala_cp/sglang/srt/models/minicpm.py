@@ -389,6 +389,9 @@ class MiniCPMDecoderLayer(nn.Module):
         prefix: str = "",
     ) -> None:
         super().__init__()
+        # Add temporarily at the top of MiniCPMDecoderLayer.__init__:
+        if quant_config is not None and layer_id == 0:
+            print(f"quant_config type={type(quant_config).__name__}, get_name={quant_config.get_name() if hasattr(quant_config, 'get_name') else 'NO METHOD'}")
         self.config = config
         self.layer_id = layer_id
         self.hidden_size = config.hidden_size
@@ -405,7 +408,18 @@ class MiniCPMDecoderLayer(nn.Module):
         # and skipped during quantization. We enforce layer_quant_config = None
         # so they instantiate as unquantized linear layers, avoiding shape mismatches
         # when loading BF16 weights into packed NVFP4 variables.
-        layer_quant_config = quant_config if self.mixer_type != "minicpm4" else None
+        # Default: minicpm4 layers are unquantized (correct for BF16 and NVFP4)
+        if self.mixer_type == "minicpm4":
+            layer_quant_config = None
+        else:
+            layer_quant_config = quant_config
+
+        # Override: for GPTQ, all layers are uniformly quantized
+        if (layer_quant_config is None
+            and quant_config is not None
+            and hasattr(quant_config, "get_name")
+            and quant_config.get_name().startswith("gptq")):
+            layer_quant_config = quant_config
 
         if self.mixer_type == "minicpm4":
             self.self_attn = MiniCPMAttention(
