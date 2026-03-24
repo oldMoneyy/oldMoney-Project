@@ -33,5 +33,4 @@ build/
 dist/
 
 # Large data
-*.jsonl
 submissions/submission_*.tar.gz
