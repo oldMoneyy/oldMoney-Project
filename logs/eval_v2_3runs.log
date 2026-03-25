@@ -1,0 +1,716 @@
+nohup: ignoring input
+=== RUN 1/3 started at Wed Mar 25 02:50:49 UTC 2026 ===
+Auto-detected model name: /opt/model_nvfp4_awq_v2
+API Base: http://127.0.0.1:31333
+Model Name: /opt/model_nvfp4_awq_v2
+Model Path: /opt/model_nvfp4_awq_v2
+Data Path: eval_dataset/perf_public_set.jsonl
+Saving results to outputs/20260325_025049
+Testing with 150 samples.
+Initializing model client...
+Generating responses...
+2026-03-25 02:50:52,558 - SGLANG_INFERENCE - INFO - mid truncation: max_out_len=65536, max_seq_len=262144, max_prompt_len=128000
+2026-03-25 02:51:01,906 - SGLANG_INFERENCE - INFO - SGLang sampling kwargs: {'temperature': 0.0, 'max_tokens': 65536, 'stop': ['<|im_end|>', '</s>']}
+  Sending 150 requests to SGLang API (concurrency=64)...
+Generating:   0%|                                                                                                                            | 0/150 [00:00<?, ?it/s]Generating:   1%|▊                                                                                                                | 1/150 [02:16<5:38:53, 136.47s/it]Generating:   1%|█▌                                                                                                                | 2/150 [02:18<2:21:29, 57.36s/it]Generating:   2%|██▎                                                                                                               | 3/150 [02:21<1:19:19, 32.38s/it]Generating:   3%|███                                                                                                                 | 4/150 [02:23<49:42, 20.43s/it]Generating:   3%|███▊                                                                                                                | 5/150 [02:26<34:00, 14.07s/it]Generating:   4%|████▋                                                                                                               | 6/150 [02:29<24:58, 10.41s/it]Generating:   5%|█████▍                                                                                                              | 7/150 [02:31<18:43,  7.86s/it]Generating:   5%|██████▏                                                                                                             | 8/150 [02:32<12:46,  5.40s/it]Generating:   6%|██████▊                                                                                                           | 9/150 [03:54<1:09:38, 29.63s/it]Generating:   7%|███████▋                                                                                                           | 10/150 [03:58<50:20, 21.58s/it]Generating:   7%|████████▍                                                                                                          | 11/150 [03:58<34:46, 15.01s/it]Generating:   8%|█████████▏                                                                                                         | 12/150 [04:13<34:10, 14.86s/it]Generating:   9%|█████████▉                                                                                                         | 13/150 [04:13<23:44, 10.40s/it]Generating:   9%|██████████▋                                                                                                        | 14/150 [04:21<22:21,  9.86s/it]Generating:  10%|███████████▌                                                                                                       | 15/150 [04:25<18:06,  8.04s/it]Generating:  11%|████████████▎                                                                                                      | 16/150 [04:25<12:40,  5.67s/it]Generating:  12%|█████████████▊                                                                                                     | 18/150 [04:42<15:12,  6.91s/it]Generating:  13%|██████████████▌                                                                                                    | 19/150 [04:49<15:14,  6.98s/it]Generating:  13%|███████████████▎                                                                                                   | 20/150 [04:58<16:03,  7.41s/it]Generating:  14%|████████████████                                                                                                   | 21/150 [04:58<11:45,  5.47s/it]Generating:  15%|████████████████▊                                                                                                  | 22/150 [05:14<17:44,  8.32s/it]Generating:  15%|█████████████████▋                                                                                                 | 23/150 [05:14<12:44,  6.02s/it]Generating:  16%|██████████████████▍                                                                                                | 24/150 [05:31<19:05,  9.09s/it]Generating:  17%|███████████████████▏                                                                                               | 25/150 [05:39<18:15,  8.76s/it]Generating:  17%|███████████████████▉                                                                                               | 26/150 [05:39<12:57,  6.27s/it]Generating:  18%|████████████████████▋                                                                                              | 27/150 [05:56<19:13,  9.38s/it]Generating:  19%|█████████████████████▍                                                                                             | 28/150 [05:58<14:50,  7.30s/it]Generating:  19%|██████████████████████▏                                                                                            | 29/150 [06:00<11:26,  5.67s/it]Generating:  20%|███████████████████████                                                                                            | 30/150 [06:07<11:59,  6.00s/it]Generating:  21%|███████████████████████▊                                                                                           | 31/150 [06:16<13:47,  6.95s/it]Generating:  21%|████████████████████████▌                                                                                          | 32/150 [06:31<18:11,  9.25s/it]Generating:  22%|█████████████████████████▎                                                                                         | 33/150 [06:35<15:16,  7.83s/it]Generating:  23%|██████████████████████████                                                                                         | 34/150 [06:40<13:16,  6.87s/it]Generating:  23%|██████████████████████████▊                                                                                        | 35/150 [06:58<19:26, 10.14s/it]Generating:  24%|███████████████████████████▌                                                                                       | 36/150 [07:00<14:59,  7.89s/it]Generating:  25%|████████████████████████████▎                                                                                      | 37/150 [07:18<20:22, 10.82s/it]Generating:  25%|█████████████████████████████▏                                                                                     | 38/150 [07:23<17:09,  9.20s/it]Generating:  26%|█████████████████████████████▉                                                                                     | 39/150 [07:28<14:38,  7.92s/it]Generating:  27%|██████████████████████████████▋                                                                                    | 40/150 [07:41<17:07,  9.34s/it]Generating:  27%|███████████████████████████████▍                                                                                   | 41/150 [08:06<25:27, 14.01s/it]Generating:  28%|████████████████████████████████▏                                                                                  | 42/150 [08:13<21:44, 12.08s/it]Generating:  29%|████████████████████████████████▉                                                                                  | 43/150 [08:24<20:39, 11.58s/it]Generating:  29%|█████████████████████████████████▋                                                                                 | 44/150 [08:32<18:51, 10.68s/it]Generating:  30%|██████████████████████████████████▌                                                                                | 45/150 [08:53<23:56, 13.68s/it]Generating:  31%|███████████████████████████████████▎                                                                               | 46/150 [09:00<20:26, 11.80s/it]Generating:  31%|████████████████████████████████████                                                                               | 47/150 [09:11<19:37, 11.43s/it]Generating:  32%|████████████████████████████████████▊                                                                              | 48/150 [09:23<19:37, 11.54s/it]Generating:  33%|█████████████████████████████████████▌                                                                             | 49/150 [09:35<19:48, 11.76s/it]Generating:  33%|██████████████████████████████████████▎                                                                            | 50/150 [09:48<20:15, 12.15s/it]Generating:  34%|███████████████████████████████████████                                                                            | 51/150 [09:55<17:24, 10.55s/it]Generating:  35%|███████████████████████████████████████▊                                                                           | 52/150 [10:09<18:59, 11.63s/it]Generating:  35%|████████████████████████████████████████▋                                                                          | 53/150 [10:16<16:23, 10.14s/it]Generating:  36%|█████████████████████████████████████████▍                                                                         | 54/150 [10:23<15:06,  9.44s/it]Generating:  37%|██████████████████████████████████████████▏                                                                        | 55/150 [10:32<14:33,  9.19s/it]Generating:  37%|██████████████████████████████████████████▉                                                                        | 56/150 [10:43<14:58,  9.56s/it]Generating:  38%|███████████████████████████████████████████▋                                                                       | 57/150 [10:58<17:29, 11.29s/it]Generating:  39%|████████████████████████████████████████████▍                                                                      | 58/150 [11:01<13:30,  8.81s/it]Generating:  39%|█████████████████████████████████████████████▏                                                                     | 59/150 [11:28<21:48, 14.38s/it]Generating:  40%|██████████████████████████████████████████████                                                                     | 60/150 [11:35<18:05, 12.06s/it]Generating:  41%|██████████████████████████████████████████████▊                                                                    | 61/150 [11:38<13:56,  9.40s/it]Generating:  41%|███████████████████████████████████████████████▌                                                                   | 62/150 [11:55<17:03, 11.63s/it]Generating:  42%|████████████████████████████████████████████████▎                                                                  | 63/150 [12:06<16:24, 11.32s/it]Generating:  43%|█████████████████████████████████████████████████                                                                  | 64/150 [12:18<16:39, 11.62s/it]Generating:  43%|█████████████████████████████████████████████████▊                                                                 | 65/150 [12:21<12:49,  9.05s/it]Generating:  44%|██████████████████████████████████████████████████▌                                                                | 66/150 [12:33<14:03, 10.04s/it]Generating:  45%|███████████████████████████████████████████████████▎                                                               | 67/150 [13:14<26:41, 19.30s/it]Generating:  45%|████████████████████████████████████████████████████▏                                                              | 68/150 [13:55<35:18, 25.84s/it]Generating:  46%|████████████████████████████████████████████████████▉                                                              | 69/150 [14:15<32:21, 23.97s/it]Generating:  47%|█████████████████████████████████████████████████████▋                                                             | 70/150 [14:25<26:19, 19.74s/it]2026-03-25 03:32:20,143 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+Generating:  47%|████████████████████████████████████████████████████▌                                                          | 71/150 [41:18<10:55:15, 497.67s/it]2026-03-25 03:32:20,146 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,147 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,149 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,149 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,149 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,151 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,151 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,151 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,152 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,152 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,152 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,152 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,152 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,153 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,153 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,153 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,153 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,153 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+Generating:  59%|████████████████████████████████████████████████████████████████████▏                                              | 89/150 [41:18<58:04, 57.12s/it]2026-03-25 03:32:20,154 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,154 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,154 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,154 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,154 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,154 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,154 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,154 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,154 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,155 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,155 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,155 - SGLANG_INFERENCE - ERROR - Request failed: HTTPConnectionPool(host='127.0.0.1', port=31333): Max retries exceeded with url: /v1/chat/completions (Caused by NewConnectionError("HTTPConnection(host='127.0.0.1', port=31333): Failed to establish a new connection: [Errno 111] Connection refused"))
+2026-03-25 03:32:20,155 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,155 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,155 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,155 - SGLANG_INFERENCE - ERROR - Request failed: HTTPConnectionPool(host='127.0.0.1', port=31333): Max retries exceeded with url: /v1/chat/completions (Caused by NewConnectionError("HTTPConnection(host='127.0.0.1', port=31333): Failed to establish a new connection: [Errno 111] Connection refused"))
+2026-03-25 03:32:20,156 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,156 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,156 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,156 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,156 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,156 - SGLANG_INFERENCE - ERROR - Request failed: HTTPConnectionPool(host='127.0.0.1', port=31333): Max retries exceeded with url: /v1/chat/completions (Caused by NewConnectionError("HTTPConnection(host='127.0.0.1', port=31333): Failed to establish a new connection: [Errno 111] Connection refused"))
+2026-03-25 03:32:20,156 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,157 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,157 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,157 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,159 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,159 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,159 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,160 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,160 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,161 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,161 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,161 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,161 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,161 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,161 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,162 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,162 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,187 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,187 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,187 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,189 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,189 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,189 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,189 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,189 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,189 - SGLANG_INFERENCE - ERROR - Request failed: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+2026-03-25 03:32:20,190 - SGLANG_INFERENCE - ERROR - Request failed: HTTPConnectionPool(host='127.0.0.1', port=31333): Max retries exceeded with url: /v1/chat/completions (Caused by NewConnectionError("HTTPConnection(host='127.0.0.1', port=31333): Failed to establish a new connection: [Errno 111] Connection refused"))
+2026-03-25 03:32:20,190 - SGLANG_INFERENCE - ERROR - Request failed: HTTPConnectionPool(host='127.0.0.1', port=31333): Max retries exceeded with url: /v1/chat/completions (Caused by NewConnectionError("HTTPConnection(host='127.0.0.1', port=31333): Failed to establish a new connection: [Errno 111] Connection refused"))
+2026-03-25 03:32:20,193 - SGLANG_INFERENCE - ERROR - Request failed: HTTPConnectionPool(host='127.0.0.1', port=31333): Max retries exceeded with url: /v1/chat/completions (Caused by NewConnectionError("HTTPConnection(host='127.0.0.1', port=31333): Failed to establish a new connection: [Errno 111] Connection refused"))
+2026-03-25 03:32:20,195 - SGLANG_INFERENCE - ERROR - Request failed: HTTPConnectionPool(host='127.0.0.1', port=31333): Max retries exceeded with url: /v1/chat/completions (Caused by NewConnectionError("HTTPConnection(host='127.0.0.1', port=31333): Failed to establish a new connection: [Errno 111] Connection refused"))
+2026-03-25 03:32:20,197 - SGLANG_INFERENCE - ERROR - Request failed: HTTPConnectionPool(host='127.0.0.1', port=31333): Max retries exceeded with url: /v1/chat/completions (Caused by NewConnectionError("HTTPConnection(host='127.0.0.1', port=31333): Failed to establish a new connection: [Errno 111] Connection refused"))
+2026-03-25 03:32:20,201 - SGLANG_INFERENCE - ERROR - Request failed: HTTPConnectionPool(host='127.0.0.1', port=31333): Max retries exceeded with url: /v1/chat/completions (Caused by NewConnectionError("HTTPConnection(host='127.0.0.1', port=31333): Failed to establish a new connection: [Errno 111] Connection refused"))
+2026-03-25 03:32:20,201 - SGLANG_INFERENCE - ERROR - Request failed: HTTPConnectionPool(host='127.0.0.1', port=31333): Max retries exceeded with url: /v1/chat/completions (Caused by NewConnectionError("HTTPConnection(host='127.0.0.1', port=31333): Failed to establish a new connection: [Errno 111] Connection refused"))
+2026-03-25 03:32:20,202 - SGLANG_INFERENCE - ERROR - Request failed: HTTPConnectionPool(host='127.0.0.1', port=31333): Max retries exceeded with url: /v1/chat/completions (Caused by NewConnectionError("HTTPConnection(host='127.0.0.1', port=31333): Failed to establish a new connection: [Errno 111] Connection refused"))
+2026-03-25 03:32:20,205 - SGLANG_INFERENCE - ERROR - Request failed: HTTPConnectionPool(host='127.0.0.1', port=31333): Max retries exceeded with url: /v1/chat/completions (Caused by NewConnectionError("HTTPConnection(host='127.0.0.1', port=31333): Failed to establish a new connection: [Errno 111] Connection refused"))
+2026-03-25 03:32:20,207 - SGLANG_INFERENCE - ERROR - Request failed: HTTPConnectionPool(host='127.0.0.1', port=31333): Max retries exceeded with url: /v1/chat/completions (Caused by NewConnectionError("HTTPConnection(host='127.0.0.1', port=31333): Failed to establish a new connection: [Errno 111] Connection refused"))
+2026-03-25 03:32:20,207 - SGLANG_INFERENCE - ERROR - Request failed: HTTPConnectionPool(host='127.0.0.1', port=31333): Max retries exceeded with url: /v1/chat/completions (Caused by NewConnectionError("HTTPConnection(host='127.0.0.1', port=31333): Failed to establish a new connection: [Errno 111] Connection refused"))
+2026-03-25 03:32:20,207 - SGLANG_INFERENCE - ERROR - Request failed: HTTPConnectionPool(host='127.0.0.1', port=31333): Max retries exceeded with url: /v1/chat/completions (Caused by NewConnectionError("HTTPConnection(host='127.0.0.1', port=31333): Failed to establish a new connection: [Errno 111] Connection refused"))
+2026-03-25 03:32:20,208 - SGLANG_INFERENCE - ERROR - Request failed: HTTPConnectionPool(host='127.0.0.1', port=31333): Max retries exceeded with url: /v1/chat/completions (Caused by NewConnectionError("HTTPConnection(host='127.0.0.1', port=31333): Failed to establish a new connection: [Errno 111] Connection refused"))
+Generating: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 150/150 [41:18<00:00, 16.52s/it]
+2026-03-25 03:32:20,299 - SGLANG_INFERENCE - INFO - Processing time: 2478.39s
+
+Generation completed in 2487.82 seconds
+
+--- Evaluation Results ---
+
+[Sample 1] Task: mcq
+Gold: D, Extracted: A, Score: 0
+Tokens: In=103, Out=5466
+
+[Sample 2] Task: mcq
+Gold: C, Extracted: D, Score: 0
+Tokens: In=103, Out=1706
+
+[Sample 3] Task: mcq
+Gold: C, Extracted: C, Score: 1
+Tokens: In=138, Out=7825
+
+[Sample 4] Task: mcq
+Gold: A, Extracted: A, Score: 1
+Tokens: In=141, Out=2794
+
+[Sample 5] Task: mcq
+Gold: A, Extracted: None, Score: 0
+Tokens: In=143, Out=9
+
+[Sample 6] Task: mcq
+Gold: A, Extracted: D, Score: 0
+Tokens: In=157, Out=3244
+
+[Sample 7] Task: mcq
+Gold: C, Extracted: A, Score: 0
+Tokens: In=158, Out=821
+
+[Sample 8] Task: mcq
+Gold: B, Extracted: None, Score: 0
+Tokens: In=167, Out=9
+
+[Sample 9] Task: mcq
+Gold: D, Extracted: D, Score: 1
+Tokens: In=171, Out=11744
+
+[Sample 10] Task: mcq
+Gold: C, Extracted: B, Score: 0
+Tokens: In=172, Out=623
+
+[Sample 11] Task: mcq
+Gold: A, Extracted: A, Score: 1
+Tokens: In=180, Out=1504
+
+[Sample 12] Task: mcq
+Gold: B, Extracted: B, Score: 1
+Tokens: In=180, Out=8922
+
+[Sample 13] Task: mcq
+Gold: C, Extracted: C, Score: 1
+Tokens: In=182, Out=8581
+
+[Sample 14] Task: mcq
+Gold: A, Extracted: A, Score: 1
+Tokens: In=202, Out=2856
+
+[Sample 15] Task: mcq
+Gold: D, Extracted: A, Score: 0
+Tokens: In=245, Out=4110
+
+[Sample 16] Task: mcq
+Gold: A, Extracted: A, Score: 1
+Tokens: In=251, Out=6489
+
+[Sample 17] Task: mcq
+Gold: A, Extracted: A, Score: 1
+Tokens: In=279, Out=12445
+
+[Sample 18] Task: mcq
+Gold: D, Extracted: None, Score: 0
+Tokens: In=282, Out=9
+
+[Sample 19] Task: mcq
+Gold: D, Extracted: A, Score: 0
+Tokens: In=298, Out=6341
+
+[Sample 20] Task: mcq
+Gold: A, Extracted: A, Score: 1
+Tokens: In=298, Out=10557
+
+[Sample 21] Task: mcq
+Gold: D, Extracted: C, Score: 0
+Tokens: In=299, Out=6399
+
+[Sample 22] Task: mcq
+Gold: C, Extracted: None, Score: 0
+Tokens: In=333, Out=9
+
+[Sample 23] Task: mcq
+Gold: B, Extracted: B, Score: 1
+Tokens: In=344, Out=12263
+
+[Sample 24] Task: mcq
+Gold: B, Extracted: None, Score: 0
+Tokens: In=351, Out=9
+
+[Sample 25] Task: mcq
+Gold: B, Extracted: None, Score: 0
+Tokens: In=379, Out=9
+
+[Sample 26] Task: mcq
+Gold: B, Extracted: A, Score: 0
+Tokens: In=419, Out=1085
+
+[Sample 27] Task: mcq
+Gold: D, Extracted: D, Score: 1
+Tokens: In=424, Out=4353
+
+[Sample 28] Task: mcq
+Gold: B, Extracted: B, Score: 1
+Tokens: In=446, Out=6060
+
+[Sample 29] Task: mcq
+Gold: C, Extracted: None, Score: 0
+Tokens: In=589, Out=9
+
+[Sample 30] Task: mcq
+Gold: B, Extracted: B, Score: 1
+Tokens: In=664, Out=5654
+
+[Sample 31] Task: niah
+Gold: ['f320a0f9-006c-4031-9cec-c89c6f8486bc'], Extracted: None, Score: 1.0
+Tokens: In=30207, Out=435
+
+[Sample 32] Task: niah
+Gold: ['9725206'], Extracted: None, Score: 1.0
+Tokens: In=31025, Out=276
+
+[Sample 33] Task: niah
+Gold: ['6347182', '5380995', '2756994', '2244876'], Extracted: None, Score: 1.0
+Tokens: In=31087, Out=403
+
+[Sample 34] Task: niah
+Gold: ['2173318', '2505169', '3063211', '3708116'], Extracted: None, Score: 0
+Tokens: In=31102, Out=9
+
+[Sample 35] Task: niah
+Gold: ['1914794'], Extracted: None, Score: 0
+Tokens: In=31327, Out=9
+
+[Sample 36] Task: niah
+Gold: ['9633492'], Extracted: None, Score: 0
+Tokens: In=31668, Out=9
+
+[Sample 37] Task: niah
+Gold: ['1a50aec3-aabc-45fa-bfe1-2e47ae9bec36'], Extracted: None, Score: 1.0
+Tokens: In=31692, Out=277
+
+[Sample 38] Task: niah
+Gold: ['1954456'], Extracted: None, Score: 0
+Tokens: In=31734, Out=9
+
+[Sample 39] Task: niah
+Gold: ['9801946'], Extracted: None, Score: 0
+Tokens: In=31742, Out=9
+
+[Sample 40] Task: niah
+Gold: ['6241427'], Extracted: None, Score: 1.0
+Tokens: In=31748, Out=185
+
+[Sample 41] Task: niah
+Gold: ['3ebdb86b-2d43-48ee-b1f9-df11c8d38c59'], Extracted: None, Score: 1.0
+Tokens: In=62323, Out=543
+
+[Sample 42] Task: niah
+Gold: ['2882551'], Extracted: None, Score: 0
+Tokens: In=63202, Out=9
+
+[Sample 43] Task: niah
+Gold: ['8143951'], Extracted: None, Score: 0
+Tokens: In=63223, Out=9
+
+[Sample 44] Task: niah
+Gold: ['8223877'], Extracted: None, Score: 1.0
+Tokens: In=63419, Out=177
+
+[Sample 45] Task: niah
+Gold: ['9633492'], Extracted: None, Score: 0
+Tokens: In=63610, Out=9
+
+[Sample 46] Task: niah
+Gold: ['af36b8cc-1308-4974-ac95-b3ac0beb7c34'], Extracted: None, Score: 1.0
+Tokens: In=63636, Out=395
+
+[Sample 47] Task: niah
+Gold: ['6311628', '6028724', '6109503', '8293509'], Extracted: None, Score: 0
+Tokens: In=63674, Out=9
+
+[Sample 48] Task: niah
+Gold: ['1954456'], Extracted: None, Score: 0
+Tokens: In=63676, Out=9
+
+[Sample 49] Task: niah
+Gold: ['4085559'], Extracted: None, Score: 1.0
+Tokens: In=63685, Out=232
+
+[Sample 50] Task: niah
+Gold: ['2173318', '2505169', '3063211', '3708116'], Extracted: None, Score: 0
+Tokens: In=63690, Out=9
+
+[Sample 51] Task: niah
+Gold: ['46657a44-ecf5-41db-b4d7-4256f08a4a2d'], Extracted: None, Score: 1.0
+Tokens: In=126604, Out=535
+
+[Sample 52] Task: niah
+Gold: ['9150078'], Extracted: None, Score: 1.0
+Tokens: In=127070, Out=236
+
+[Sample 53] Task: niah
+Gold: ['c8edabdd-4ef0-4f80-9d91-fe39d8014004'], Extracted: None, Score: 1.0
+Tokens: In=127104, Out=348
+
+[Sample 54] Task: niah
+Gold: ['6311628', '6028724', '6109503', '8293509'], Extracted: None, Score: 1.0
+Tokens: In=127142, Out=431
+
+[Sample 55] Task: niah
+Gold: ['7371160'], Extracted: None, Score: 0
+Tokens: In=127145, Out=9
+
+[Sample 56] Task: niah
+Gold: ['1002847'], Extracted: None, Score: 1.0
+Tokens: In=127152, Out=164
+
+[Sample 57] Task: niah
+Gold: ['2173318', '2505169', '3063211', '3708116'], Extracted: None, Score: 1.0
+Tokens: In=127158, Out=651
+
+[Sample 58] Task: niah
+Gold: ['7021437'], Extracted: None, Score: 1.0
+Tokens: In=127341, Out=190
+
+[Sample 59] Task: niah
+Gold: ['8149041'], Extracted: None, Score: 1.0
+Tokens: In=127577, Out=198
+
+[Sample 60] Task: niah
+Gold: ['9633492'], Extracted: None, Score: 1.0
+Tokens: In=127719, Out=263
+
+[Sample 61] Task: qa
+Gold: ['The Walt Disney Company', 'The Walt Disney Company', 'The Walt Disney Company'], Extracted: None, Score: 1.0
+Tokens: In=25035, Out=78
+
+[Sample 62] Task: qa
+Gold: ['chosen machine model', 'the chosen machine model', 'the chosen machine model'], Extracted: None, Score: 1.0
+Tokens: In=27011, Out=95
+
+[Sample 63] Task: qa
+Gold: ['various deities, beings, and heroes'], Extracted: None, Score: 1.0
+Tokens: In=27210, Out=118
+
+[Sample 64] Task: qa
+Gold: ['Battle of Hastings', 'the Battle of Hastings', 'at the Battle of Hastings'], Extracted: None, Score: 1.0
+Tokens: In=27497, Out=132
+
+[Sample 65] Task: qa
+Gold: ['William of Volpiano and John of Ravenna', 'William of Volpiano and John of Ravenna', 'William of Volpiano and John of Ravenna'], Extracted: None, Score: 1.0
+Tokens: In=28129, Out=108
+
+[Sample 66] Task: qa
+Gold: ['Edgar', 'Edgar', 'Edgar Atheling'], Extracted: None, Score: 1.0
+Tokens: In=29411, Out=109
+
+[Sample 67] Task: qa
+Gold: ["Hey Pa! There's a Goat on the Roof"], Extracted: None, Score: 0
+Tokens: In=29899, Out=9
+
+[Sample 68] Task: qa
+Gold: ['The Battle of Belleau Wood'], Extracted: None, Score: 0
+Tokens: In=30529, Out=9
+
+[Sample 69] Task: qa
+Gold: ['author'], Extracted: None, Score: 0
+Tokens: In=31149, Out=9
+
+[Sample 70] Task: qa
+Gold: ['"Teach the Controversy" campaign'], Extracted: None, Score: 0
+Tokens: In=31652, Out=9
+
+[Sample 71] Task: qa
+Gold: ['Gerard "Gerry" Adams'], Extracted: None, Score: 0.0
+Tokens: In=56398, Out=95
+
+[Sample 72] Task: qa
+Gold: ['the general number field sieve', 'RSA', 'general number field sieve'], Extracted: None, Score: 0
+Tokens: In=57459, Out=9
+
+[Sample 73] Task: qa
+Gold: ['NP-hard', 'NP-hard', 'NP-hard problems'], Extracted: None, Score: 0
+Tokens: In=60640, Out=9
+
+[Sample 74] Task: qa
+Gold: ['James Packer'], Extracted: None, Score: 0
+Tokens: In=61208, Out=9
+
+[Sample 75] Task: qa
+Gold: ['seven', 'seven', 'seven'], Extracted: None, Score: 1.0
+Tokens: In=61413, Out=134
+
+[Sample 76] Task: qa
+Gold: ['Computational complexity theory', 'Computational complexity theory', 'Computational complexity theory'], Extracted: None, Score: 0
+Tokens: In=62137, Out=9
+
+[Sample 77] Task: qa
+Gold: ['Battle of Guam'], Extracted: None, Score: 0
+Tokens: In=62175, Out=9
+
+[Sample 78] Task: qa
+Gold: ['Beijing'], Extracted: None, Score: 0
+Tokens: In=62868, Out=9
+
+[Sample 79] Task: qa
+Gold: ['Decision problems', 'Decision problems', 'Decision'], Extracted: None, Score: 0
+Tokens: In=63005, Out=9
+
+[Sample 80] Task: qa
+Gold: ['Kansas Song'], Extracted: None, Score: 0
+Tokens: In=63540, Out=9
+
+[Sample 81] Task: qa
+Gold: ['nineteenth'], Extracted: None, Score: 0
+Tokens: In=119919, Out=9
+
+[Sample 82] Task: qa
+Gold: ['10 counties', '10', '10'], Extracted: None, Score: 0
+Tokens: In=120881, Out=9
+
+[Sample 83] Task: qa
+Gold: ['probabilistic Turing machines, non-deterministic Turing machines', 'probabilistic Turing machines, non-deterministic Turing machines'], Extracted: None, Score: 0
+Tokens: In=124534, Out=9
+
+[Sample 84] Task: qa
+Gold: ['Ferdi Taygan'], Extracted: None, Score: 0
+Tokens: In=124600, Out=9
+
+[Sample 85] Task: qa
+Gold: ['yes', 'yes', 'yes'], Extracted: None, Score: 0
+Tokens: In=125362, Out=9
+
+[Sample 86] Task: qa
+Gold: ['1987'], Extracted: None, Score: 0
+Tokens: In=125914, Out=9
+
+[Sample 87] Task: qa
+Gold: ['Bethencourt', 'Bethencourt', 'Bethencourt'], Extracted: None, Score: 1.0
+Tokens: In=126221, Out=86
+
+[Sample 88] Task: qa
+Gold: ['the Parthian Empire'], Extracted: None, Score: 0
+Tokens: In=126720, Out=9
+
+[Sample 89] Task: qa
+Gold: ['Hereford', 'Hereford', 'Hereford'], Extracted: None, Score: 1.0
+Tokens: In=127056, Out=122
+
+[Sample 90] Task: qa
+Gold: ['Richmond'], Extracted: None, Score: 0
+Tokens: In=127500, Out=9
+
+[Sample 91] Task: fwe
+Gold: ['svlmts', 'oiavmz', 'ewfbpu'], Extracted: None, Score: 0
+Tokens: In=28031, Out=9
+
+[Sample 92] Task: fwe
+Gold: ['tfxufs', 'pllpwy', 'gkptee'], Extracted: None, Score: 0
+Tokens: In=28249, Out=9
+
+[Sample 93] Task: fwe
+Gold: ['tkrjdw', 'pqcvgu', 'fkoiwn'], Extracted: None, Score: 0
+Tokens: In=28464, Out=9
+
+[Sample 94] Task: fwe
+Gold: ['sqkzru', 'pdgvuj', 'fddmnk'], Extracted: None, Score: 1.0
+Tokens: In=28719, Out=789
+
+[Sample 95] Task: fwe
+Gold: ['tgjcri', 'pdmjix', 'fhymzc'], Extracted: None, Score: 0
+Tokens: In=28977, Out=9
+
+[Sample 96] Task: fwe
+Gold: ['tqyavk', 'prvnvo', 'ftpogb'], Extracted: None, Score: 1.0
+Tokens: In=29847, Out=751
+
+[Sample 97] Task: fwe
+Gold: ['tbodqp', 'pkkryn', 'fyuaob'], Extracted: None, Score: 1.0
+Tokens: In=30694, Out=685
+
+[Sample 98] Task: fwe
+Gold: ['trthvg', 'pnudya', 'glsxdc'], Extracted: None, Score: 0
+Tokens: In=31036, Out=9
+
+[Sample 99] Task: fwe
+Gold: ['scsqsu', 'ovsdrt', 'ffdzev'], Extracted: None, Score: 1.0
+Tokens: In=31315, Out=677
+
+[Sample 100] Task: fwe
+Gold: ['rrcsxl', 'ocrple', 'etzmor'], Extracted: None, Score: 0
+Tokens: In=31646, Out=9
+
+[Sample 101] Task: fwe
+Gold: ['szygym', 'reckcf', 'muynld'], Extracted: None, Score: 0
+Tokens: In=52714, Out=9
+
+[Sample 102] Task: fwe
+Gold: ['snaxoz', 'qrscsa', 'mphaxd'], Extracted: None, Score: 0
+Tokens: In=54637, Out=9
+
+[Sample 103] Task: fwe
+Gold: ['tdsuly', 'rghkvb', 'mykxta'], Extracted: None, Score: 0
+Tokens: In=55258, Out=9
+
+[Sample 104] Task: fwe
+Gold: ['tevdtf', 'qywyiw', 'mthmvw'], Extracted: None, Score: 1.0
+Tokens: In=55688, Out=720
+
+[Sample 105] Task: fwe
+Gold: ['slsbwx', 'qfmdjo', 'mlqyph'], Extracted: None, Score: 1.0
+Tokens: In=56179, Out=564
+
+[Sample 106] Task: fwe
+Gold: ['sqaagq', 'qtxdbz', 'mxodwl'], Extracted: None, Score: 0
+Tokens: In=56837, Out=9
+
+[Sample 107] Task: fwe
+Gold: ['tdcnlb', 'qztfku', 'mmekhj'], Extracted: None, Score: 1.0
+Tokens: In=57353, Out=752
+
+[Sample 108] Task: fwe
+Gold: ['tcczbn', 'rgdegt', 'nqlibn'], Extracted: None, Score: 1.0
+Tokens: In=57712, Out=731
+
+[Sample 109] Task: fwe
+Gold: ['srceaa', 'qxnukn', 'mpyheo'], Extracted: None, Score: 1.0
+Tokens: In=58142, Out=761
+
+[Sample 110] Task: fwe
+Gold: ['srmwjq', 'qommdn', 'meovca'], Extracted: None, Score: 1.0
+Tokens: In=59195, Out=841
+
+[Sample 111] Task: fwe
+Gold: ['wnilti', 'hybmcm', 'qkaxwx'], Extracted: None, Score: 1.0
+Tokens: In=112519, Out=854
+
+[Sample 112] Task: fwe
+Gold: ['wpekzy', 'idrhnb', 'qqbtri'], Extracted: None, Score: 1.0
+Tokens: In=113681, Out=673
+
+[Sample 113] Task: fwe
+Gold: ['wuibpb', 'idlbjm', 'qotdyg'], Extracted: None, Score: 1.0
+Tokens: In=114579, Out=884
+
+[Sample 114] Task: fwe
+Gold: ['wzgcnt', 'hxngtq', 'qisogu'], Extracted: None, Score: 1.0
+Tokens: In=115313, Out=724
+
+[Sample 115] Task: fwe
+Gold: ['wsiwka', 'hvmeic', 'qmmegt'], Extracted: None, Score: 0
+Tokens: In=116007, Out=9
+
+[Sample 116] Task: fwe
+Gold: ['wvhkku', 'igfygz', 'qgqkpy'], Extracted: None, Score: 0
+Tokens: In=116866, Out=9
+
+[Sample 117] Task: fwe
+Gold: ['wqgncv', 'hxafnw', 'pxkmwk'], Extracted: None, Score: 0
+Tokens: In=118903, Out=9
+
+[Sample 118] Task: fwe
+Gold: ['wrpcbm', 'ibwgfd', 'qetudu'], Extracted: None, Score: 0
+Tokens: In=123566, Out=9
+
+[Sample 119] Task: fwe
+Gold: ['wrpwas', 'hvdhnx', 'qcyvkk'], Extracted: None, Score: 0
+Tokens: In=125593, Out=9
+
+[Sample 120] Task: fwe
+Gold: ['wvkpal', 'iibnne', 'qmpqcq'], Extracted: None, Score: 0
+Tokens: In=126892, Out=9
+
+[Sample 121] Task: cwe
+Gold: ['garb', 'teach', 'violin', 'rot', 'blow', 'bewildered', 'obscene', 'morbidity', 'array', 'crude'], Extracted: None, Score: 1.0
+Tokens: In=31173, Out=1049
+
+[Sample 122] Task: cwe
+Gold: ['dive', 'emery', 'accordance', 'fishnet', 'subject', 'norm', 'workforce', 'realize', 'farming', 'bare'], Extracted: None, Score: 1.0
+Tokens: In=31433, Out=839
+
+[Sample 123] Task: cwe
+Gold: ['youth', 'friend', 'carpeting', 'chafe', 'publication', 'dispatch', 'press', 'dwarf', 'harpooner', 'immigrant'], Extracted: None, Score: 0
+Tokens: In=31483, Out=9
+
+[Sample 124] Task: cwe
+Gold: ['moor', 'symptomatic', 'boy', 'raisin', 'abundant', 'dune', 'sleep', 'metabolite', 'bloomer', 'soulmate'], Extracted: None, Score: 0.8
+Tokens: In=31522, Out=521
+
+[Sample 125] Task: cwe
+Gold: ['irrigation', 'heir', 'comradeship', 'privilege', 'assassination', 'artichoke', 'adrenaline', 'street', 'viewer', 'leap'], Extracted: None, Score: 0
+Tokens: In=31554, Out=9
+
+[Sample 126] Task: cwe
+Gold: ['blot', 'duffel', 'elbow', 'wilderness', 'spacing', 'dish', 'romaine', 'webmail', 'survey', 'obedient'], Extracted: None, Score: 1.0
+Tokens: In=31592, Out=683
+
+[Sample 127] Task: cwe
+Gold: ['victory', 'airplane', 'elimination', 'application', 'garb', 'honorable', 'gorilla', 'mature', 'airspace', 'prepare'], Extracted: None, Score: 0
+Tokens: In=31620, Out=9
+
+[Sample 128] Task: cwe
+Gold: ['bagel', 'stick', 'tarragon', 'ignorance', 'beauty', 'glen', 'pantry', 'riverbed', 'waiting', 'vanity'], Extracted: None, Score: 1.0
+Tokens: In=31658, Out=374
+
+[Sample 129] Task: cwe
+Gold: ['wolf', 'fertile', 'summer', 'groan', 'legislature', 'questioner', 'catamaran', 'cash', 'porter', 'rim'], Extracted: None, Score: 0
+Tokens: In=31697, Out=9
+
+[Sample 130] Task: cwe
+Gold: ['obtain', 'reproduce', 'sour', 'missionary', 'trapezoid', 'vaulting', 'billing', 'jam', 'pompom', 'capon'], Extracted: None, Score: 0
+Tokens: In=31750, Out=9
+
+[Sample 131] Task: cwe
+Gold: ['resident', 'excellence', 'software', 'dispute', 'arch-rival', 'block', 'mangle', 'manufacturer', 'college', 'sweet'], Extracted: None, Score: 0
+Tokens: In=63069, Out=9
+
+[Sample 132] Task: cwe
+Gold: ['stay', 'marble', 'flick', 'democracy', 'morale', 'larder', 'lode', 'various', 'passport', 'reference'], Extracted: None, Score: 0
+Tokens: In=63303, Out=9
+
+[Sample 133] Task: cwe
+Gold: ['nasal', 'sock', 'diam', 'yin', 'dialogue', 'rainbow', 'rye', 'reflect', 'barbecue', 'flesh'], Extracted: None, Score: 0
+Tokens: In=63357, Out=9
+
+[Sample 134] Task: cwe
+Gold: ['shaw', 'source', 'rib', 'clave', 'comb', 'enigma', 'mill', 'batting', 'chance', 'beard'], Extracted: None, Score: 0
+Tokens: In=63393, Out=9
+
+[Sample 135] Task: cwe
+Gold: ['brainy', 'merciful', 'associate', 'cleaner', 'reporter', 'hen', 'bacon', 'selective', 'record', 'subconscious'], Extracted: None, Score: 0
+Tokens: In=63430, Out=9
+
+[Sample 136] Task: cwe
+Gold: ['furniture', 'lanai', 'curly', 'hockey', 'steal', 'inversion', 'psychiatrist', 'academics', 'creek', 'ugliest'], Extracted: None, Score: 0
+Tokens: In=63466, Out=9
+
+[Sample 137] Task: cwe
+Gold: ['anorak', 'jicama', 'outfit', 'confirmation', 'sickness', 'yourself', 'stimulation', 'tummy', 'blinker', 'oval'], Extracted: None, Score: 0
+Tokens: In=63498, Out=9
+
+[Sample 138] Task: cwe
+Gold: ['stallion', 'individual', 'clockwork', 'contest', 'diversity', 'dugout', 'gaudy', 'saffron', 'tub', 'rubric'], Extracted: None, Score: 0
+Tokens: In=63538, Out=9
+
+[Sample 139] Task: cwe
+Gold: ['enjoyment', 'fast', 'ambition', 'receptive', 'airship', 'cloudy', 'rid', 'bathhouse', 'ossified', 'modernist'], Extracted: None, Score: 0
+Tokens: In=63584, Out=9
+
+[Sample 140] Task: cwe
+Gold: ['inglenook', 'brassiere', 'hydrolysis', 'examiner', 'honor', 'puzzled', 'opera', 'whirl', 'cello', 'payment'], Extracted: None, Score: 0
+Tokens: In=63666, Out=9
+
+[Sample 141] Task: cwe
+Gold: ['hulking', 'panther', 'fang', 'dose', 'deeply', 'contract', 'quaint', 'religion', 'capability', 'screening'], Extracted: None, Score: 0
+Tokens: In=127092, Out=9
+
+[Sample 142] Task: cwe
+Gold: ['cent', 'moon', 'kingfish', 'boundary', 'good-bye', 'evaluator', 'discretion', 'bake', 'rare', 'legend'], Extracted: None, Score: 0
+Tokens: In=127395, Out=9
+
+[Sample 143] Task: cwe
+Gold: ['flower', 'separate', 'party', 'explorer', 'herbs', 'fight', 'pupa', 'silly', 'composer', 'hydrocarbon'], Extracted: None, Score: 0
+Tokens: In=127439, Out=9
+
+[Sample 144] Task: cwe
+Gold: ['advance', 'charlatan', 'virus', 'sunshine', 'intelligence', 'parachute', 'permafrost', 'burning', 'pinot', 'mess'], Extracted: None, Score: 0
+Tokens: In=127483, Out=9
+
+[Sample 145] Task: cwe
+Gold: ['occur', 'rhinoceros', 'means', 'invite', 'entertain', 'illustrate', 'spectrum', 'cutover', 'middleman', 'decorous'], Extracted: None, Score: 0
+Tokens: In=127515, Out=9
+
+[Sample 146] Task: cwe
+Gold: ['truck', 'choice', 'rain', 'hapless', 'carrier', 'endothelium', 'formulate', 'bestseller', 'accident', 'snowsuit'], Extracted: None, Score: 0
+Tokens: In=127561, Out=9
+
+[Sample 147] Task: cwe
+Gold: ['pipe', 'evil', 'birdbath', 'abbey', 'trapezoid', 'appendix', 'drake', 'idiom', 'add', 'digger'], Extracted: None, Score: 0
+Tokens: In=127589, Out=9
+
+[Sample 148] Task: cwe
+Gold: ['suck', 'licence', 'maternity', 'pickax', 'apathetic', 'pipe', 'kennel', 'damaged', 'dearest', 'stake'], Extracted: None, Score: 0
+Tokens: In=127628, Out=9
+
+[Sample 149] Task: cwe
+Gold: ['footstool', 'website', 'gauntlet', 'explode', 'courtroom', 'plowman', 'continent', 'mortal', 'caribou', 'onion'], Extracted: None, Score: 0
+Tokens: In=127676, Out=9
+
+[Sample 150] Task: cwe
+Gold: ['evanescent', 'snowmobiling', 'insert', 'info', 'grate', 'gosling', 'loquat', 'south', 'erosion', 'ozone'], Extracted: None, Score: 0
+Tokens: In=127738, Out=9
+
+Average Score: 39.87%
+Total Duration: 2487.82 s
+Total Tokens: In=8644166, Out=153450
+Average Tokens/Sample: In=57627.8, Out=1023.0
+Overall TPS (Output): 61.68 tokens/s
+Detailed results saved to outputs/20260325_025049/predictions.jsonl
+=== RUN 1/3 finished at Wed Mar 25 03:32:30 UTC 2026 ===
+=== RUN 2/3 started at Wed Mar 25 03:32:30 UTC 2026 ===
+[ERROR] Could not auto-detect model name: HTTPConnectionPool(host='127.0.0.1', port=31333): Max retries exceeded with url: /v1/models (Caused by NewConnectionError("HTTPConnection(host='127.0.0.1', port=31333): Failed to establish a new connection: [Errno 111] Connection refused"))
+Please specify using --model_name
+=== RUN 2/3 finished at Wed Mar 25 03:32:30 UTC 2026 ===
+=== RUN 3/3 started at Wed Mar 25 03:32:30 UTC 2026 ===
+[ERROR] Could not auto-detect model name: HTTPConnectionPool(host='127.0.0.1', port=31333): Max retries exceeded with url: /v1/models (Caused by NewConnectionError("HTTPConnection(host='127.0.0.1', port=31333): Failed to establish a new connection: [Errno 111] Connection refused"))
+Please specify using --model_name
+=== RUN 3/3 finished at Wed Mar 25 03:32:31 UTC 2026 ===

@@ -394,7 +394,7 @@ source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
 python /opt/oldMoney-Project/quantization/AWQ_L_4_Mini_16.py \
  --input /opt/model \
  --output /opt/model_nvfp4_awq_v2 \
- --calib-data /opt/oldMoney-Project/quantization/calibration/optimal_64.jsonl \
+ --calib-data /opt/oldMoney-Project/quantization/calibration/optimal_.jsonl \
  --max-samples 64 \
  --max-len 131072 \
  --mse-iters 200 \
@@ -404,7 +404,7 @@ python /opt/oldMoney-Project/quantization/AWQ_L_4_Mini_16.py \
 source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
 python /opt/oldMoney-Project/quantization/AWQ_L_4_Mini_16.py \
  --input /opt/model \
- --output /opt/model_nvfp4_awq_v3 \
+ --output /opt/model_AWQ_L_4_Mini_16_calib_96 \
  --calib-data /opt/oldMoney-Project/quantization/calibration/optimal_96.jsonl \
  --max-samples 64 \
  --max-len 131072 \
@@ -436,6 +436,19 @@ nohup python /opt/oldMoney-Project/quantization/AWQ_MLP_4_Attn_16.py \
  --mse-max-shrink 0.60 \
  --mse-error-norm 2.0 \
  > /opt/oldMoney-Project/logs/model_awq_mlp4_attn16.log 2>&1 &
+
+export TRITON_PTXAS_PATH="$(which ptxas)"
+source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
+nohup python /opt/oldMoney-Project/quantization/AWQ_Lattn_Mini_16_Lmlp_4.py \
+ --input /opt/model \
+ --output /opt/model_AWQ_Lattn_Mini_16_Lmlp_4 \
+ --calib-data /opt/oldMoney-Project/quantization/calibration/optimal_64.jsonl \
+ --max-samples 64 \
+ --max-len 131072 \
+ --mse-iters 200 \
+ --mse-max-shrink 0.60 \
+ --mse-error-norm 2.0 \
+ > /opt/oldMoney-Project/logs/AWQ_Lattn_Mini_16_Lmlp_4.log 2>&1 &
 ```
 
 

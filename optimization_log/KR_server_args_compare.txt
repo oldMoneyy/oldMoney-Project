@@ -410,8 +410,59 @@ Peak concurrent requests:                64
 Total token throughput (tok/s):          6290.86   
 Concurrency:                             30.77     
 
+AFTER CACHING THE PLAN PER BS:
 
+Running Test 1 - Capital of France (Prefill Focus) (~80,075 chars / ~20,018 tokens)
+   ✅ Completed
+      Duration        : 3.92 seconds
+      Tokens/sec      : 69.4 t/s
+      Response length : 1,028 chars
+      Tokens used     : 17527 prompt + 272 completion
+      Preview         : Paris
 
+Running Test 2 - Needle in Haystack (Prefill Focus) (~350,086 chars / ~87,521 tokens)
+   ✅ Completed
+      Duration        : 7.85 seconds
+      Tokens/sec      : 40.1 t/s
+      Response length : 1,228 chars
+      Tokens used     : 75034 prompt + 315 completion
+      Preview         : BLUE-TIGER-42
+
+Running Test 3 - Multi-document (Prefill Focus) (~604,943 chars / ~151,235 tokens)
+   ✅ Completed
+      Duration        : 18.55 seconds
+      Tokens/sec      : 26.4 t/s
+      Response length : 1,778 chars
+      Tokens used     : 212892 prompt + 489 completion
+      Preview         : Alice Zhang, 1987
+
+Running Test 4 - Long Generation (Decode Focus) (~486 chars / ~121 tokens)
+   ✅ Completed
+      Duration        : 27.45 seconds
+      Tokens/sec      : 94.1 t/s
+      Response length : 11,267 chars
+      Tokens used     : 102 prompt + 2583 completion
+      Preview         : ## The Cosmic Ascent: A Comprehensive History of Human Space Exploration  The journey of human space exploration is a saga of daring ambition, technological ingenuity, and profound discovery, stretching from ancient gazes at the stars to the lofty aspirations of the 21st century. This narrative begi...
+
+✅ Benchmark finished!
+
+============ Serving Benchmark Result ============
+Backend:                                 sglang    
+Traffic request rate:                    inf       
+Max request concurrency:                 not set   
+Successful requests:                     64        
+Benchmark duration (s):                  676.93    
+Total input tokens:                      3885243   
+Total input text tokens:                 3885243   
+Total generated tokens:                  409876    
+Total generated tokens (retokenized):    336857    
+Request throughput (req/s):              0.09      
+Input token throughput (tok/s):          5739.49   
+Output token throughput (tok/s):         605.49    
+Peak output token throughput (tok/s):    1972.00   
+Peak concurrent requests:                64        
+Total token throughput (tok/s):          6344.98   
+Concurrency:                             30.84     
 
 =================================================================================================================
 

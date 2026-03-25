@@ -1,0 +1,2 @@
+[ERROR] Could not auto-detect model name: HTTPConnectionPool(host='127.0.0.1', port=31333): Max retries exceeded with url: /v1/models (Caused by NewConnectionError("HTTPConnection(host='127.0.0.1', port=31333): Failed to establish a new connection: [Errno 111] Connection refused"))
+Please specify using --model_name
