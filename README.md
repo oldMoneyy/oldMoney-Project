@@ -391,15 +391,16 @@ uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
 
 export TRITON_PTXAS_PATH="$(which ptxas)"
 source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
-python /opt/oldMoney-Project/quantization/AWQ_L_4_Mini_16.py \
+nohup python /opt/oldMoney-Project/quantization/AWQ_L_4_Mini_16.py \
  --input /opt/model \
  --output /opt/model_nvfp4_awq_v2 \
- --calib-data /opt/oldMoney-Project/quantization/calibration/optimal_.jsonl \
+ --calib-data /opt/oldMoney-Project/quantization/calibration/optimal_64.jsonl \
  --max-samples 64 \
  --max-len 131072 \
  --mse-iters 200 \
  --mse-max-shrink 0.60 \
- --mse-error-norm 2.0
+ --mse-error-norm 2.0 \
+ > /opt/oldMoney-Project/logs/AWQ_L_4_Mini_16_train.log 2>&1 &
 
 source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
 python /opt/oldMoney-Project/quantization/AWQ_L_4_Mini_16.py \
