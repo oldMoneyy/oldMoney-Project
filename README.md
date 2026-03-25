@@ -223,12 +223,12 @@ python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31333 \
 cd /opt/SOAR-Toolkit
 nohup python3 eval_model.py \
   --api_base http://127.0.0.1:31333 \
-  --model_path /opt/model_nvfp4_awq_lmlp4_m16 \
+  --model_path /opt/model_nvfp4_awq_v2 \
   --data_path eval_dataset/perf_public_set.jsonl \
   --concurrency 64 \
   --num_samples 150 \
   --verbose \
-  > /opt/oldMoney-Project/logs/eval_awq_model_v2.log 2>&1 &
+  > /opt/oldMoney-Project/logs/eval_nvfp4_awq_v2.log 2>&1 &
 ```
 
 
@@ -405,8 +405,8 @@ source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
 python /opt/oldMoney-Project/quantization/AWQ_L_4_Mini_16.py \
  --input /opt/model \
  --output /opt/model_AWQ_L_4_Mini_16_calib_96 \
- --calib-data /opt/oldMoney-Project/quantization/calibration/optimal_96.jsonl \
- --max-samples 64 \
+ --calib-data /opt/optimal_96.jsonl \
+ --max-samples 96 \
  --max-len 131072 \
  --mse-iters 200 \
  --mse-max-shrink 0.60 \
@@ -473,6 +473,7 @@ nohup python3 -m sglang.launch_server \
     --attention-backend minicpm_flashinfer \
     --chunked-prefill-size 32768 \
     --max-running-requests 64 \
+    --max-mamba-cache-size 64 \
     --skip-server-warmup \
     --port 31333 \
     --dense-as-sparse \

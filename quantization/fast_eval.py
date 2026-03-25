@@ -10,7 +10,7 @@ import requests
 # python /opt/oldMoney-Project/quantization/fast_eval.py --mode baseline --api-base http://127.0.0.1:31333
 
 # # Step 2: Start quantized model, run eval
-# python /opt/oldMoney-Project/quantization/fast_eval.py --mode eval --api-base http://127.0.0.1:31333
+# cd /opt/oldMoney-Project/quantization && python /opt/oldMoney-Project/quantization/fast_eval.py --mode eval --api-base http://127.0.0.1:31333
 
 # 测试用的一组 Prompt（覆盖长文本、推理、代码等不同场景）
 TEST_PROMPTS = [
