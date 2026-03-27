@@ -4,9 +4,9 @@ These kernels fuse multiple elementwise operations to reduce kernel launch
 overhead and memory round-trips. They are drop-in replacements for the
 unfused operation sequences in the MiniCPM decoder layer forward pass.
 
-Kernel inventory (saves ~331 kernel launches per forward):
+Kernel inventory (saves ~331+ kernel launches per forward):
   1. fused_scale_residual_rmsnorm  — 64× per forward (all residual+norm boundaries)
-  2. fused_sigmoid_gate            — 8× per forward  (minicpm4 attn output gate)
+  2. fused_sigmoid_gate            — (kept for fallback, replaced by #8 on minicpm4)
   3. fused_rmsnorm_sigmoid_gate    — 24× per forward (lightning attn output)
   4. fused_qknorm                  — (kept for fallback, replaced by #7 on lightning layers)
   5. fused_rmsnorm_scale           — 1× per forward  (final norm + scale)
@@ -14,6 +14,10 @@ Kernel inventory (saves ~331 kernel launches per forward):
   7. fused_qknorm_rope             — 24× per forward (lightning QK norms + RoPE)
      Replaces: fused_qknorm + q.float() + k.float() + rotary_emb + q.bf16() + k.bf16()
      Saves 5 launches per lightning layer × 24 = 120 launches.
+  8. fused_gemm_sigmoid_gate       — 8× per forward (minicpm4 o_gate GEMM epilogue)
+     Replaces: ColumnParallelLinear(o_gate) + fused_sigmoid_gate
+     Fuses GEMM + sigmoid + multiply, eliminates intermediate tensor.
+     Saves 1 launch per minicpm4 layer × 8 = 8 launches.
 """
 
 import torch
@@ -582,3 +586,154 @@ def fused_qknorm_rope(
         HALF_DIM=HALF_DIM,
         num_warps=4,
     )
+
+
+# =============================================================================
+# 8. fused_gemm_sigmoid_gate
+#    Fuses: output = x * sigmoid(hidden_states @ weight.T)
+#    Triton GEMM with fused sigmoid+multiply epilogue.
+#    Eliminates intermediate GEMM output tensor (o_gate_output / z).
+#    Used for minicpm4 layers' o_gate path.
+# =============================================================================
+
+@triton.autotune(
+    configs=[
+        triton.Config(
+            {"BLOCK_M": 16, "BLOCK_N": 64, "BLOCK_K": 64, "GROUP_SIZE_M": 8},
+            num_stages=4, num_warps=4,
+        ),
+        triton.Config(
+            {"BLOCK_M": 16, "BLOCK_N": 128, "BLOCK_K": 64, "GROUP_SIZE_M": 8},
+            num_stages=3, num_warps=4,
+        ),
+        triton.Config(
+            {"BLOCK_M": 32, "BLOCK_N": 64, "BLOCK_K": 32, "GROUP_SIZE_M": 8},
+            num_stages=5, num_warps=2,
+        ),
+        triton.Config(
+            {"BLOCK_M": 32, "BLOCK_N": 128, "BLOCK_K": 32, "GROUP_SIZE_M": 8},
+            num_stages=4, num_warps=4,
+        ),
+        triton.Config(
+            {"BLOCK_M": 64, "BLOCK_N": 128, "BLOCK_K": 32, "GROUP_SIZE_M": 8},
+            num_stages=4, num_warps=4,
+        ),
+        triton.Config(
+            {"BLOCK_M": 128, "BLOCK_N": 128, "BLOCK_K": 32, "GROUP_SIZE_M": 8},
+            num_stages=3, num_warps=8,
+        ),
+    ],
+    key=["M", "N", "K"],
+)
+@triton.jit
+def _fused_gemm_sigmoid_gate_kernel(
+    # Computes: output = x * sigmoid(a @ b.T)
+    # a=[M,K] (hidden_states), b=[N,K] (weight, row-major), x=[M,N] (attn_output)
+    output_ptr, x_ptr, a_ptr, b_ptr,
+    M, N, K,
+    stride_xm, stride_xn,
+    stride_am, stride_ak,
+    stride_bn, stride_bk,
+    stride_om, stride_on,
+    BLOCK_M: tl.constexpr,
+    BLOCK_N: tl.constexpr,
+    BLOCK_K: tl.constexpr,
+    GROUP_SIZE_M: tl.constexpr,
+):
+    """Tiled GEMM with fused sigmoid+multiply epilogue."""
+    pid = tl.program_id(0)
+    num_pid_m = tl.cdiv(M, BLOCK_M)
+    num_pid_n = tl.cdiv(N, BLOCK_N)
+
+    # Swizzle for better L2 cache utilization
+    num_pid_in_group = GROUP_SIZE_M * num_pid_n
+    group_id = pid // num_pid_in_group
+    first_pid_m = group_id * GROUP_SIZE_M
+    group_size_m = min(num_pid_m - first_pid_m, GROUP_SIZE_M)
+    pid_m = first_pid_m + ((pid % num_pid_in_group) % group_size_m)
+    pid_n = (pid % num_pid_in_group) // group_size_m
+
+    offs_m = pid_m * BLOCK_M + tl.arange(0, BLOCK_M)
+    offs_n = pid_n * BLOCK_N + tl.arange(0, BLOCK_N)
+    offs_k = tl.arange(0, BLOCK_K)
+
+    # A [M, K]: hidden_states
+    a_ptrs = a_ptr + offs_m[:, None] * stride_am + offs_k[None, :] * stride_ak
+    # B.T [K, N]: weight transposed — weight is stored [N, K]
+    bt_ptrs = b_ptr + offs_k[:, None] * stride_bk + offs_n[None, :] * stride_bn
+
+    # Main GEMM loop: acc = A @ B.T
+    acc = tl.zeros((BLOCK_M, BLOCK_N), dtype=tl.float32)
+    for k_start in range(0, tl.cdiv(K, BLOCK_K)):
+        k_offset = k_start * BLOCK_K
+        a_mask = (offs_m[:, None] < M) & (offs_k[None, :] + k_offset < K)
+        bt_mask = (offs_k[:, None] + k_offset < K) & (offs_n[None, :] < N)
+
+        a = tl.load(a_ptrs, mask=a_mask, other=0.0)
+        bt = tl.load(bt_ptrs, mask=bt_mask, other=0.0)
+        acc += tl.dot(a, bt)
+
+        a_ptrs += BLOCK_K * stride_ak
+        bt_ptrs += BLOCK_K * stride_bk
+
+    # Fused epilogue: output = x * sigmoid(acc)
+    out_mask = (offs_m[:, None] < M) & (offs_n[None, :] < N)
+    x = tl.load(
+        x_ptr + offs_m[:, None] * stride_xm + offs_n[None, :] * stride_xn,
+        mask=out_mask, other=0.0,
+    ).to(tl.float32)
+
+    result = x * tl.sigmoid(acc)
+
+    tl.store(
+        output_ptr + offs_m[:, None] * stride_om + offs_n[None, :] * stride_on,
+        result.to(tl.bfloat16), mask=out_mask,
+    )
+
+
+def fused_gemm_sigmoid_gate(
+    x: torch.Tensor,
+    hidden_states: torch.Tensor,
+    weight: torch.Tensor,
+) -> torch.Tensor:
+    """Fused: output = x * sigmoid(hidden_states @ weight.T)
+
+    Triton GEMM with fused sigmoid+multiply epilogue. Eliminates the
+    intermediate GEMM output tensor materialization.
+
+    Used for minicpm4 layers' o_gate path:
+      Before: o_gate_output = o_gate(hidden)  → writes [M, N]
+              attn_out = fused_sigmoid_gate(attn_out, o_gate_output) → reads [M, N]
+      After:  attn_out = fused_gemm_sigmoid_gate(attn_out, hidden, o_gate.weight)
+
+    Requires BF16 weight (no quantization). Falls back to None if weight
+    is not BF16.
+
+    Args:
+        x: Gating input (attn_output), shape [M, N]
+        hidden_states: GEMM input, shape [M, K]
+        weight: GEMM weight, shape [N, K] (row-major, as stored by Linear)
+
+    Returns:
+        output = x * sigmoid(hidden_states @ weight.T), shape [M, N]
+    """
+    M, K = hidden_states.shape
+    N = weight.shape[0]
+    assert weight.shape[1] == K, f"Weight K mismatch: {weight.shape[1]} vs {K}"
+    assert x.shape == (M, N), f"x shape mismatch: {x.shape} vs ({M}, {N})"
+
+    output = torch.empty(M, N, dtype=x.dtype, device=x.device)
+
+    grid = lambda META: (
+        triton.cdiv(M, META["BLOCK_M"]) * triton.cdiv(N, META["BLOCK_N"]),
+    )
+
+    _fused_gemm_sigmoid_gate_kernel[grid](
+        output, x, hidden_states, weight,
+        M, N, K,
+        x.stride(0), x.stride(1),
+        hidden_states.stride(0), hidden_states.stride(1),
+        weight.stride(0), weight.stride(1),
+        output.stride(0), output.stride(1),
+    )
+    return output

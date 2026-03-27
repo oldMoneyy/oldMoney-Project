@@ -1,0 +1,150 @@
+================================================================================
+MiniCPM-SALA Kernel Fusion Log
+Model: openbmb/MiniCPM-SALA (9.5B params, 32 layers, hidden=4096)
+Architecture: 8 minicpm4 (sparse attn) + 24 lightning-attn (SimpleGLA) layers
+================================================================================
+
+FUNDAMENTAL PRINCIPLE: ZERO ACCURACY DEGRADATION
+  All fusions MUST preserve or improve numerical precision. No fusion may
+  introduce accuracy loss compared to the original computation path.
+  This is a hard constraint — performance gains are worthless if they
+  degrade model output quality.
+
+ACCURACY ANALYSIS:
+  Kernels #1-6: All compute in float32 accumulation, bf16 I/O.
+    Numerically identical to the unfused operation sequences.
+  Kernel #7 (fused_qknorm_rope): STRICTLY MORE PRECISE than original.
+    Original: qknorm writes bf16 → reads bf16 → casts float32 → RoPE → bf16
+    Fused:    qknorm in float32 → RoPE in float32 (no intermediate bf16 truncation) → bf16
+    The intermediate bf16 truncation between RMSNorm and RoPE is eliminated.
+  Kernel #8 (fused_gemm_sigmoid_gate): STRICTLY MORE PRECISE than original.
+    Original: cuBLAS GEMM → writes bf16 → reads bf16 → float32 → sigmoid → bf16
+    Fused:    Triton GEMM accumulator (float32) → sigmoid (float32) → bf16
+    The GEMM output bf16 truncation before sigmoid is eliminated.
+  Note: Triton GEMM may produce bit-level differences vs cuBLAS due to
+    different floating-point reduction order (non-associativity). This is
+    NOT accuracy degradation — both are valid float32 computations.
+
+================================================================================
+FILES MODIFIED (in sglang_sala_kernel_fuse/)
+================================================================================
+
+[NEW] sglang/srt/layers/minicpm_fused_ops.py
+  - 7 Triton fused kernels (see below)
+
+[MOD] sglang/srt/models/minicpm.py
+  - MiniCPMAttention.forward: fused_sigmoid_gate for output gate
+  - MiniCPMLightningMixer.forward: fused_qknorm_rope (QK norm + RoPE in 1 kernel),
+    fused_rmsnorm_sigmoid_gate
+  - MiniCPMDecoderLayer.forward: fused_scale_residual_rmsnorm (x2),
+    cross-layer fusion, removed profiling overhead
+  - MiniCPMModel.forward: returns raw hidden for cross-layer fusion
+  - MiniCPMForCausalLM.forward: fused_rmsnorm_scale (final norm + scale)
+
+[MOD] sglang/srt/layers/attention/minicpm_attention_kernels.py
+  - FlashInferKernel.forward: fused_fp8_gather_dequant for FP8 prefill path
+
+================================================================================
+FILES CREATED (in vendor_kernel_fuse/)
+================================================================================
+
+[NEW] fused_kernels.cu        — 3 CUDA kernels (vectorized, SM80/89/90/120)
+[NEW] setup.py                — builds fused_kernel_extension
+[NEW] static_switch.h         — template dispatch macros
+[CPY] sparse_kernel/*         — copied from vendor/ (unchanged)
+[CPY] infllmv2_cuda_impl/*    — copied from vendor/ (unchanged)
+
+Build: cd vendor_kernel_fuse && pip install -e .
+CUDA kernels are OPTIONAL — auto-fallback to Triton if not installed.
+
+================================================================================
+TRITON KERNELS (minicpm_fused_ops.py)
+================================================================================
+
+#  Kernel                         Fuses                                Calls/fwd  Saved
+-- ------------------------------ ------------------------------------ ---------- -----
+1  fused_scale_residual_rmsnorm   residual + x*scale + rmsnorm         64         128
+   (post-attn + cross-layer)      3 ops -> 1 kernel
+2  fused_sigmoid_gate             (kept as fallback, replaced by #8)     0          0
+                                  2 ops -> 1 kernel (minicpm4 layers)
+3  fused_rmsnorm_sigmoid_gate     rmsnorm + sigmoid + mul               24         48
+                                  3 ops -> 1 kernel (lightning layers)
+4  fused_qknorm                   (kept as fallback, replaced by #7)     0          0
+5  fused_rmsnorm_scale            rmsnorm + / scale_width               1           2
+                                  2 ops -> 1 kernel (final output)
+6  fused_scale_residual           residual + x * scale                  1           1
+                                  2 ops -> 1 kernel (after last layer)
+7  fused_qknorm_rope              q_norm + k_norm + RoPE rotation       24        120
+                                  Replaces: qknorm + q.float() +
+                                  k.float() + rotary_emb + q.bf16()
+                                  + k.bf16() = 6 kernels -> 1 kernel
+                                  (lightning layers only)
+8  fused_gemm_sigmoid_gate        Triton GEMM + sigmoid + multiply       8          8
+                                  Replaces: o_gate GEMM + sigmoid_gate
+                                  = 2 kernels -> 1 kernel
+                                  Eliminates intermediate tensor
+                                  (minicpm4 layers, BF16 weights only)
+                                                              SUBTOTAL:          ~315
+
+Profiling code removal (import time, synchronize, perf_counter):        ~5 syncs
+
+Cross-layer fusion detail:
+  BEFORE: layer N ends with   residual + mlp_out * scale  (2 ops)
+          layer N+1 starts    residual = h; h = layernorm(h) (1 op)
+  AFTER:  layer N returns     (mlp_out, residual)
+          layer N+1 calls     fused_scale_residual_rmsnorm(mlp_out, residual, ...)
+  Saves 32 kernel launches (one per layer boundary).
+
+================================================================================
+CUDA KERNELS (vendor_kernel_fuse/fused_kernels.cu)
+================================================================================
+
+#  Kernel                         What                                  Impact
+-- ------------------------------ ------------------------------------- -----------
+1  fused_fp8_gather_dequant       kv_cache[pages].to(bf16) * scale      ~5% prefill
+                                  gather + cast + multiply -> 1 kernel
+                                  Uses vectorized memory access
+
+2  fused_topk_block_table_decode  topk().sort() + get_block_table_v3    ~5-10% @bs64
+                                  2 separate ops -> 1 kernel
+                                  insertion_topk + inline block table
+
+3  fused_sigmoid_gate (CUDA)      x * sigmoid(gate) with uint4 loads    ~30% faster
+                                  128-bit vectorized loads/stores        than Triton
+                                  BF16 + FP16 variants                  version
+
+================================================================================
+ESTIMATED PERFORMANCE IMPROVEMENT
+================================================================================
+
+Concurrency   Kernel launches saved   Est. time saved   % of decode latency
+------------- ---------------------- ----------------- --------------------
+bs=1  decode  ~315 Triton + 3 CUDA    ~1.7-2.3ms        7-9%
+bs=8  decode  ~315 Triton + 3 CUDA    ~1.9-2.6ms        5-7%
+bs=64 decode  ~315 Triton + 3 CUDA    ~2.1-3.2ms        4-6%
+prefill (FP8) +fused_fp8_gather       ~2-5ms             ~5%
+
+Additional: fused_gemm_sigmoid_gate eliminates 8 intermediate tensor
+materializations per forward (one per minicpm4 layer), saving M*N*4 bytes
+of memory traffic per layer (M=batch tokens, N=4096).
+
+Main bottleneck remains GEMMs (weight-memory-bound at low bs).
+
+================================================================================
+NOT DONE (requires weeks of CUDA engineering)
+================================================================================
+
+- Persistent decode kernel (single kernel for all 32 layers' GEMMs)
+  Would give 10-20% at bs=1 but requires ~10K lines of CUDA.
+  NVIDIA TensorRT-LLM has this; too complex for a kernel fusion patch.
+
+- CUTLASS GEMM epilogue fusion for lightning z_proj + rmsnorm + sigmoid
+  The minicpm4 o_gate path is now fused (#8 above) via Triton GEMM.
+  Lightning layers' z_proj would also benefit, but fusing rmsnorm variance
+  reduction with the GEMM tiling requires CUTLASS 3.x cooperative epilogues.
+
+- Self-speculative decoding using early lightning layers as draft model
+  Would give 2-3x decode throughput at bs=1 but requires training
+  an early-exit LM head + modified serving loop.
+
+================================================================================

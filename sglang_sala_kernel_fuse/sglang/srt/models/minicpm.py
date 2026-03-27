@@ -41,6 +41,7 @@ from sglang.srt.layers.linear import (
 )
 from sglang.srt.layers.logits_processor import LogitsProcessor
 from sglang.srt.layers.minicpm_fused_ops import (
+    fused_gemm_sigmoid_gate,
     fused_qknorm,
     fused_qknorm_rope,
     fused_rmsnorm_scale,
@@ -182,6 +183,8 @@ class MiniCPMAttention(nn.Module):
                 quant_config=quant_config,
                 prefix=add_prefix("o_gate", prefix),
             )
+            # Enable fused GEMM epilogue when weight is BF16 (not quantized)
+            self._fuse_ogate_gemm = quant_config is None
 
         self.layer_id = layer_id
 
@@ -203,8 +206,15 @@ class MiniCPMAttention(nn.Module):
         attn_output = self.attn(q, k, v, forward_batch)
 
         if self.use_output_gate:
-            o_gate_output, _ = self.o_gate(hidden_states)
-            attn_output = fused_sigmoid_gate(attn_output, o_gate_output)
+            if self._fuse_ogate_gemm:
+                # Fused: GEMM + sigmoid + multiply in one kernel (no intermediate tensor)
+                attn_output = fused_gemm_sigmoid_gate(
+                    attn_output, hidden_states, self.o_gate.weight
+                )
+            else:
+                # Fallback for quantized weights
+                o_gate_output, _ = self.o_gate(hidden_states)
+                attn_output = fused_sigmoid_gate(attn_output, o_gate_output)
 
         output, _ = self.o_proj(attn_output)
         return output
