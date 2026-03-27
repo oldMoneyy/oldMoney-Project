@@ -108,9 +108,15 @@ python -c "import torch; print(f'PyTorch Version: {torch.__version__}\nCUDA Vers
 
 Copy a backup of original env:
 ```bash
-# cp -r /opt/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python/* /opt/oldMoney-Project/sglang_sala_cp/
-uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
 # uv pip install --no-deps -e /opt/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python
+
+# Optimized version:      
+uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_kernel_fuse
+pip install --no-build-isolation -e /opt/oldMoney-Project/vendor_kernel_fuse
+
+# Baseline version:
+pip uninstall fused_kernel_extension
+uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
 ```
 
 What I have done to the environment:
@@ -155,6 +161,15 @@ nohup python3 -m sglang.launch_server \
 (1) Send a simple request:
 
 ```bash
+curl http://localhost:31333/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "MiniCPM-SALA",
+    "messages": [{"role": "user", "content": "Hi, how are u?"}],
+    "max_tokens": 8192,
+    "temperature": 0.0
+  }'
+
 curl http://localhost:31333/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
@@ -231,12 +246,12 @@ python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31333 \
 cd /opt/SOAR-Toolkit
 nohup python3 eval_model.py \
   --api_base http://127.0.0.1:31333 \
-  --model_path /opt/model_nvfp4_awq_v2 \
+  --model_path /tmp/model_nvfp4_smoothed \
   --data_path eval_dataset/perf_public_set.jsonl \
   --concurrency 64 \
   --num_samples 150 \
   --verbose \
-  > /opt/oldMoney-Project/logs/eval_nvfp4_awq_v2.log 2>&1 &
+  > /opt/oldMoney-Project/logs/model_nvfp4_smoothed_unk_problem.log 2>&1 &
 ```
 
 
