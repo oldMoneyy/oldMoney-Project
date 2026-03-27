@@ -15,7 +15,7 @@ Advanced GPTQ Quantizer for MiniCPM-SALA (Mixed Precision + Smoothing)
 Skipping import of cpp extensions due to incompatible torch version 2.8.0+cu128 for torchao version 0.16.0             Please see https://github.com/pytorch/ao/issues/2919 for more info
 Current Python version 3.10 is below the recommended 3.11 version. It is recommended to upgrade to Python 3.11 or higher for the best experience.
 `torch_dtype` is deprecated! Use `dtype` instead!
-Loading checkpoint shards:   0%|                                                                                                                                    | 0/4 [00:00<?, ?it/s]Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:00<00:00, 161.96it/s]
+Loading checkpoint shards:   0%|                                                                                                      | 0/4 [00:00<?, ?it/s]Loading checkpoint shards: 100%|█████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:00<00:00, 159.07it/s]
 [INFO] Model has 32 layers
 [INFO] Phase 1: Computing initial hidden states...
 
@@ -31,3 +31,562 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
     mlp.gate_proj [16384x4096] MSE=9.537610e-06 RelErr=0.1844 (0.4s)
     mlp.up_proj [16384x4096] MSE=1.159823e-05 RelErr=0.1704 (0.4s)
   Updating hidden states for next layer...
+
+======================================================================
+[LAYER 1/31] type=lightning-attn
+======================================================================
+  INT4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (64 samples)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj']
+  Smoothed [o_norm] -> [o_proj]
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj [4096x16384] MSE=1.633363e-05 RelErr=0.1791 (3.1s)
+    mlp.gate_proj [16384x4096] MSE=1.232495e-05 RelErr=0.1779 (0.4s)
+    mlp.up_proj [16384x4096] MSE=1.067544e-05 RelErr=0.1585 (0.4s)
+    self_attn.k_proj [4096x4096] MSE=1.817909e-05 RelErr=0.2543 (0.4s)
+    self_attn.o_proj [4096x4096] MSE=1.408313e-05 RelErr=0.1724 (0.4s)
+    self_attn.q_proj [4096x4096] MSE=1.654638e-05 RelErr=0.2429 (0.4s)
+    self_attn.v_proj [4096x4096] MSE=1.972402e-05 RelErr=0.2230 (0.4s)
+    self_attn.z_proj [4096x4096] MSE=1.708152e-05 RelErr=0.2121 (0.4s)
+  Updating hidden states for next layer...
+
+======================================================================
+[LAYER 2/31] type=lightning-attn
+======================================================================
+  INT4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (64 samples)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj']
+  Smoothed [o_norm] -> [o_proj]
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj [4096x16384] MSE=1.519920e-05 RelErr=0.1667 (3.0s)
+    mlp.gate_proj [16384x4096] MSE=1.328121e-05 RelErr=0.1655 (0.4s)
+    mlp.up_proj [16384x4096] MSE=1.055798e-05 RelErr=0.1484 (0.4s)
+    self_attn.k_proj [4096x4096] MSE=1.826289e-05 RelErr=0.2122 (0.4s)
+    self_attn.o_proj [4096x4096] MSE=1.357446e-05 RelErr=0.1543 (0.4s)
+    self_attn.q_proj [4096x4096] MSE=1.715329e-05 RelErr=0.2060 (0.4s)
+    self_attn.v_proj [4096x4096] MSE=1.619808e-05 RelErr=0.1749 (0.4s)
+    self_attn.z_proj [4096x4096] MSE=1.500818e-05 RelErr=0.1825 (0.4s)
+  Updating hidden states for next layer...
+
+======================================================================
+[LAYER 3/31] type=lightning-attn
+======================================================================
+  INT4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (64 samples)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj']
+  Smoothed [o_norm] -> [o_proj]
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj [4096x16384] MSE=1.138695e-05 RelErr=0.1457 (3.0s)
+    mlp.gate_proj [16384x4096] MSE=1.265901e-05 RelErr=0.1483 (0.4s)
+    mlp.up_proj [16384x4096] MSE=1.009782e-05 RelErr=0.1420 (0.4s)
+    self_attn.k_proj [4096x4096] MSE=1.535723e-05 RelErr=0.1755 (0.4s)
+    self_attn.o_proj [4096x4096] MSE=1.210953e-05 RelErr=0.1440 (0.4s)
+    self_attn.q_proj [4096x4096] MSE=1.372330e-05 RelErr=0.1664 (0.4s)
+    self_attn.v_proj [4096x4096] MSE=1.424783e-05 RelErr=0.1571 (0.4s)
+    self_attn.z_proj [4096x4096] MSE=1.235814e-05 RelErr=0.1581 (0.4s)
+  Updating hidden states for next layer...
+
+======================================================================
+[LAYER 4/31] type=lightning-attn
+======================================================================
+  INT4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (64 samples)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj']
+  Smoothed [o_norm] -> [o_proj]
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj [4096x16384] MSE=1.102410e-05 RelErr=0.1421 (3.0s)
+    mlp.gate_proj [16384x4096] MSE=1.191006e-05 RelErr=0.1434 (0.4s)
+    mlp.up_proj [16384x4096] MSE=9.928485e-06 RelErr=0.1379 (0.4s)
+    self_attn.k_proj [4096x4096] MSE=1.316716e-05 RelErr=0.1738 (0.4s)
+    self_attn.o_proj [4096x4096] MSE=1.262798e-05 RelErr=0.1468 (0.4s)
+    self_attn.q_proj [4096x4096] MSE=1.223129e-05 RelErr=0.1685 (0.4s)
+    self_attn.v_proj [4096x4096] MSE=1.215822e-05 RelErr=0.1477 (0.4s)
+    self_attn.z_proj [4096x4096] MSE=1.090973e-05 RelErr=0.1496 (0.4s)
+  Updating hidden states for next layer...
+
+======================================================================
+[LAYER 5/31] type=lightning-attn
+======================================================================
+  INT4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (64 samples)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj']
+  Smoothed [o_norm] -> [o_proj]
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj [4096x16384] MSE=9.654631e-06 RelErr=0.1335 (3.0s)
+    mlp.gate_proj [16384x4096] MSE=1.134097e-05 RelErr=0.1387 (0.4s)
+    mlp.up_proj [16384x4096] MSE=9.741748e-06 RelErr=0.1355 (0.4s)
+    self_attn.k_proj [4096x4096] MSE=1.364113e-05 RelErr=0.1665 (0.4s)
+    self_attn.o_proj [4096x4096] MSE=1.163627e-05 RelErr=0.1396 (0.4s)
+    self_attn.q_proj [4096x4096] MSE=1.185285e-05 RelErr=0.1546 (0.4s)
+    self_attn.v_proj [4096x4096] MSE=1.268995e-05 RelErr=0.1470 (0.4s)
+    self_attn.z_proj [4096x4096] MSE=1.100889e-05 RelErr=0.1487 (0.4s)
+  Updating hidden states for next layer...
+
+======================================================================
+[LAYER 6/31] type=lightning-attn
+======================================================================
+  INT4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (64 samples)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj']
+  Smoothed [o_norm] -> [o_proj]
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj [4096x16384] MSE=9.729974e-06 RelErr=0.1342 (3.0s)
+    mlp.gate_proj [16384x4096] MSE=1.077215e-05 RelErr=0.1358 (0.4s)
+    mlp.up_proj [16384x4096] MSE=9.580694e-06 RelErr=0.1339 (0.4s)
+    self_attn.k_proj [4096x4096] MSE=1.612160e-05 RelErr=0.1740 (0.4s)
+    self_attn.o_proj [4096x4096] MSE=1.104258e-05 RelErr=0.1373 (0.4s)
+    self_attn.q_proj [4096x4096] MSE=1.194582e-05 RelErr=0.1541 (0.4s)
+    self_attn.v_proj [4096x4096] MSE=1.181350e-05 RelErr=0.1402 (0.4s)
+    self_attn.z_proj [4096x4096] MSE=9.799194e-06 RelErr=0.1421 (0.4s)
+  Updating hidden states for next layer...
+
+======================================================================
+[LAYER 7/31] type=lightning-attn
+======================================================================
+  INT4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (64 samples)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj']
+  Smoothed [o_norm] -> [o_proj]
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj [4096x16384] MSE=1.071724e-05 RelErr=0.1394 (3.0s)
+    mlp.gate_proj [16384x4096] MSE=1.093887e-05 RelErr=0.1369 (0.4s)
+    mlp.up_proj [16384x4096] MSE=9.877449e-06 RelErr=0.1349 (0.4s)
+    self_attn.k_proj [4096x4096] MSE=1.579980e-05 RelErr=0.1720 (0.4s)
+    self_attn.o_proj [4096x4096] MSE=1.125195e-05 RelErr=0.1382 (0.4s)
+    self_attn.q_proj [4096x4096] MSE=1.165846e-05 RelErr=0.1515 (0.4s)
+    self_attn.v_proj [4096x4096] MSE=1.194470e-05 RelErr=0.1406 (0.4s)
+    self_attn.z_proj [4096x4096] MSE=9.744339e-06 RelErr=0.1415 (0.4s)
+  Updating hidden states for next layer...
+
+======================================================================
+[LAYER 8/31] type=lightning-attn
+======================================================================
+  INT4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (64 samples)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj']
+  Smoothed [o_norm] -> [o_proj]
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj [4096x16384] MSE=1.010588e-05 RelErr=0.1362 (3.0s)
+    mlp.gate_proj [16384x4096] MSE=1.156079e-05 RelErr=0.1380 (0.4s)
+    mlp.up_proj [16384x4096] MSE=1.013383e-05 RelErr=0.1362 (0.4s)
+    self_attn.k_proj [4096x4096] MSE=1.906452e-05 RelErr=0.1826 (0.4s)
+    self_attn.o_proj [4096x4096] MSE=1.144089e-05 RelErr=0.1381 (0.4s)
+    self_attn.q_proj [4096x4096] MSE=1.291148e-05 RelErr=0.1556 (0.4s)
+    self_attn.v_proj [4096x4096] MSE=1.228344e-05 RelErr=0.1407 (0.4s)
+    self_attn.z_proj [4096x4096] MSE=9.988060e-06 RelErr=0.1415 (0.4s)
+  Updating hidden states for next layer...
+
+======================================================================
+[LAYER 9/31] type=minicpm4
+======================================================================
+  BF16 (kept): ['self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  INT4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Collecting Hessians (64 samples)...
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj']
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj [4096x16384] MSE=1.046590e-05 RelErr=0.1374 (3.1s)
+    mlp.gate_proj [16384x4096] MSE=1.118923e-05 RelErr=0.1374 (0.4s)
+    mlp.up_proj [16384x4096] MSE=1.038212e-05 RelErr=0.1364 (0.4s)
+  Updating hidden states for next layer...
+
+======================================================================
+[LAYER 10/31] type=lightning-attn
+======================================================================
+  INT4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (64 samples)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj']
+  Smoothed [o_norm] -> [o_proj]
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj [4096x16384] MSE=1.030349e-05 RelErr=0.1355 (3.1s)
+    mlp.gate_proj [16384x4096] MSE=1.078130e-05 RelErr=0.1357 (0.4s)
+    mlp.up_proj [16384x4096] MSE=1.032200e-05 RelErr=0.1351 (0.4s)
+    self_attn.k_proj [4096x4096] MSE=1.676274e-05 RelErr=0.1694 (0.4s)
+    self_attn.o_proj [4096x4096] MSE=1.275577e-05 RelErr=0.1461 (0.4s)
+    self_attn.q_proj [4096x4096] MSE=1.184452e-05 RelErr=0.1482 (0.4s)
+    self_attn.v_proj [4096x4096] MSE=1.229461e-05 RelErr=0.1431 (0.4s)
+    self_attn.z_proj [4096x4096] MSE=9.988520e-06 RelErr=0.1412 (0.4s)
+  Updating hidden states for next layer...
+
+======================================================================
+[LAYER 11/31] type=lightning-attn
+======================================================================
+  INT4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (64 samples)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj']
+  Smoothed [o_norm] -> [o_proj]
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj [4096x16384] MSE=1.145596e-05 RelErr=0.1414 (3.0s)
+    mlp.gate_proj [16384x4096] MSE=1.094035e-05 RelErr=0.1372 (0.4s)
+    mlp.up_proj [16384x4096] MSE=1.066492e-05 RelErr=0.1361 (0.4s)
+    self_attn.k_proj [4096x4096] MSE=1.532292e-05 RelErr=0.1659 (0.4s)
+    self_attn.o_proj [4096x4096] MSE=1.146673e-05 RelErr=0.1383 (0.4s)
+    self_attn.q_proj [4096x4096] MSE=1.157160e-05 RelErr=0.1468 (0.4s)
+    self_attn.v_proj [4096x4096] MSE=1.209320e-05 RelErr=0.1404 (0.4s)
+    self_attn.z_proj [4096x4096] MSE=9.322924e-06 RelErr=0.1373 (0.4s)
+  Updating hidden states for next layer...
+
+======================================================================
+[LAYER 12/31] type=lightning-attn
+======================================================================
+  INT4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (64 samples)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj']
+  Smoothed [o_norm] -> [o_proj]
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj [4096x16384] MSE=1.087867e-05 RelErr=0.1367 (3.0s)
+    mlp.gate_proj [16384x4096] MSE=1.087677e-05 RelErr=0.1377 (0.4s)
+    mlp.up_proj [16384x4096] MSE=1.084928e-05 RelErr=0.1360 (0.4s)
+    self_attn.k_proj [4096x4096] MSE=1.459228e-05 RelErr=0.1641 (0.4s)
+    self_attn.o_proj [4096x4096] MSE=1.195148e-05 RelErr=0.1401 (0.4s)
+    self_attn.q_proj [4096x4096] MSE=1.240135e-05 RelErr=0.1508 (0.4s)
+    self_attn.v_proj [4096x4096] MSE=1.345576e-05 RelErr=0.1495 (0.4s)
+    self_attn.z_proj [4096x4096] MSE=1.046767e-05 RelErr=0.1422 (0.4s)
+  Updating hidden states for next layer...
+
+======================================================================
+[LAYER 13/31] type=lightning-attn
+======================================================================
+  INT4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (64 samples)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj']
+  Smoothed [o_norm] -> [o_proj]
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj [4096x16384] MSE=1.094376e-05 RelErr=0.1367 (3.0s)
+    mlp.gate_proj [16384x4096] MSE=1.079889e-05 RelErr=0.1382 (0.4s)
+    mlp.up_proj [16384x4096] MSE=1.086067e-05 RelErr=0.1353 (0.4s)
+    self_attn.k_proj [4096x4096] MSE=1.846572e-05 RelErr=0.1733 (0.4s)
+    self_attn.o_proj [4096x4096] MSE=1.047388e-05 RelErr=0.1342 (0.4s)
+    self_attn.q_proj [4096x4096] MSE=1.243485e-05 RelErr=0.1467 (0.4s)
+    self_attn.v_proj [4096x4096] MSE=1.220842e-05 RelErr=0.1413 (0.4s)
+    self_attn.z_proj [4096x4096] MSE=9.790119e-06 RelErr=0.1410 (0.4s)
+  Updating hidden states for next layer...
+
+======================================================================
+[LAYER 14/31] type=lightning-attn
+======================================================================
+  INT4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (64 samples)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj']
+  Smoothed [o_norm] -> [o_proj]
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj [4096x16384] MSE=1.126677e-05 RelErr=0.1373 (3.0s)
+    mlp.gate_proj [16384x4096] MSE=1.050658e-05 RelErr=0.1379 (0.4s)
+    mlp.up_proj [16384x4096] MSE=1.114940e-05 RelErr=0.1355 (0.4s)
+    self_attn.k_proj [4096x4096] MSE=1.679529e-05 RelErr=0.1708 (0.4s)
+    self_attn.o_proj [4096x4096] MSE=1.084051e-05 RelErr=0.1360 (0.4s)
+    self_attn.q_proj [4096x4096] MSE=1.281249e-05 RelErr=0.1518 (0.4s)
+    self_attn.v_proj [4096x4096] MSE=1.243611e-05 RelErr=0.1412 (0.4s)
+    self_attn.z_proj [4096x4096] MSE=9.424486e-06 RelErr=0.1385 (0.4s)
+  Updating hidden states for next layer...
+
+======================================================================
+[LAYER 15/31] type=lightning-attn
+======================================================================
+  INT4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (64 samples)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj']
+  Smoothed [o_norm] -> [o_proj]
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj [4096x16384] MSE=1.034673e-05 RelErr=0.1337 (3.0s)
+    mlp.gate_proj [16384x4096] MSE=1.091671e-05 RelErr=0.1374 (0.4s)
+    mlp.up_proj [16384x4096] MSE=1.086495e-05 RelErr=0.1356 (0.4s)
+    self_attn.k_proj [4096x4096] MSE=1.921070e-05 RelErr=0.1746 (0.4s)
+    self_attn.o_proj [4096x4096] MSE=1.129414e-05 RelErr=0.1369 (0.4s)
+    self_attn.q_proj [4096x4096] MSE=1.332371e-05 RelErr=0.1509 (0.4s)
+    self_attn.v_proj [4096x4096] MSE=1.262611e-05 RelErr=0.1413 (0.4s)
+    self_attn.z_proj [4096x4096] MSE=9.525344e-06 RelErr=0.1388 (0.4s)
+  Updating hidden states for next layer...
+
+======================================================================
+[LAYER 16/31] type=minicpm4
+======================================================================
+  BF16 (kept): ['self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  INT4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Collecting Hessians (64 samples)...
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj']
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj [4096x16384] MSE=1.008010e-05 RelErr=0.1332 (3.1s)
+    mlp.gate_proj [16384x4096] MSE=1.134282e-05 RelErr=0.1382 (0.4s)
+    mlp.up_proj [16384x4096] MSE=1.088196e-05 RelErr=0.1363 (0.4s)
+  Updating hidden states for next layer...
+
+======================================================================
+[LAYER 17/31] type=minicpm4
+======================================================================
+  BF16 (kept): ['self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  INT4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Collecting Hessians (64 samples)...
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj']
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj [4096x16384] MSE=1.002225e-05 RelErr=0.1341 (3.1s)
+    mlp.gate_proj [16384x4096] MSE=1.224768e-05 RelErr=0.1400 (0.4s)
+    mlp.up_proj [16384x4096] MSE=1.057321e-05 RelErr=0.1361 (0.4s)
+  Updating hidden states for next layer...
+
+======================================================================
+[LAYER 18/31] type=lightning-attn
+======================================================================
+  INT4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (64 samples)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj']
+  Smoothed [o_norm] -> [o_proj]
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj [4096x16384] MSE=9.966167e-06 RelErr=0.1324 (3.1s)
+    mlp.gate_proj [16384x4096] MSE=1.162841e-05 RelErr=0.1380 (0.4s)
+    mlp.up_proj [16384x4096] MSE=1.094282e-05 RelErr=0.1360 (0.4s)
+    self_attn.k_proj [4096x4096] MSE=1.871811e-05 RelErr=0.1734 (0.4s)
+    self_attn.o_proj [4096x4096] MSE=1.090878e-05 RelErr=0.1355 (0.4s)
+    self_attn.q_proj [4096x4096] MSE=1.283973e-05 RelErr=0.1496 (0.4s)
+    self_attn.v_proj [4096x4096] MSE=1.323762e-05 RelErr=0.1441 (0.4s)
+    self_attn.z_proj [4096x4096] MSE=1.013550e-05 RelErr=0.1392 (0.4s)
+  Updating hidden states for next layer...
+
+======================================================================
+[LAYER 19/31] type=lightning-attn
+======================================================================
+  INT4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (64 samples)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj']
+  Smoothed [o_norm] -> [o_proj]
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj [4096x16384] MSE=1.035116e-05 RelErr=0.1330 (3.1s)
+    mlp.gate_proj [16384x4096] MSE=1.115395e-05 RelErr=0.1375 (0.4s)
+    mlp.up_proj [16384x4096] MSE=1.139933e-05 RelErr=0.1362 (0.4s)
+    self_attn.k_proj [4096x4096] MSE=1.652603e-05 RelErr=0.1670 (0.4s)
+    self_attn.o_proj [4096x4096] MSE=1.087965e-05 RelErr=0.1363 (0.4s)
+    self_attn.q_proj [4096x4096] MSE=1.218831e-05 RelErr=0.1468 (0.4s)
+    self_attn.v_proj [4096x4096] MSE=1.270085e-05 RelErr=0.1431 (0.4s)
+    self_attn.z_proj [4096x4096] MSE=9.947084e-06 RelErr=0.1378 (0.4s)
+  Updating hidden states for next layer...
+
+======================================================================
+[LAYER 20/31] type=lightning-attn
+======================================================================
+  INT4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (64 samples)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj']
+  Smoothed [o_norm] -> [o_proj]
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj [4096x16384] MSE=1.066124e-05 RelErr=0.1342 (3.1s)
+    mlp.gate_proj [16384x4096] MSE=1.103746e-05 RelErr=0.1388 (0.4s)
+    mlp.up_proj [16384x4096] MSE=1.156985e-05 RelErr=0.1364 (0.4s)
+    self_attn.k_proj [4096x4096] MSE=1.937242e-05 RelErr=0.1740 (0.4s)
+    self_attn.o_proj [4096x4096] MSE=1.015925e-05 RelErr=0.1315 (0.4s)
+    self_attn.q_proj [4096x4096] MSE=1.318491e-05 RelErr=0.1501 (0.4s)
+    self_attn.v_proj [4096x4096] MSE=1.223044e-05 RelErr=0.1412 (0.4s)
+    self_attn.z_proj [4096x4096] MSE=1.029406e-05 RelErr=0.1396 (0.4s)
+  Updating hidden states for next layer...
+
+======================================================================
+[LAYER 21/31] type=lightning-attn
+======================================================================
+  INT4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (64 samples)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj']
+  Smoothed [o_norm] -> [o_proj]
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj [4096x16384] MSE=1.074880e-05 RelErr=0.1340 (3.1s)
+    mlp.gate_proj [16384x4096] MSE=1.084041e-05 RelErr=0.1381 (0.4s)
+    mlp.up_proj [16384x4096] MSE=1.167531e-05 RelErr=0.1368 (0.4s)
+    self_attn.k_proj [4096x4096] MSE=1.672925e-05 RelErr=0.1688 (0.4s)
+    self_attn.o_proj [4096x4096] MSE=1.149571e-05 RelErr=0.1395 (0.4s)
+    self_attn.q_proj [4096x4096] MSE=1.362630e-05 RelErr=0.1541 (0.4s)
+    self_attn.v_proj [4096x4096] MSE=1.340064e-05 RelErr=0.1478 (0.4s)
+    self_attn.z_proj [4096x4096] MSE=1.031872e-05 RelErr=0.1398 (0.4s)
+  Updating hidden states for next layer...
+
+======================================================================
+[LAYER 22/31] type=minicpm4
+======================================================================
+  BF16 (kept): ['self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  INT4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Collecting Hessians (64 samples)...
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj']
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj [4096x16384] MSE=1.062543e-05 RelErr=0.1338 (3.1s)
+    mlp.gate_proj [16384x4096] MSE=1.089590e-05 RelErr=0.1394 (0.4s)
+    mlp.up_proj [16384x4096] MSE=1.153968e-05 RelErr=0.1367 (0.4s)
+  Updating hidden states for next layer...
+
+======================================================================
+[LAYER 23/31] type=lightning-attn
+======================================================================
+  INT4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (64 samples)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj']
+  Smoothed [o_norm] -> [o_proj]
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj [4096x16384] MSE=1.076165e-05 RelErr=0.1343 (3.1s)
+    mlp.gate_proj [16384x4096] MSE=1.079736e-05 RelErr=0.1387 (0.4s)
+    mlp.up_proj [16384x4096] MSE=1.146965e-05 RelErr=0.1358 (0.4s)
+    self_attn.k_proj [4096x4096] MSE=1.876283e-05 RelErr=0.1672 (0.4s)
+    self_attn.o_proj [4096x4096] MSE=1.050508e-05 RelErr=0.1347 (0.4s)
+    self_attn.q_proj [4096x4096] MSE=1.330964e-05 RelErr=0.1489 (0.4s)
+    self_attn.v_proj [4096x4096] MSE=1.182544e-05 RelErr=0.1399 (0.4s)
+    self_attn.z_proj [4096x4096] MSE=1.008339e-05 RelErr=0.1393 (0.4s)
+  Updating hidden states for next layer...
+
+======================================================================
+[LAYER 24/31] type=lightning-attn
+======================================================================
+  INT4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (64 samples)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj']
+  Smoothed [o_norm] -> [o_proj]
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj [4096x16384] MSE=1.129092e-05 RelErr=0.1370 (3.0s)
+    mlp.gate_proj [16384x4096] MSE=1.092744e-05 RelErr=0.1402 (0.4s)
+    mlp.up_proj [16384x4096] MSE=1.157392e-05 RelErr=0.1360 (0.4s)
+    self_attn.k_proj [4096x4096] MSE=1.898617e-05 RelErr=0.1686 (0.4s)
+    self_attn.o_proj [4096x4096] MSE=1.046806e-05 RelErr=0.1340 (0.4s)
+    self_attn.q_proj [4096x4096] MSE=1.331057e-05 RelErr=0.1492 (0.4s)
+    self_attn.v_proj [4096x4096] MSE=1.222352e-05 RelErr=0.1422 (0.4s)
+    self_attn.z_proj [4096x4096] MSE=1.022396e-05 RelErr=0.1400 (0.4s)
+  Updating hidden states for next layer...
+
+======================================================================
+[LAYER 25/31] type=lightning-attn
+======================================================================
+  INT4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (64 samples)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj']
+  Smoothed [o_norm] -> [o_proj]
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj [4096x16384] MSE=1.289840e-05 RelErr=0.1446 (3.0s)
+    mlp.gate_proj [16384x4096] MSE=1.172610e-05 RelErr=0.1454 (0.4s)
+    mlp.up_proj [16384x4096] MSE=1.230906e-05 RelErr=0.1389 (0.4s)
+    self_attn.k_proj [4096x4096] MSE=1.942128e-05 RelErr=0.1729 (0.4s)
+    self_attn.o_proj [4096x4096] MSE=1.102623e-05 RelErr=0.1361 (0.4s)
+    self_attn.q_proj [4096x4096] MSE=1.389831e-05 RelErr=0.1518 (0.4s)
+    self_attn.v_proj [4096x4096] MSE=1.232058e-05 RelErr=0.1416 (0.4s)
+    self_attn.z_proj [4096x4096] MSE=1.030652e-05 RelErr=0.1396 (0.4s)
+  Updating hidden states for next layer...
+
+======================================================================
+[LAYER 26/31] type=lightning-attn
+======================================================================
+  INT4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (64 samples)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj']
+  Smoothed [o_norm] -> [o_proj]
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj [4096x16384] MSE=1.157134e-05 RelErr=0.1357 (3.0s)
+    mlp.gate_proj [16384x4096] MSE=1.127365e-05 RelErr=0.1417 (0.4s)
+    mlp.up_proj [16384x4096] MSE=1.196267e-05 RelErr=0.1364 (0.4s)
+    self_attn.k_proj [4096x4096] MSE=2.670524e-05 RelErr=0.1895 (0.4s)
+    self_attn.o_proj [4096x4096] MSE=1.109337e-05 RelErr=0.1334 (0.4s)
+    self_attn.q_proj [4096x4096] MSE=1.526130e-05 RelErr=0.1560 (0.4s)
+    self_attn.v_proj [4096x4096] MSE=2.034740e-05 RelErr=0.1829 (0.4s)
+    self_attn.z_proj [4096x4096] MSE=1.143666e-05 RelErr=0.1430 (0.4s)
+  Updating hidden states for next layer...
+
+======================================================================
+[LAYER 27/31] type=lightning-attn
+======================================================================
+  INT4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (64 samples)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj']
+  Smoothed [o_norm] -> [o_proj]
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj [4096x16384] MSE=1.148523e-05 RelErr=0.1342 (3.0s)
+    mlp.gate_proj [16384x4096] MSE=1.110187e-05 RelErr=0.1411 (0.4s)
+    mlp.up_proj [16384x4096] MSE=1.210455e-05 RelErr=0.1363 (0.4s)
+    self_attn.k_proj [4096x4096] MSE=1.617663e-05 RelErr=0.1635 (0.4s)
+    self_attn.o_proj [4096x4096] MSE=1.137327e-05 RelErr=0.1372 (0.4s)
+    self_attn.q_proj [4096x4096] MSE=1.409933e-05 RelErr=0.1547 (0.4s)
+    self_attn.v_proj [4096x4096] MSE=1.235874e-05 RelErr=0.1423 (0.4s)
+    self_attn.z_proj [4096x4096] MSE=1.081440e-05 RelErr=0.1410 (0.4s)
+  Updating hidden states for next layer...
+
+======================================================================
+[LAYER 28/31] type=lightning-attn
+======================================================================
+  INT4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (64 samples)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj']
+  Smoothed [o_norm] -> [o_proj]
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj [4096x16384] MSE=1.162641e-05 RelErr=0.1336 (3.0s)
+    mlp.gate_proj [16384x4096] MSE=1.091761e-05 RelErr=0.1403 (0.4s)
+    mlp.up_proj [16384x4096] MSE=1.228466e-05 RelErr=0.1365 (0.4s)
+    self_attn.k_proj [4096x4096] MSE=2.675374e-05 RelErr=0.1966 (0.4s)
+    self_attn.o_proj [4096x4096] MSE=1.203874e-05 RelErr=0.1422 (0.4s)
+    self_attn.q_proj [4096x4096] MSE=1.569811e-05 RelErr=0.1593 (0.4s)
+    self_attn.v_proj [4096x4096] MSE=1.776917e-05 RelErr=0.1750 (0.4s)
+    self_attn.z_proj [4096x4096] MSE=1.184943e-05 RelErr=0.1450 (0.4s)
+  Updating hidden states for next layer...
+
+======================================================================
+[LAYER 29/31] type=minicpm4
+======================================================================
+  BF16 (kept): ['self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  INT4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Collecting Hessians (64 samples)...
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj']
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj [4096x16384] MSE=1.160914e-05 RelErr=0.1326 (3.1s)
+    mlp.gate_proj [16384x4096] MSE=1.050043e-05 RelErr=0.1388 (0.4s)
+    mlp.up_proj [16384x4096] MSE=1.220513e-05 RelErr=0.1354 (0.4s)
+  Updating hidden states for next layer...
+
+======================================================================
+[LAYER 30/31] type=minicpm4
+======================================================================
+  BF16 (kept): ['self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  INT4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Collecting Hessians (64 samples)...
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj']
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj [4096x16384] MSE=1.176740e-05 RelErr=0.1358 (3.1s)
+    mlp.gate_proj [16384x4096] MSE=1.055438e-05 RelErr=0.1393 (0.4s)
+    mlp.up_proj [16384x4096] MSE=1.235266e-05 RelErr=0.1365 (0.4s)
+  Updating hidden states for next layer...
+
+======================================================================
+[LAYER 31/31] type=minicpm4
+======================================================================
+  BF16 (kept): ['self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  INT4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Collecting Hessians (64 samples)...
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj']
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj [4096x16384] MSE=1.188501e-05 RelErr=0.1455 (3.1s)
+    mlp.gate_proj [16384x4096] MSE=1.052359e-05 RelErr=0.1381 (0.4s)
+    mlp.up_proj [16384x4096] MSE=1.239884e-05 RelErr=0.1396 (0.4s)
+  Updating hidden states for next layer...
+
+======================================================================
+[INFO] Phase 3: Processing final norm + lm_head...
+======================================================================
+
+======================================================================
+[INFO] Phase 4: Saving quantized model to /opt/model_gptq_int4_minicpm_flashinfer_sparse
+======================================================================
+
+[INFO] Quantization complete!
+
+[INFO] Total time: 43.2 minutes

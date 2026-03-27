@@ -20,6 +20,9 @@ Steps to push commits:
 git config --global user.name "github_user_name"
 git config --global user.email "github_user_email"
 
+git config --global user.name "boris-dotv"
+git config --global user.email "1322553126@qq.com"
+
 cd /opt/oldMoney-Project
 
 git pull
@@ -360,7 +363,7 @@ Dense:
 ```bash
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 python3 -m sglang.launch_server \
-    --model-path /opt/model_gptq_ultimate_64_dense \
+    --model-path /opt/model_gptq_int4_minicpm_flashinfer_sparse \
     --port 31333 \
     --quantization gptq_marlin \
     --dtype float16 \
@@ -368,10 +371,10 @@ python3 -m sglang.launch_server \
     --kv-cache-dtype fp8_e5m2 \
     --attention-backend minicpm_flashinfer \
     --chunked-prefill-size 32768 \
-    --mem-fraction-static 0.6 \
-    --max-mamba-cache-size 32 \
+    --mem-fraction-static 0.8 \
+    --max-mamba-cache-size 64 \
     --fuse-topk \
-    --max-running-requests 32 \
+    --max-running-requests 64 \
     --log-level info \
     --num-continuous-decode-steps 2 \
     --enable-mixed-chunk \
