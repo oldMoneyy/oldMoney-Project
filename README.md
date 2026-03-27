@@ -1031,3 +1031,33 @@ python3 -m sglang.launch_server \
     --enable-mixed-chunk \
     --enable-torch-compile
 ```
+[Sample 146] Task: cwe
+Gold: ['truck', 'choice', 'rain', 'hapless', 'carrier', 'endothelium', 'formulate', 'bestseller', 'accident', 'snowsuit'], Extracted: None, Score: 0
+Tokens: In=127561, Out=9
+
+[Sample 147] Task: cwe
+Gold: ['pipe', 'evil', 'birdbath', 'abbey', 'trapezoid', 'appendix', 'drake', 'idiom', 'add', 'digger'], Extracted: None, Score: 0
+Tokens: In=127589, Out=9
+
+[Sample 148] Task: cwe
+Gold: ['suck', 'licence', 'maternity', 'pickax', 'apathetic', 'pipe', 'kennel', 'damaged', 'dearest', 'stake'], Extracted: None, Score: 0
+Tokens: In=127628, Out=9
+
+[Sample 149] Task: cwe
+Gold: ['footstool', 'website', 'gauntlet', 'explode', 'courtroom', 'plowman', 'continent', 'mortal', 'caribou', 'onion'], Extracted: None, Score: 0
+Tokens: In=127676, Out=9
+
+[Sample 150] Task: cwe
+Gold: ['evanescent', 'snowmobiling', 'insert', 'info', 'grate', 'gosling', 'loquat', 'south', 'erosion', 'ozone'], Extracted: None, Score: 0
+Tokens: In=127738, Out=9
+
+Average Score: 19.33%
+Total Duration: 4109.81 s
+Total Tokens: In=8644166, Out=1275622
+Average Tokens/Sample: In=57627.8, Out=8504.1
+Overall TPS (Output): 310.39 tokens/s
+Detailed results saved to outputs/20260327_162030/predictions.jsonl
+^Z[1]   Done                    nohup python3 eval_model.py --api_base http://127.0.0.1:31333 --model_path /tmp/model_nvfp4_smoothed/ --data_path eval_dataset/perf_public_set.jsonl --concurrency 64 --num_samples 150 --verbose > /opt/oldMoney-Project/logs/model_nvfp4_smoothed.log 2>&1
+
+[2]+  Stopped                 tail -f /opt/oldMoney-Project/logs/model_nvfp4_smoothed.log
+root@C.33628558:/opt/SOAR-Toolkit$ 
