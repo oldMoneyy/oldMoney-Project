@@ -46,4 +46,6 @@ for idx in test_indices:
 
     print(f"  finish_reason={finish}")
     print(f"  prompt_tokens={usage.get('prompt_tokens')} completion_tokens={usage.get('completion_tokens')}")
-    print(f"  MATCH GOLD: {'?' if content is None else (gold.lower() in (content or '').lower())}")
+    gold_list = gold if isinstance(gold, list) else [gold]
+    match = '?' if content is None else any(str(g).lower() in (content or '').lower() for g in gold_list)
+    print(f"  MATCH GOLD: {match}")
