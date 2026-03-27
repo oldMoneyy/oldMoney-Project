@@ -277,6 +277,16 @@ class DetokenizerManager(MultiHttpWorkerDetokenizerMixin):
                 else:
                     new_text = find_printable_text(new_text)
             else:
+                # DEBUG: print final decode state when request finishes
+                logger.info(
+                    f"[DEBUG DETOK] rid={recv_obj.rids[i]} "
+                    f"n_decode_ids={len(s.decode_ids)} "
+                    f"first_20_ids={s.decode_ids[:20]} "
+                    f"last_20_ids={s.decode_ids[-20:]} "
+                    f"decoded_text_len={len(s.decoded_text)} "
+                    f"decoded_text_preview={repr(s.decoded_text[:200])} "
+                    f"new_text={repr(new_text[:200])}"
+                )
                 del self.decode_status[recv_obj.rids[i]]
 
             output_str = self.trim_matched_stop(
