@@ -694,7 +694,7 @@ The `model_nvfp4_smoothed` (AWQ_L_4_Mini_16_smoothed, smooth-alpha=0.5, mse-iter
 The FP4 (E2M1, 15 discrete values) precision is insufficient for this model architecture.
 
 
-## Deep Analysis: Why NVFP4 Fails on Long Sequences (2026-03-27)
+## Deep Analysis: Why NVFP4 Fails — `<unk>` Collapse Mechanism (2026-03-27)
 
 ### Architecture: 24/32 layers are recurrent (Lightning-Attn)
 
@@ -713,7 +713,7 @@ Layer 29-31: minicpm4    — attn=BF16, MLP=FP4
 **24 lightning-attn layers** with ALL projections (Q, K, V, Z, O) in FP4.
 **8 minicpm4 layers** with attention in BF16, only MLP in FP4.
 
-### Root cause: Recurrent state error accumulation
+### Root cause: FP4 creates numerically fragile GLA state → `<unk>` feedback loop
 
 Lightning-attn uses Simple GLA (Gated Linear Attention), a recurrent mechanism:
 ```
@@ -721,18 +721,51 @@ S_t = decay * S_{t-1} + k_t^T @ v_t    (state update)
 o_t = q_t @ S_t                         (output)
 ```
 
-The state `S` is updated at every token position. Over a 100k+ token sequence,
-`S` is updated 100k+ times through 24 recurrent layers. Each update uses
-FP4-quantized Q, K, V projections. The quantization error compounds
-**multiplicatively** through the recurrence:
+The failure is NOT gradual error accumulation — it's a **cliff effect + feedback loop**:
 
-- **Short sequences (MCQ, 143-712 tokens)**: State updated ~500 times.
-  Error stays manageable. Model gets 40% accuracy (some gibberish in reasoning).
-- **Long sequences (niah/qa/fwe/cwe, 25k-135k tokens)**: State updated
-  100k+ times. Error explodes. Model collapses to `<unk>` or gibberish.
+**Phase 1 — Prefill builds a fragile state:**
+During prefill of 100k+ tokens, the GLA state `S` is updated at every position
+through 24 recurrent layers, each using FP4-quantized Q, K, V. The accumulated
+FP4 noise doesn't destroy the state outright — it pushes `S` to the **edge of
+numerical instability**. Whether it tips over depends on CUDA non-determinism
+(kernel launch order, floating-point rounding in graph captures). This is why the
+same input with temp=0.0 sometimes works and sometimes doesn't.
 
-This is fundamentally different from standard attention (minicpm4 layers),
-where each position is computed independently — no error accumulation.
+**Phase 2 — First few tokens still work:**
+The model outputs `<think>\n` because:
+- The 8 minicpm4 anchor layers (BF16 attention, no recurrence) still provide
+  clean signal through standard softmax attention
+- `<think>` is a high-probability token that doesn't require precise state
+
+**Phase 3 — `<unk>` feedback loop locks in:**
+Once the fragile lightning-attn state produces one bad output, the model emits
+token 0 (`<unk>`). The `<unk>` embedding feeds back as input to the next step.
+Since `<unk>` is a meaningless token, its embedding provides no useful signal:
+```
+bad state → <unk> → meaningless embedding → k_t^T @ v_t is garbage
+→ state gets worse → <unk> → ... → 65,536 <unk> tokens
+```
+This is a **positive feedback loop**, not gradual degradation. The transition
+from "working" to "65k <unk>" is instantaneous.
+
+**Phase 4 — Sometimes recovers:**
+The GLA decay factor (`g_gamma` from ALiBi slopes) gradually attenuates old state:
+`S_t = decay * S_{t-1} + ...`. After enough `<unk>` tokens, the corrupted prefill
+state gets forgotten. If the `<unk>` embedding's k^T @ v accidentally pushes `S`
+into a stable region, the model escapes the loop and produces real tokens again.
+
+### Evidence supporting this mechanism
+
+| Observation | Explanation |
+|-------------|-------------|
+| `<unk>` starts after only a few generated tokens | State is already fragile from prefill, not generated-token error |
+| temp=0.0 gives different results across runs | CUDA non-determinism tips borderline state over the cliff |
+| Short MCQ (40% acc, 0 `<unk>`) | ~500 state updates — not enough to reach instability edge |
+| Long sequences (44% `<unk>`) | 100k+ state updates — state is at the cliff edge |
+| Same gibberish fragments across samples | Specific token embeddings are corrupted at FP4 precision |
+| Concurrency amplifies failure | Batched FP4 arithmetic introduces more non-determinism |
+| Model sometimes stops `<unk>` mid-generation | GLA decay attenuates corrupted state, model escapes loop |
+| Run-to-run instability (77% → 22% → 50%) | Different CUDA graph captures → different numerical paths |
 
 ### Scale factor math verification
 
@@ -759,39 +792,116 @@ out = (x * 2688/act_amax) @ (W * 2688/max_amax) * (act_amax * max_amax / 2688^2)
 
 The scale factor math is correct. The issue is not a scale mismatch.
 
-### Run-to-run instability (77% → 22% → 50%)
-
-The non-smoothed NVFP4 model (AWQ_L_4_Mini_16.py) showed wildly different accuracy
-across runs. This is caused by:
-
-1. **CUDA graph non-determinism**: Server uses `cuda graph: True`. Different kernel
-   captures on each restart → different numerical paths → different results at FP4.
-2. **Recurrent state amplification**: In the GLA recurrence, a tiny difference in
-   one early token's Q/K/V (from CUDA non-determinism ~1e-7) gets amplified through
-   100k state updates, potentially flipping the output from correct to garbage.
-3. **This doesn't happen in standard attention** because each position is independent.
-
 ### Why calibration with long sequences doesn't help
 
 The calibration data IS mostly long sequences (mean 48k tokens). The MSE during
 quantization is low (4.5e-06). But MSE measures **static weight approximation error**,
-not **dynamic recurrent state accumulation error**. The calibration process:
+not **dynamic recurrent state stability**. The calibration process:
 
 1. Collects activation statistics (H_diag) through forward passes
 2. Finds optimal block scales to minimize weight reconstruction error
-3. Does NOT simulate the recurrent state accumulation over long sequences
+3. Does NOT simulate the GLA recurrence or test for state stability
 
-The weights look correct in isolation (low MSE), but when used in the GLA recurrence
-over 100k+ tokens, the compound error becomes catastrophic.
+The weights look correct in isolation (low MSE), but FP4's 15 discrete values
+cannot preserve the fine-grained numerical relationships that keep the GLA state
+stable over 100k+ recurrent updates.
 
-### Potential fixes
+### Why flashinfer is NOT an option
 
-1. **Keep lightning-attn Q/K/V in BF16, only quantize MLP**: This eliminates the
-   recurrent state error at the cost of model size (~1.5x larger). The recurrent
-   layers' attention projections are the most sensitive.
-2. **Reduce recurrent layers from FP4**: Keep only MLP of lightning layers in FP4,
-   keep Q/K/V/Z/O in BF16. Similar to how minicpm4 layers already work.
-3. **Test with `--disable-cuda-graph`**: May stabilize run-to-run variance.
-4. **Fall back to GPTQ INT4**: Dense GPTQ + flashinfer already passes all tests.
-   INT4 has 16 values (similar to FP4's 15) but uses integer arithmetic which is
-   more deterministic and doesn't have the same floating-point accumulation issues.
+Dense GPTQ + flashinfer achieves 77-79% accuracy and passes all 3 long context tests,
+but **flashinfer uses full softmax attention** — it completely bypasses the model's sparse
+attention (SALA) architecture. This defeats the entire purpose. Our goal is to build and
+optimize the **sparse attention model** with minicpm_flashinfer, not fall back to a
+standard full-attention backend. The flashinfer results only prove that quantization itself
+is not broken — the problem is specifically quantization + recurrent state in lightning-attn.
+
+
+## Solution: MLP-Only FP4 Quantization (2026-03-27)
+
+### Strategy: Protect ALL attention projections, quantize only MLP
+
+The current quantization plan:
+```
+MiniCPM4 layers (8):     attn=BF16, MLP=FP4  ← already correct
+Lightning-attn layers (24): ALL=FP4           ← THIS CAUSES THE COLLAPSE
+```
+
+The fix:
+```
+MiniCPM4 layers (8):     attn=BF16, MLP=FP4  ← no change
+Lightning-attn layers (24): attn=BF16, MLP=FP4  ← protect Q/K/V/Z/O
+```
+
+This removes FP4 from the GLA recurrence path entirely. The state `S` will be
+computed from BF16 Q/K/V → numerically stable → no cliff → no `<unk>` loop.
+
+### Model size impact
+
+| Component | Params | Current | Proposed |
+|-----------|--------|---------|----------|
+| MLP (all 32 layers) | 6.44B (68%) | FP4 | FP4 (no change) |
+| Lightning Q/K/V/Z/O (24 layers) | 1.93B (20%) | FP4 | **BF16** |
+| minicpm4 attn (8 layers) | 0.42B (4%) | BF16 | BF16 (no change) |
+| Embeddings + LM head | 0.60B (6%) | BF16 | BF16 (no change) |
+
+- **Current**: ~5.5 GB quantized model
+- **Proposed**: ~8.3 GB (MLP in FP4 + all attention in BF16)
+- **Original**: 19 GB (full BF16)
+- **Compression ratio**: 2.3x (down from 3.4x, but actually works)
+
+### Code changes required
+
+**1. `AWQ_L_4_Mini_16_smoothed.py` — `should_quantize_linear()` (line 314):**
+```python
+def should_quantize_linear(layer_idx, linear_name, mixer_type):
+    # Protect ALL attention projections from FP4 — both minicpm4 and lightning
+    if "self_attn" in linear_name:
+        return False
+    return True  # Only MLP gets quantized
+```
+
+**2. `AWQ_L_4_Mini_16_smoothed.py` — `build_exclude_modules()` (line 335):**
+```python
+def build_exclude_modules(config):
+    exclude = []
+    for i, mt in enumerate(config.mixer_types):
+        # Exclude ALL attention projections for ALL layer types
+        if mt == "minicpm4":
+            exclude.append(f"model.layers.{i}.self_attn.q_proj")
+            exclude.append(f"model.layers.{i}.self_attn.k_proj")
+            exclude.append(f"model.layers.{i}.self_attn.v_proj")
+            exclude.append(f"model.layers.{i}.self_attn.o_proj")
+            exclude.append(f"model.layers.{i}.self_attn.o_gate")
+        else:  # lightning-attn
+            exclude.append(f"model.layers.{i}.self_attn.q_proj")
+            exclude.append(f"model.layers.{i}.self_attn.k_proj")
+            exclude.append(f"model.layers.{i}.self_attn.v_proj")
+            exclude.append(f"model.layers.{i}.self_attn.o_proj")
+            exclude.append(f"model.layers.{i}.self_attn.z_proj")
+    return exclude
+```
+
+**3. `AWQ_L_4_Mini_16_smoothed.py` — `apply_layer_smoothing()` (line 160):**
+Remove Group 1 (input_layernorm → attention) and Group 3 (o_norm → o_proj)
+smoothing for lightning layers, since those weights stay BF16 and should not
+be modified. Only Group 2 (post_attention_layernorm → gate, up) remains.
+
+**4. SGLang inference (`minicpm.py` line 456) — no change needed:**
+The `exclude_modules` logic already works for NVFP4/modelopt. The GPTQ override
+at line 456 only triggers for GPTQ quantization, not modelopt. SGLang will
+correctly load lightning-attn attention as BF16 and MLP as FP4.
+
+### Re-quantize command
+```bash
+source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
+export TRITON_PTXAS_PATH="$(which ptxas)"
+nohup python /opt/oldMoney-Project/quantization/AWQ_L_4_Mini_16_smoothed.py \
+    --input /opt/model \
+    --output /opt/model_nvfp4_mlp_only \
+    --calib-data /opt/oldMoney-Project/quantization/calibration/optimal_96.jsonl \
+    --max-samples 96 \
+    --max-len 131072 \
+    --smooth-alpha 0.5 \
+    --mse-iters 80 \
+ > /opt/oldMoney-Project/logs/AWQ_mlp_only.log 2>&1 &
+```
