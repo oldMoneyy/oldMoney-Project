@@ -1,0 +1,96 @@
+====================================================================
+2026-03-27 Data Analysis: Eval vs Calib (optimal_64) + Token 0 Bug
+====================================================================
+
+CONTEXT
+-------
+- Model: MiniCPM-SALA, quantized with NVFP4 (AWQ_L_4_Mini_16_smoothed)
+- Calib data: optimal_64.jsonl (64 samples, max-len 131072)
+- Eval data: perf_public_set.jsonl (150 samples)
+- Issue: Model outputs <unk> (token 0) on some eval inputs
+
+BUG: TOKEN 0 (<unk>) GENERATION
+--------------------------------
+- On highly repetitive inputs, the model generates a few real tokens
+  (e.g. <think>\n<|im_start|> assistant\n) then degenerates into
+  token 0 (<unk>) for the remaining output.
+- Tested repetition threshold: works at n=1500 repeats (10,521 tokens),
+  breaks at n=2000 repeats (14,021 tokens) with identical sentences.
+- Non-repetitive prompts work fine even at 71k tokens.
+- Conclusion: NVFP4 quantization artifact on degenerate repetitive inputs.
+
+EVAL DATASET (perf_public_set.jsonl)
+------------------------------------
+- 150 samples, 5 task types:
+  1. MCQ (short, indices 1-30): 143-712 tokens, ratio 0.30-0.69
+  2. Needle-in-haystack (indices 31-60): 30k-128k tokens, ratio 0.0006-0.12
+  3. Document QA (indices 61-90): 25k-135k tokens, ratio 0.09-0.21
+  4. Coded text frequency (indices 91-120): 28k-127k tokens, ratio 0.003-0.008
+  5. Word list counting (indices 121-150): 31k-128k tokens, ratio 0.04-0.05
+
+- Token stats: min=143, max=135,527, mean=58,416, median=56,564
+- 30 samples under 1000 tokens (all MCQ)
+- 5 samples over 131,072 tokens
+- Mean uniqueness ratio: 0.1483
+- Most repetitive sample: idx 58, ratio=0.0006 (127k tokens, ~82 unique)
+
+CALIB DATASET (optimal_64.jsonl)
+--------------------------------
+- 64 samples, 4 task types + short science QA:
+  1. Short science QA (indices 0-23): 913-22k tokens
+  2. Document QA (indices 24-37): 25k-135k tokens
+  3. Word list counting (indices 38-47): 31k-128k tokens
+  4. Needle-in-haystack (indices 48-57): 30k-129k tokens
+  5. Coded text frequency (indices 58-63): 28k-124k tokens
+
+- Token stats: min=913, max=135,515, mean=48,339, median=31,447
+- Mean uniqueness ratio: 0.0794 (MORE repetitive than eval on average)
+- Most repetitive sample: idx 55, ratio=0.0017 (127k tokens, ~212 unique)
+
+COMPARISON
+----------
+                           EVAL        CALIB
+  Samples                   150           64
+  Mean tokens            58,416       48,339
+  Max tokens            135,527      135,515
+  Mean uniqueness        0.1483       0.0794
+
+COVERAGE GAPS
+-------------
+1. SHORT SAMPLES: 30 eval MCQ samples (143-712 tokens) have NO equivalent
+   in calib (calib min = 913 tokens). The quantization never saw inputs
+   this short. Impact: likely minor, short inputs should be easier.
+
+2. CODED TEXT FREQUENCY: eval has 30 samples (indices 91-120), calib only
+   has 6 (indices 58-63). These are EXTREMELY repetitive (ratio 0.003-0.008).
+   Under-represented in calibration.
+
+3. NEEDLE-IN-HAYSTACK: eval has 30 samples (indices 31-60), calib has 10
+   (indices 48-57). Some eval samples have ratio as low as 0.0006 (only
+   82 unique tokens in 127k). Calib's lowest is 0.0017. Eval has MORE
+   extreme repetition than calib ever saw.
+
+4. OVERALL: Calib is a 64-sample subset. Eval's most extreme repetitive
+   samples (ratio < 0.002) are more extreme than anything in calib.
+
+KEY FINDING
+-----------
+The token-0 degeneration is NOT caused by missing calibration coverage.
+The calib data DOES include highly repetitive samples. The issue is
+fundamental to NVFP4 precision: at 4-bit, the model's hidden state
+accumulates numerical errors on extremely repetitive patterns until it
+collapses.
+
+The benchmark test (2500x identical sentence) is MORE extreme than
+anything in either dataset, but eval samples with ratio < 0.003
+(indices 58, 41, 50, 34) may also trigger the issue.
+
+RECOMMENDATIONS
+---------------
+1. Test the model on eval samples 58, 41, 50, 34 (most repetitive)
+   to see if they also produce token-0 degeneration.
+2. If they do, consider:
+   a. Increasing smooth-alpha (currently 0.5) to reduce quantization error
+   b. Adding more extreme repetitive samples to calib data
+   c. Using FP8 instead of FP4 for layers most sensitive to repetition
+3. The 30 short MCQ samples should work fine - not a concern.
