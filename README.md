@@ -361,6 +361,8 @@ Findings:
 
 Dense:
 ```bash
+uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_kernel_fuse
+fuser -k -9 31333/tcp
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 python3 -m sglang.launch_server \
     --model-path /opt/model_gptq_int4_minicpm_flashinfer_sparse \
@@ -369,12 +371,12 @@ python3 -m sglang.launch_server \
     --dtype float16 \
     --disable-radix-cache \
     --kv-cache-dtype fp8_e5m2 \
+    --max-running-requests 64 \
     --attention-backend minicpm_flashinfer \
     --chunked-prefill-size 32768 \
     --mem-fraction-static 0.8 \
     --max-mamba-cache-size 64 \
     --fuse-topk \
-    --max-running-requests 64 \
     --log-level info \
     --num-continuous-decode-steps 2 \
     --enable-mixed-chunk \
@@ -440,9 +442,9 @@ export TRITON_PTXAS_PATH="$(which ptxas)"
 source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
 nohup python /opt/oldMoney-Project/quantization/AWQ_L_4_Mini_16_smoothed.py \
     --input /opt/model \
-    --output /tmp/model_nvfp4_smoothed \
-    --calib-data /opt/oldMoney-Project/quantization/calibration/optimal_64.jsonl \
-    --max-samples 64 \
+    --output /opt/model_nvfp4_96_smoothed \
+    --calib-data /opt/oldMoney-Project/quantization/calibration/optimal_96.jsonl \
+    --max-samples 96 \
     --max-len 131072 \
     --smooth-alpha 0.5 \
     --mse-iters 80 \
