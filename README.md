@@ -599,46 +599,72 @@ tokens of identical text causes collapse.
 | 2,500   | 17,521       | **Breaks** |
 | 71k diverse | 71,333   | Works     |
 
-## Eval vs Calib Dataset Comparison
+## Eval vs Calib Dataset Comparison (2026-03-27)
 
-|                    | Eval (perf_public_set) | Calib (optimal_64) |
-|--------------------|------------------------|-------------------|
-| Samples            | 150                    | 64                |
-| Mean tokens        | 58,416                 | 48,339            |
-| Max tokens         | 135,527                | 135,515           |
-| Mean uniqueness    | 0.1483                 | 0.0794            |
-| Min uniqueness     | 0.0006                 | 0.0017            |
+|                    | Eval (perf_public_set) | Calib (optimal_64) | Calib (optimal_96) |
+|--------------------|------------------------|-------------------|-------------------|
+| Samples            | 150                    | 64                | 94                |
+| Mean tokens        | 57,621                 | 47,083            | 52,119            |
+| Max tokens         | 127,732                | 127,732           | 127,732           |
+| Mean uniqueness    | 0.1547                 | 0.0823            | 0.0760            |
+| Min uniqueness     | 0.0005                 | 0.0015            | 0.0015            |
 
 **Uniqueness ratio** = unique_tokens / total_tokens. Lower = more repetitive.
 
 ### Eval Task Types
 | Task                  | Indices  | Token Range   | Uniqueness   |
 |-----------------------|----------|---------------|--------------|
-| MCQ (short)           | 1-30     | 143-712       | 0.30-0.69    |
-| Needle-in-haystack    | 31-60    | 30k-128k      | 0.0006-0.12  |
-| Document QA           | 61-90    | 25k-135k      | 0.09-0.21    |
-| Coded text frequency  | 91-120   | 28k-127k      | 0.003-0.008  |
-| Word list counting    | 121-150  | 31k-128k      | 0.04-0.05    |
+| MCQ (short)           | 0-29     | 95-656        | 0.29-0.73    |
+| Needle-in-haystack    | 30-59    | 30k-128k      | 0.0005-0.12  |
+| Document QA           | 60-89    | 25k-128k      | 0.10-0.22    |
+| Coded text frequency  | 90-119   | 28k-127k      | 0.003-0.007  |
+| Word list counting    | 120-149  | 31k-128k      | 0.04-0.05    |
 
-### Coverage Gaps
-- 30 short MCQ samples (143-712 tok) have no equivalent in calib (calib min=913)
-- Eval has more extreme repetition (ratio 0.0006) than calib's worst (0.0017)
-- Coded text tasks under-represented in calib (6 vs 30 in eval)
+### Token Bucket Distribution
+
+| Bucket          | Eval | Calib_64 | Calib_96 |
+|-----------------|------|----------|----------|
+| [0-1k)          | 30   | 1        | 1        |
+| [1k-5k)         | 0    | 6        | 10       |
+| [5k-10k)        | 0    | 11       | 11       |
+| [10k-20k)       | 0    | 6        | 8        |
+| [20k-50k)       | 40   | 13       | 20       |
+| [50k-100k)      | 40   | 15       | 23       |
+| [100k-131k)     | 40   | 12       | 21       |
+
+### Coverage Gaps (still present in calib_96)
+- **30 short MCQ samples (95-656 tok)** have no equivalent in calib (calib min=849).
+  This is the entire MCQ task category from eval — zero coverage in calibration.
+- Eval has more extreme repetition (ratio 0.0005) than calib's worst (0.0015).
+- calib_96 added 30 more samples vs calib_64, improving long-sequence coverage
+  (20k-131k bucket: 40→53 samples, closer to eval's 120), but still doesn't cover
+  the short MCQ range at all.
+
+### What calib_96 improved vs calib_64
+- +4 samples in [1k-5k), +2 in [10k-20k), +7 in [20k-50k), +8 in [50k-100k), +9 in [100k-131k)
+- Added needle-in-haystack sample idx=92 (31,320 tok, ratio=0.0019) — one of eval's
+  most repetitive samples, now covered in calibration
+- Better coverage of coded text (fwe) and word list (cwe) tasks at all length tiers
+- Total calibration tokens: 4.9M (vs 3.0M in calib_64)
 
 ### At-Risk Eval Samples (most repetitive)
-| Eval idx | Tokens  | Uniqueness | Task                  |
-|----------|---------|------------|-----------------------|
-| 58       | 127,624 | 0.0006     | Needle-in-haystack    |
-| 41       | 63,248  | 0.0013     | Needle-in-haystack    |
-| 50       | 126,678 | 0.0017     | Needle-in-haystack    |
-| 34       | 31,373  | 0.0026     | Needle-in-haystack    |
+| Eval idx | Tokens  | Uniqueness | Task                  | In calib_96? |
+|----------|---------|------------|-----------------------|-------------|
+| 58       | 127,570 | 0.0005     | Needle-in-haystack    | No          |
+| 41       | 63,195  | 0.0009     | Needle-in-haystack    | No          |
+| 50       | 126,597 | 0.0015     | Needle-in-haystack    | Yes (idx=55)|
+| 34       | 31,320  | 0.0019     | Needle-in-haystack    | Yes (idx=92)|
 
-Test result: idx=34 (31k tok, ratio=0.0026) **passed** and got correct answer.
+Test result: idx=34 (31k tok, ratio=0.0019) **passed** in isolation but **failed**
+under concurrency=64.
 
 ## Analysis Scripts
 
 ```bash
-# Analyze token stats and repetition for eval vs calib datasets
+# Analyze token stats and repetition for eval vs calib_64 vs calib_96
+python /opt/oldMoney-Project/bench/analyze_data_96.py
+
+# Legacy: eval vs calib_64 only
 python /opt/oldMoney-Project/bench/analyze_data.py
 
 # Test the most repetitive eval samples for token-0 collapse
@@ -646,6 +672,39 @@ python /opt/oldMoney-Project/bench/test_repetitive_samples.py
 ```
 
 Full analysis log: `optimization_log/20260327_data_analysis.txt`
+
+### Hints for future analysis
+<!--
+AI notes for future sessions analyzing calibration/eval data:
+
+1. The tokenizer path may change — the model is usually at /opt/model/ but
+   quantized variants are at /opt/model_* or /tmp/model_*. Use the base model
+   tokenizer at /opt/model/ for consistent token counting.
+
+2. The optimal_96.jsonl file actually contains 94 samples, not 96.
+   Always check actual sample count vs filename.
+
+3. The "question" field is the input text in calib data. Eval data also uses
+   "question" but has additional fields: index, prompt_tokens, completion_tokens,
+   task, gold. The "task" field categorizes: mcq, niah, qa, fwe, cwe.
+
+4. Key analysis dimensions for calibration quality:
+   - Token length distribution coverage (does calib cover eval's range?)
+   - Token uniqueness ratio (does calib cover eval's repetition patterns?)
+   - Task type coverage (does calib have samples from all 5 eval task types?)
+   - The BIGGEST gap: eval has 30 short MCQ samples (95-656 tokens) with NO
+     equivalent in calibration. This likely hurts short-input accuracy.
+
+5. For quantization specifically: calibration data primarily affects the
+   activation statistics (H_diag) and AWQ block scale search. It does NOT
+   simulate the GLA recurrent state accumulation, so even perfect calibration
+   coverage won't fix the FP4 + lightning-attn recurrence issue. That requires
+   keeping attention projections in BF16 (see AWQ_NVFP4_mixed_bf16attn.py).
+
+6. To regenerate calibration data, see quantization/generate_ultimate_64.py.
+   To add short MCQ samples, consider sampling from eval's MCQ questions or
+   generating similar short science/math MCQ questions.
+-->
 
 
 ## Full Eval Results (model_nvfp4_smoothed, 2026-03-27)
