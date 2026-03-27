@@ -555,3 +555,79 @@ bash /opt/oldMoney-Project/utils_prompt/export_files.sh
 
 
 
+# Data Analysis: NVFP4 Token-0 Collapse (2026-03-27)
+
+## Problem
+
+NVFP4-quantized model generates `<unk>` (token ID 0) on highly repetitive inputs.
+The model produces a few valid tokens then degenerates into all-zero token IDs,
+resulting in `content: null` in the API response.
+
+## Root Cause
+
+FP4 quantization causes numerical collapse on extremely repetitive input patterns.
+The model's hidden state accumulates precision errors when processing thousands of
+near-identical tokens until it can no longer produce meaningful output.
+
+**Not a length issue** — 71k diverse tokens work fine. **A repetition issue** — 14k
+tokens of identical text causes collapse.
+
+## Repetition Threshold Test
+
+| Repeats | Prompt Tokens | Result    |
+|---------|--------------|-----------|
+| 100     | 721          | Works     |
+| 500     | 3,521        | Works     |
+| 1,000   | 7,021        | Works     |
+| 1,500   | 10,521       | Works     |
+| 2,000   | 14,021       | **Breaks** |
+| 2,500   | 17,521       | **Breaks** |
+| 71k diverse | 71,333   | Works     |
+
+## Eval vs Calib Dataset Comparison
+
+|                    | Eval (perf_public_set) | Calib (optimal_64) |
+|--------------------|------------------------|-------------------|
+| Samples            | 150                    | 64                |
+| Mean tokens        | 58,416                 | 48,339            |
+| Max tokens         | 135,527                | 135,515           |
+| Mean uniqueness    | 0.1483                 | 0.0794            |
+| Min uniqueness     | 0.0006                 | 0.0017            |
+
+**Uniqueness ratio** = unique_tokens / total_tokens. Lower = more repetitive.
+
+### Eval Task Types
+| Task                  | Indices  | Token Range   | Uniqueness   |
+|-----------------------|----------|---------------|--------------|
+| MCQ (short)           | 1-30     | 143-712       | 0.30-0.69    |
+| Needle-in-haystack    | 31-60    | 30k-128k      | 0.0006-0.12  |
+| Document QA           | 61-90    | 25k-135k      | 0.09-0.21    |
+| Coded text frequency  | 91-120   | 28k-127k      | 0.003-0.008  |
+| Word list counting    | 121-150  | 31k-128k      | 0.04-0.05    |
+
+### Coverage Gaps
+- 30 short MCQ samples (143-712 tok) have no equivalent in calib (calib min=913)
+- Eval has more extreme repetition (ratio 0.0006) than calib's worst (0.0017)
+- Coded text tasks under-represented in calib (6 vs 30 in eval)
+
+### At-Risk Eval Samples (most repetitive)
+| Eval idx | Tokens  | Uniqueness | Task                  |
+|----------|---------|------------|-----------------------|
+| 58       | 127,624 | 0.0006     | Needle-in-haystack    |
+| 41       | 63,248  | 0.0013     | Needle-in-haystack    |
+| 50       | 126,678 | 0.0017     | Needle-in-haystack    |
+| 34       | 31,373  | 0.0026     | Needle-in-haystack    |
+
+Test result: idx=34 (31k tok, ratio=0.0026) **passed** and got correct answer.
+
+## Analysis Scripts
+
+```bash
+# Analyze token stats and repetition for eval vs calib datasets
+python /opt/oldMoney-Project/bench/analyze_data.py
+
+# Test the most repetitive eval samples for token-0 collapse
+python /opt/oldMoney-Project/bench/test_repetitive_samples.py
+```
+
+Full analysis log: `optimization_log/20260327_data_analysis.txt`
