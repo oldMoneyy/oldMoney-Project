@@ -737,3 +737,773 @@ Jeffrey Zhou, Tianjian Lu, Swaroop Mishra, Siddhartha Brahma, Sujoy Basu, Yi Lua
 Zihan Zhou, Chong Li, Xinyi Chen, Shuo Wang, Yu Chao, Zhili Li, Haoyu Wang, Qi Shi, Zhixing Tan, Xu Han, Xiaodong Shi, Zhiyuan Liu, and Maosong Sun. LLM$\times$MapReduce: Simplified long-sequence processing using large language models. In *Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)*, 2025. URL `https://aclanthology.org/2025.acl-long.1341/`.
 
 Jingwei Zuo, Maksim Velikanov, Ilyas Chahed, Younes Belkada, Dhia Eddine Rhayem, Guillaume Kunsch, Hakim Hacid, Hamza Yous, Brahim Farhat, Ibrahim Khadraoui, Mugariya Farooq, Giulia Campesan, Ruxandra Cojocaru, Yasser Djilali, Shi Hu, Iheb Chaabane, Puneesh Khanna, Mohamed El Amine Seddik, Ngoc Dung Huynh, Phuc Le Khac, Leen AlQadi, Billel Mokeddem, Mohamed Chami, Abdalgader Abubaker, Mikhail Lubinets, Kacper Piskorski, and Slim Frikha. Falcon-h1: A family of hybrid-head language models redefining efficiency and performance, 2025. URL `https://arxiv.org/abs/2507.22448`.
+
+
+# Various Lengths, Constant Speed: Efficient Language Modeling with Lightning Attention
+
+**Zhen Qin**<sup>1</sup>, **Weigao Sun**<sup>2</sup>, **Dong Li**<sup>2</sup>, **Xuyang Shen**<sup>2</sup>, **Weixuan Sun**<sup>2</sup>, **Yiran Zhong**<sup>2</sup>
+
+<sup>1</sup>TapTap  
+<sup>2</sup>OpenNLPLab, Shanghai AI Lab  
+Correspondence to: Yiran Zhong \<zhongyiran@gmail.com\>
+
+*Proceedings of the 41st International Conference on Machine Learning, Vienna, Austria. PMLR 235, 2024.*
+
+---
+
+## Abstract
+
+We present Lightning Attention, the first linear attention implementation that maintains a constant training speed for various sequence lengths under fixed memory consumption. Due to the issue with cumulative summation operations (cumsum), previous linear attention implementations cannot achieve their theoretical advantage in a casual setting. However, this issue can be effectively solved by utilizing different attention calculation strategies to compute the different parts of attention. Specifically, we split the attention calculation into intra-blocks and inter-blocks and use conventional attention computation for intra-blocks and linear attention kernel tricks for inter-blocks. This eliminates the need for cumsum in the linear attention calculation. Furthermore, a tiling technique is adopted through both forward and backward procedures to take full advantage of the GPU hardware. To enhance accuracy while preserving efficacy, we introduce TransNormerLLM (TNL), a new architecture that is tailored to our lightning attention. We conduct rigorous testing on standard and self-collected datasets with varying model sizes and sequence lengths. TNL is notably more efficient than other language models. In addition, benchmark results indicate that TNL performs on par with state-of-the-art LLMs utilizing conventional transformer structures. The source code is released at [github.com/OpenNLPLab/TransnormerLLM](https://github.com/OpenNLPLab/TransnormerLLM).
+
+---
+
+## 1. Introduction
+
+Linear attention has emerged as a potentially viable alternative to conventional softmax attention over the last five years (Bahdanau et al., 2016; de Brébisson & Vincent, 2016). However, despite its promise, none of the current leading large language models (Touvron et al., 2023a;b; Zeng et al., 2022; Black et al., 2022; Almazrouei et al., 2023; Team et al., 2023; Wang & Komatsuzaki, 2021; Baichuan, 2023; Jiang et al., 2023) have adopted linear attention mechanisms. There are two possible reasons for that:
+
+1. **Inferior performance:** There is a notable performance gap between existing linear attention-based models (Katharopoulos et al., 2020; Qin et al., 2022b) and state-of-the-art softmax attention-based models (Touvron et al., 2023a;b) in language modeling.
+2. **Slow training speed:** Existing linear attention models frequently struggle with slow training speeds due to the use of cumulative summation operations (cumsum) (Hua et al., 2022). As a result, these models (Hua et al., 2022) often adopt conventional attention computation during practical use, losing the theoretical advantages of linear attention.
+
+In this paper, we address the aforementioned issues of linear attention and propose a new linear attention-based model that outperforms softmax attention-based models in terms of accuracy and efficiency in language modeling.
+
+**Training speed.** We introduce Lightning Attention, the first linear attention implementation that enables linear attention to realize its theoretical computational benefits. To achieve the linear computational complexities, the core idea is to leverage the "kernel trick" to accelerate the attention matrix computation, i.e., compute the product of keys and values first to circumvent the n×n query-key matrix multiplication. The slow operation cumsum is needed during the calculation in causal language modeling. To solve this dilemma, we apply the concept of "divide and conquer" to perform the calculation. Specifically, our attention calculation is divided into intra-blocks and inter-blocks. The conventional attention calculation is applied to intra-blocks, while the "kernel trick" is utilized for inter-blocks. We also leverage tiling techniques in both forward and backward processes to maximize GPU hardware performance and tailor the technique used in FlashAttention (Dao et al., 2022a; Dao, 2023) to our Lightning Attention to make it IO-friendly. As a result, Lightning Attention maintains a constant training speed with increasing sequence length under fixed memory consumption, as shown in Fig. 1.
+
+**Accuracy.** As the adage goes, a good horse often needs a good spur. We propose a novel architecture, TransNormerLLM (TNL), which is specifically designed for Lightning Attention in order to enhance its performance. TNL evolves from the previous linear attention architecture TransNormer (Qin et al., 2022a) by making advanced modifications that include positional embedding, linear attention acceleration, gating mechanism, tensor normalization. Specifically, we use LRPE (Qin et al., 2023b) together with an exponential decay (Press et al., 2022; Qin et al., 2023a; Peng et al., 2023b) to avoid attention dilution issues while allowing the model to retain global interactions between tokens. A gating mechanism is utilized to smooth training, and a new tensor normalization scheme is proposed to accelerate the model while preserving its accuracy. We also implement an efficient model parallel schema for TransNormerLLM, enabling seamless deployment on large-scale clusters and facilitating expansion to even more extensive models. As shown in Fig. 1, TNL achieves the lowest training loss among the existing efficient transformer structures (Qin et al., 2023a;c) as well as SOTA transformer models (Touvron et al., 2023b).
+
+We perform a comprehensive evaluation of Lightning Attention across a diverse range of sequence lengths to assess its accuracy and compare its computational speed and memory utilization with FlashAttention-2 (Dao, 2023). Lightning Attention exhibits a notable advantage in computational speed and memory consumption compared to its counterparts without compromising performance. We also validate our model design through a series of ablations and train models with sizes of 44M, 385M, 1B, 7B, and 15B on standard or our self-collected datasets. Benchmark results demonstrate that TNL not only matches the performance of SOTA LLMs with Transformer but is also significantly faster.
+
+---
+
+## 2. Related Work
+
+### 2.1. Efficient Language Modeling
+
+New efficient model architectures are being explored to address the high time complexity of the traditional transformer structure. Four promising alternatives, including linear transformers, state space models, long convolution, and linear recurrence, are being developed to replace self-attention modules for long sequence modeling.
+
+**Linear Attention.** Linear attention decomposes Softmax Attention into the inner product of hidden representations, allowing it to use the "Kernel Trick", where the product of keys and values is computed first to avoid the quadratic n × n matrix. Different methods utilize various hidden representations. For example, Katharopoulos et al. (2020) use 1+elu as an activation function, Qin et al. (2022b) use the cosine function to approximate the properties of softmax, and Choromanski et al. (2021); Zheng et al. (2022; 2023) approximate softmax through theoretical approaches. Although its theoretical complexity is O(nd²), the actual computational efficiency of linear attention becomes low when used in causal attention due to the need for cumsum operations (Hua et al., 2022). Moreover, most linear attention still exhibits a certain performance gap compared to traditional Transformers (Katharopoulos et al., 2020; Liu et al., 2022).
+
+**State Space Model.** State Space Model is based on the State Space Equation for sequence modeling (Gu et al., 2022b), using special initialization (Gu et al., 2020; 2022c), diagonalization assumptions (Gupta et al., 2022), and mixed techniques (Dao et al., 2022b) to achieve performance comparable to Transformers. Due to the characteristics of the state space equation, inference can be conducted with constant complexity (Gu et al., 2022b), whereas the training speed can be slow compared with FlashAttention.
+
+**Long Convolution.** Long convolution models (Qin et al., 2023a; Fu et al., 2023) utilize a kernel size equal to the input sequence length, facilitating a wider context compared to traditional convolutions. Training these models involves Fast Fourier Transforms (FFT) algorithm, reducing the computational complexities to O(n log n). However, long convolution models need to cache all historical computations for causal convolution inference, making them less ideal for processing long sequences compared to RNNs.
+
+**Linear RNN.** Linear RNNs (Orvieto et al., 2023a; Qin et al., 2023c), in contrast, stand out as more suitable replacements for transformers in long-sequence modeling. A notable example is the HGRN (Qin et al., 2023c) model, a linear RNN-based LLM that has shown competitive performance against similarly scaled GPT models.
+
+### 2.2. IO-aware Attention
+
+The FlashAttention series (Dao et al., 2022a; Dao, 2023) focuses on system-level optimizations for the efficient implementation of the standard attention operator on GPU platforms. These approaches employ tiling strategies to minimize the volume of memory reads/writes between the GPU's high bandwidth memory (HBM) and on-chip SRAM. Although these methods optimize the IO communication in attention calculation and are faster than previous softmax attention implementations, their theoretical computation complexity remains O(n²d), making them unsuitable for long sequence language modeling.
+
+---
+
+## 3. Lightning Attention
+
+### 3.1. Preliminary
+
+We first recall the formulation of linear attention and then introduce our proposed Lightning Attention. In the case of NormAttention within TransNormer (Qin et al., 2022a), attention computation deviates from the conventional Transformer structure (Vaswani et al., 2017) by eschewing the costly softmax and scaling operations. The NormAttention mechanism can be expressed as follows:
+
+$$O = \text{Norm}((QK^\top)V) \tag{1}$$
+
+where Q, K, and V ∈ ℝ<sup>n×d</sup> are the query, key, and value matrices, respectively, with n for sequence length and d for feature dimension. The equation can be transformed into its linear variant using right matrix multiplication:
+
+$$O = \text{Norm}(Q(K^\top V)) \tag{2}$$
+
+The linear formulation enables efficient recurrent prediction with O(nd²) complexity during training. Additionally, linear attention guarantees a constant computation complexity of O(d²) regardless of the sequence length. This is achieved by recurrently updating K⊤V, eliminating the need for repeated computation of the entire attention matrix. In contrast, standard softmax attention has a complexity of O(nd²) during inference.
+
+Nevertheless, when dealing with causal prediction tasks, the effectiveness of the right product is compromised, leading to the requirement for the computation of cumsum (Hua et al., 2022). This impediment hinders the potential for highly efficient parallel computation. In this section, we show that the requirement of cumsum can be eliminated by leveraging the concept of "divide and conquer" in linear attention calculation. For the convenience of discussion, Norm will be ignored in the subsequent discussion.
+
+There are two computational approaches to handling the causal scenario.
+
+**Left Product:** Using conventional attention computation, which involves computing QK⊤ first. The complete calculation formula is:
+
+$$O = [(QK^\top) \odot M]V \tag{3}$$
+
+where M<sub>ts</sub> = 1 if t ≥ s, otherwise 0.
+
+> **Algorithm 1: Linear Attention Left Product**
+>
+> **Input:** Q, K, V ∈ ℝ<sup>n×d</sup>.
+>
+> Initialize mask M ∈ ℝ<sup>n×n</sup>, where M<sub>ts</sub> = 1, if t ≥ s, else 0.
+>
+> Load Q, K, M from HBM, compute S = (QK⊤) ⊙ M, write S to HBM.
+>
+> Load S, V from HBM, compute O = SV, write O to HBM.
+>
+> **Return** O.
+
+Note that this algorithm is parallelizable, but its time complexity is O(n²d).
+
+**Right Product:** Compute k<sub>t</sub>v<sub>t</sub>⊤ first, which leverages a recursive formula for computation:
+
+$$kv_0 = 0, \quad kv_t = kv_{t-1} + k_t v_t^\top, \quad o_t^\top = q_t^\top kv_t \tag{4}$$
+
+> **Algorithm 2: Linear Attention Right Product**
+>
+> **Input:** Q, K, V ∈ ℝ<sup>n×d</sup>.
+>
+> Initialize kv = 0 ∈ ℝ<sup>d×d</sup>.
+>
+> **for** t = 1, …, n **do**
+> - Load q<sub>t</sub>, k<sub>t</sub>, v<sub>t</sub> ∈ ℝ<sup>d×1</sup> from HBM to on-chip SRAM.
+> - On chip, compute kv = kv + k<sub>t</sub>v<sub>t</sub>⊤.
+> - On chip, compute o<sub>t</sub> = q<sub>t</sub>⊤ kv.
+> - Write o<sub>t</sub>⊤ to HBM as the t-th row of O.
+>
+> **end for**
+>
+> **Return** O.
+
+This algorithm has a time complexity of O(nd²), but it is not GPU-friendly, making it slower than the first approach.
+
+### 3.2. Linear Attention with Tiling
+
+We use a tiling technique to compute linear attention in a causal setting. Specifically, we first divide Q, K, V into two blocks by rows:
+
+$$X = \begin{bmatrix} X_1 \\ X_2 \end{bmatrix}, \quad X_1 \in \mathbb{R}^{m \times d}, \quad X_2 \in \mathbb{R}^{(n-m) \times d}, \quad X \in \{Q, K, V\}$$
+
+Then, by unfolding Eq. 3, we get (note that kv₀ = 0):
+
+$$kv_s = kv_0 + \sum_{j=1}^{s} k_j v_j^\top, \quad s = 1, \ldots, m$$
+
+$$o_s^\top = q_s^\top kv_s = q_s^\top kv_0 + q_s^\top \sum_{j=1}^{s} k_j v_j^\top \tag{5}$$
+
+In block form, we have:
+
+$$O_1 = Q_1 kv_0 + [(Q_1 K_1^\top) \odot M] V_1 \triangleq Q_1 KV_0 + [(Q_1 K_1^\top) \odot M] V_1 \tag{6}$$
+
+The above formula shows that the forward causal linear attention can be divided into two parts:
+
+- The computation within the block [(Q₁K₁⊤) ⊙ M]V₁ (**intra blocks**) can use the Left Product;
+- The computation between blocks Q₁KV₀ (**inter blocks**) can use the Right Product.
+
+It is worth noting that the second block can be computed using the same idea as follows:
+
+$$kv_{m+t} = kv_m + \sum_{j=m+1}^{m+t} k_j v_j^\top, \quad t = 1, \ldots, n-m$$
+
+$$o_{m+t}^\top = q_{m+t}^\top kv_{m+t}$$
+
+$$O_2 = Q_2 kv_m + [(Q_2 K_2^\top) \odot M] V_2 \triangleq Q_2 KV_1 + [(Q_2 K_2^\top) \odot M] V_2 \tag{7}$$
+
+Note that to compute the second block, we have to use KV₁ = kv<sub>m</sub>, which can be computed by:
+
+$$KV_1 = KV_0 + \sum_{j=1}^{m} k_m v_m^\top = KV_0 + K_1^\top V_1 \tag{8}$$
+
+where KV₀ = kv₀. By using the above strategy to divide the matrix into multiple blocks, we obtain the Lightning Attention Forward Pass. More detailed derivation can be found in the Appendix C.
+
+> **Algorithm 3: Lightning Attention Forward Pass**
+>
+> **Input:** Q, K, V ∈ ℝ<sup>n×d</sup>, block sizes B.
+>
+> Divide X into T = n/B blocks X₁, X₂, …X<sub>T</sub> of size B × d each, where X ∈ {Q, K, V, O}.
+>
+> Initialize mask M ∈ ℝ<sup>B×B</sup>, where M<sub>ts</sub> = 1, if t ≥ s, else 0.
+>
+> Initialize KV = 0 ∈ ℝ<sup>d×d</sup>.
+>
+> **for** t = 1, …, T **do**
+> - Load Q<sub>t</sub>, K<sub>t</sub>, V<sub>t</sub> ∈ ℝ<sup>B×d</sup> from HBM to on-chip SRAM.
+> - On chip, compute O<sub>intra</sub> = [(Q<sub>t</sub>K<sub>t</sub>⊤) ⊙ M]V<sub>t</sub>.
+> - On chip, compute O<sub>inter</sub> = Q<sub>t</sub>(KV).
+> - On chip, compute KV = KV + K<sub>t</sub>⊤V<sub>t</sub>.
+> - Write O<sub>t</sub> = O<sub>intra</sub> + O<sub>inter</sub> to HBM as the t-th block of O.
+>
+> **end for**
+>
+> **Return** O.
+
+For the backward propagation, according to (Katharopoulos et al., 2020), we can rewrite the process as:
+
+$$dq_t^\top = do_t^\top kv_t^\top, \quad dk_t^\top = v_t^\top dkv_t^\top, \quad dv_t^\top = k_t^\top dkv_t$$
+
+$$dkv_{n+1} = 0 \in \mathbb{R}^{d \times d}, \quad dkv_{t-1} = dkv_t + q_{t-1} do_{t-1}^\top$$
+
+Therefore, the calculation of the backward propagation is consistent with the forward Eq. 4, and the Lightning Attention Backward Pass can also be obtained using the tiling technique. A detailed proof can be found in the Appendix C.
+
+> **Algorithm 4: Lightning Attention Backward Pass**
+>
+> **Input:** Q, K, V, dO ∈ ℝ<sup>n×d</sup>, block sizes B.
+>
+> Divide X into T = n/B blocks X₁, X₂, …X<sub>T</sub> of size B × d each, where X ∈ {Q, K, V}.
+>
+> Divide dX into T = n/B blocks dX₁, dX₂, …dX<sub>T</sub> of size B × d each, where X ∈ {Q, K, V, O}.
+>
+> Initialize mask M ∈ ℝ<sup>B×B</sup>, where M<sub>ts</sub> = 1, if t ≥ s, else 0.
+>
+> Initialize KV = 0, dKV = 0 ∈ ℝ<sup>d×d</sup>.
+>
+> **for** t = 1, …, T **do**
+> - Load K<sub>t</sub>, V<sub>t</sub>, O<sub>t</sub>, dO<sub>t</sub> ∈ ℝ<sup>B×d</sup> from HBM to on-chip SRAM.
+> - On chip, compute dQ<sub>intra</sub> = [(dO<sub>t</sub>V<sub>t</sub>⊤) ⊙ M]K<sub>t</sub>.
+> - On chip, compute dQ<sub>inter</sub> = dO<sub>t</sub>KV⊤.
+> - On chip, compute KV = KV + K<sub>t</sub>⊤V<sub>t</sub>.
+> - Write dQ<sub>t</sub> = dQ<sub>intra</sub> + dQ<sub>inter</sub> to HBM as the t-th block of dQ.
+>
+> **end for**
+>
+> **for** t = T, …, 1 **do**
+> - Load Q<sub>t</sub>, K<sub>t</sub>, V<sub>t</sub>, O<sub>t</sub>, dO<sub>t</sub> ∈ ℝ<sup>B×d</sup> from HBM to on-chip SRAM.
+> - On chip, compute dK<sub>intra</sub> = [(dO<sub>t</sub>V<sub>t</sub>⊤) ⊙ M]⊤Q<sub>t</sub>.
+> - On chip, compute dK<sub>inter</sub> = V<sub>t</sub>dKV⊤.
+> - On chip, compute dV<sub>intra</sub> = [(Q<sub>t</sub>K<sub>t</sub>⊤) ⊙ M]⊤dO<sub>t</sub>.
+> - On chip, compute dV<sub>inter</sub> = K<sub>t</sub>dKV.
+> - On chip, compute dKV = dKV + Q<sub>t</sub>⊤dO<sub>t</sub>.
+> - Write dK<sub>t</sub> = dK<sub>intra</sub> + dK<sub>inter</sub>, dV<sub>t</sub> = dV<sub>intra</sub> + dV<sub>inter</sub> to HBM as the t-th block of dK, dV.
+>
+> **end for**
+>
+> **Return** dQ, dK, dV.
+
+### 3.3. Complexity Analysis
+
+**Theorem 3.1.** *The time complexity of Lightning Attention is O(nd² + nBd).*
+
+**Proof of Theorem 3.1.** For the forward pass, according to Algorithm 3, each intra part's time complexity is O(B²d), each inter part's time complexity is O(Bd²), the time complexity of updating KV is O(Bd²), so each the time complexity in each loop is O(B²d + Bd²), since we loop for T = n/B times, the total time complexity is O((B²d + Bd²)n/B) = O(nd² + nBd). Because the computation of the backward pass is similar to that of the forward pass, the time complexity of the backward pass is also O(nd² + nBd). ∎
+
+> **Note:** We choose B ≈ d in practice, so the time complexity is O(nd²).
+
+### 3.4. Exact IO-aware Implementation
+
+Lightning Attention employs the above tiling methodology throughout its whole computation process and leverages distinct approaches to optimize the utilization of memory bandwidth between HBM and SRAM within a GPU. Specifically, in each iteration t, matrices Q<sub>t</sub>, K<sub>t</sub>, V<sub>t</sub> undergo segmentation into blocks, subsequently transferred to SRAM for computation. The intra- and inter-block operations are segregated, with intra-blocks employing the left product and inter-blocks utilizing the right product. This approach optimally exploits the computational and memory efficiencies associated with the right product, enhancing overall execution speed. The intermediate activation KV is iteratively saved and accumulated within SRAM. Subsequently, the outputs of intra-blocks and inter-blocks are summed within SRAM, and the results are written back to HBM. The structure of Lightning Attention is illustrated in Fig. 2. The intricate details of the Lightning Attention implementation are explained through Algorithm 3 for the forward pass and Algorithm 4 for the backward pass.
+
+---
+
+## 4. TransNormerLLM
+
+### 4.1. The Overall Structure
+
+Our structure is based on the findings of TransNormer (Qin et al., 2022a) but has custom modifications to balance efficiency and performance. The input X is updated through two consecutive steps:
+
+1. It undergoes Gated Linear Attention (GLA) with the application of SimpleRMSNorm (SRMSNorm) normalization.
+2. It goes through the Simple Gated Linear Unit (SGLU) with SRMSNorm normalization.
+
+We apply the Pre-norm for both modules.
+
+### 4.2. Custom Modification
+
+In this section, we outline the key designs and inspiration behind each custom modification, including positional encoding, gating mechanisms, and tensor normalization.
+
+**Position Encoding.** In TransNormer, DiagAttention is used at the lower layers to avoid dilution issues. However, this leads to a lack of global interaction between tokens. In TNL, we leverage LRPE (Qin et al., 2023b) with exponential decay (Press et al., 2022; Qin et al., 2023a; Peng et al., 2023b) to address this issue, retaining full attention at the lower layers. The expression of our position encoding is as follows:
+
+$$a_{ts} = q_t^\top k_s \lambda^{t-s} \exp^{i\theta(t-s)} \tag{9}$$
+
+which we call LRPE-d — Linearized Relative Positional Encoding with exponential decay. Similar to the original LRPE, we set θ to be learnable. We empirically find that rather than applying LRPE-d to every layer, applying it to the first layer and keeping other layers with exponential decay can speed up training by approximately 15–20% but only with a subtle effect on the performance.
+
+Note that this position encoding is fully compatible with Linear Attention, as it can be decomposed with respect to s and t separately. The value of λ for the h-th head in the l-th layer (assuming there are a total of H heads and L layers) is given by:
+
+$$\lambda = \exp\left(-\frac{8h}{H} \times \left(1 - \frac{l}{L}\right)\right) \tag{10}$$
+
+Here, 8h/H corresponds to the decay rate of the h-th head, while (1 − l/L) corresponds to the decay rate of the l-th layer. The term (1 − l/L) ensures that the Theoretical Receptive Fields (TRF) (Qin et al., 2024) at the lower layers is smaller compared to the higher layers, which aligns with TransNormer's motivation. We choose λ to be non-learnable since we empirically found that gradients become unstable when λ is learnable, leading to NaN values. Note that this positional encoding is still compatible with Lightning Attention, with the specific algorithm detailed in Appendix A, B.
+
+**Gating Mechanism.** Gate can enhance the performance of the model and smooth the training process. In TNL, we adopt the approach from Flash (Hua et al., 2022) and use Gated Linear Attention (GLA) in token mixing:
+
+$$O = \text{Norm}(QK^\top V) \odot U, \quad Q = \phi(XW_q), \quad K = \phi(XW_k), \quad V = XW_v, \quad U = XW_u \tag{11}$$
+
+We choose φ to be Swish (Ramachandran et al., 2017) activation function as we empirically find that it outperforms other activation functions.
+
+To further accelerate the model, we propose Simple GLU (SGLU), which removes the activation function from the original GLU structure as the gate itself can introduce non-linearity. Therefore, our channel mixing becomes:
+
+$$O = [V \odot U] W_o, \quad V = XW_v, \quad U = XW_u \tag{12}$$
+
+We empirically find that not using an activation function in GLU will not lead to any performance loss.
+
+**Tensor Normalization.** The origin NormAttention introduced in TransNormer (Qin et al., 2022a) is as follows:
+
+$$O = \text{Norm}(QK^\top V) \tag{13}$$
+
+In TransNormerLLM, we replace the origin RMSNorm with a new simple normalization function called SimpleRMSNorm, abbreviated as SRMSNorm:
+
+$$\text{SRMSNorm}(x) = \frac{x}{\|x\|_2 / \sqrt{d}} \tag{14}$$
+
+We empirically find that using SRMSNorm does not lead to any performance loss.
+
+---
+
+## 5. Experiments
+
+We carried out thorough experiments on TNL models and lightning attention. We implemented our models on the Metaseq framework (Zhang et al., 2022) with Pytorch (Paszke et al., 2019). The Lightning Attention was executed through Triton (Tillet et al., 2019). All the experiments were conducted on A100 80G GPU clusters. The assessment of our work is divided into three main sections: I) We evaluated the efficiency and accuracy of the Lightning Attention module; II) We further benchmarked our TNL models' performance on standard small-scale corpus and LLM benchmarks and compared their training and inference speeds with STOA models; III) We also provide an ablation study on the design of TNL.
+
+### 5.1. Lightning Attention Evaluation
+
+Since our Lightning Attention is an exact implementation of norm linear attention (Qin et al., 2022a), we compared the speed and memory usage between its original pytorch implementation (named Vanilla) and our Lightning Attention. As a reference, we have also included FlashAttention-2 (Dao, 2023) (named Flash2), which is currently the SOTA implementation of softmax attention. As shown in Fig. 4, Lightning Attention shows remarkable linear growth of processing time in both forward and backward passes, whereas Vanilla and Flash2 exhibit quadratic growth. In terms of memory footprint, Vanilla tends to rapidly exhaust memory resources. Lightning Attention shows a similar trend to Flash2 but requires less memory.
+
+### 5.2. TNL Evaluation
+
+**Performance Evaluation.** In Table 1, we present an evaluation across various 40M models on a standard dataset.
+
+#### Table 1. Results on Wikitext-103 (TNN's setting). ↓ means lower is better.
+
+| Model | | PPL (val)↓ | PPL (test)↓ | Params (M) |
+|---|---|---|---|---|
+| **Attn-based** | | | | |
+| | Transformer | 24.40 | 24.78 | 44.65 |
+| | FLASH | 25.92 | 26.70 | 42.17 |
+| | 1+elu | 27.44 | 28.05 | 44.65 |
+| | Performer | 62.50 | 63.16 | 44.65 |
+| | cosFormer | 26.53 | 27.06 | 44.65 |
+| | TN1 | 24.43 | 25.00 | 44.64 |
+| | TN2 | 24.50 | 25.05 | 44.64 |
+| **MLP-based** | | | | |
+| | Syn(D) | 31.31 | 32.43 | 46.75 |
+| | Syn(R) | 33.68 | 34.78 | 44.65 |
+| | gMLP | 28.08 | 29.13 | 47.83 |
+| **RNN-based** | | | | |
+| | S4 | 38.34 | 39.66 | 45.69 |
+| | DSS | 39.39 | 41.07 | 45.73 |
+| | GSS | 29.61 | 30.74 | 43.84 |
+| | RWKV | 24.31 | 25.07 | 46.23 |
+| | LRU | 29.86 | 31.12 | 46.24 |
+| | HGRN | 24.14 | 24.82 | 46.25 |
+| **FFT-based** | TNN | 23.98 | 24.67 | 48.68 |
+| **Ours** | **TNL** | **23.46** | **24.03** | **45.45** |
+
+TNL records the lowest perplexity on test set after trained on the Wikitext-103 dataset.
+
+We also scaled up our model to 1B and 3B parameters and compared its training loss with top-tier LLM structures such as LLaMA-FA2 (Touvron et al., 2023a; Dao, 2023), HGRN (Qin et al., 2023c), and TNN (Qin et al., 2023a). For a fair comparison, we retrain all models on the same 30B corpus and plot the training losses in Fig. 1. TNL achieved the lowest training losses in both 1B and 3B parameters.
+
+**Efficiency Evaluation.** In Fig. 1, we present a comparative analysis of training speeds under the same corpora and hardware setups. This comparison encompasses four variants: TNL, LLaMA-FA2, HGRN, and TNN. Our findings show that during both the forward and backward passes, the TGS (tokens per GPU per second) for TNL remains consistently high, while the other three models exhibit a rapid decline when sequence length is scaled from 1K to 128K. This pattern suggests that Lightning Attention offers a significant advancement in managing extremely long sequence lengths in LLM.
+
+**Inference Evaluation.** We conduct an inference throughput comparison on various 7B large language models using their standard codebase from Huggingface, as detailed in Fig. 5. TNL with Lightning Attention demonstrates a significant advantage, achieving a throughput rate that up to 11× higher than transformer structure models.
+
+**Benchmark Results.** In order to validate the effectiveness of TNL, we pretraining 385M, 1B, 7B, and 15B models on self-collected datasets, and tested on Commonsense Reasoning Task, MMLU (Hendrycks et al., 2021), C-Eval (Huang et al., 2023), and SCROLLS (Shaham et al., 2022).
+
+#### Table 2. Performance Comparison on Commonsense Reasoning and Aggregated Benchmarks
+
+PS: parameter size (billion). T: tokens (billion). HS: HellaSwag. WG: WinoGrande.
+
+| Model | PS (B) | T (B) | BoolQ | PIQA | HS | WG | ARC-e | ARC-c | OBQA | MMLU | C-Eval |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| OPT | 0.35 | 0.30 | 57.74 | 64.58 | 36.69 | 52.49 | 44.02 | 23.89 | 28.20 | 26.02 | 25.71 |
+| Pythia | 0.40 | 0.30 | 60.40 | 67.08 | 40.52 | 53.59 | 51.81 | 24.15 | 29.40 | 25.99 | 24.81 |
+| RWKV | 0.43 | - | - | 67.52 | 40.90 | 51.14 | 52.86 | 25.17 | 32.40 | 24.85 | - |
+| **TNL** | **0.39** | **1.0** | **62.14** | **66.70** | **46.27** | **54.46** | **55.43** | **27.99** | **32.40** | **25.90** | **25.24** |
+| OPT | 1.3 | 0.3 | 57.77 | 71.71 | 53.70 | 59.35 | 57.24 | 29.69 | 33.20 | 24.96 | 25.32 |
+| Pythia | 1.4 | 0.3 | 60.73 | 70.67 | 47.18 | 53.51 | 56.99 | 26.88 | 31.40 | 26.55 | 24.25 |
+| RWKV | 1.5 | - | - | 72.36 | 52.48 | 54.62 | 60.48 | 29.44 | 34.00 | 25.77 | - |
+| Falcon | 1.0 | 0.35 | 61.38 | 75.14 | 61.50 | 60.30 | 63.38 | 32.17 | 35.60 | 25.28 | 25.66 |
+| **TNL** | **1.0** | **1.2** | **63.27** | **72.09** | **56.49** | **60.38** | **63.68** | **35.24** | **36.60** | **27.10** | **26.01** |
+| OPT | 6.7 | 0.3 | 66.18 | 76.22 | 67.21 | 65.19 | 65.66 | 34.64 | 37.20 | 24.57 | 25.32 |
+| Pythia | 6.9 | 0.3 | 63.46 | 75.14 | 63.92 | 60.77 | 67.34 | 35.41 | 37.00 | 24.64 | 26.40 |
+| RWKV | 7.4 | - | - | 76.06 | 65.51 | 61.01 | 67.80 | 37.46 | 40.20 | 24.96 | - |
+| Falcon | 7.2 | 1.5 | 73.73 | 79.38 | 76.3 | 67.17 | 74.62 | 43.60 | 43.80 | 27.79 | 22.92 |
+| Baichuan2 | 7.0 | 2.6 | 72.72 | 76.50 | 72.17 | 68.35 | 75.17 | 42.32 | 39.60 | 54.16 | 54.00 |
+| ChatGLM2 | 7.1 | 1.4 | 77.65 | 69.37 | 50.51 | 57.62 | 59.13 | 34.30 | 37.00 | 45.46 | 52.55 |
+| OpenLLaMAv2 | 6.7 | 1.0 | 72.20 | 78.84 | 74.51 | 65.67 | 72.39 | 41.30 | 41.00 | 41.29 | 30.01 |
+| LLaMA1 | 6.7 | 1.0 | 76.50 | 79.80 | 76.10 | 70.10 | 72.80 | 47.60 | 57.20 | 35.10 | 25.72 |
+| LLaMA2 | 6.7 | 2.0 | 77.68 | 78.07 | 76.02 | 68.98 | 76.30 | 46.33 | 44.20 | 45.30 | 33.20 |
+| **TNL** | **6.8** | **1.4** | **75.87** | **80.09** | **75.21** | **66.06** | **75.42** | **44.40** | **63.40** | **43.10** | **43.18** |
+| OPT | 13 | 0.3 | 65.93 | 75.84 | 69.83 | 65.19 | 67.00 | 35.75 | 38.80 | 24.68 | 22.23 |
+| Pythia | 12 | 0.3 | 65.72 | 76.17 | 68.85 | 66.22 | 70.62 | 38.23 | 41.00 | 25.51 | 22.99 |
+| RWKV | 14 | - | 70.12 | 78.51 | 71.49 | 64.48 | 72.35 | 40.87 | 41.00 | 26.49 | 26.49 |
+| Baichuan2 | 13 | 2.6 | 79.20 | 77.31 | 75.27 | 70.01 | 77.36 | 47.01 | 43.80 | 57.02 | 59.63 |
+| OpenLLaMAv2 | 13 | 1.0 | 72.29 | 77.58 | 72.07 | 70.09 | 75.42 | 43.86 | 43.00 | 43.43 | 25.95 |
+| LLaMA1 | 13 | 1.0 | 77.95 | 79.16 | 79.06 | 72.61 | 77.40 | 47.70 | 44.80 | 47.62 | 32.13 |
+| LLaMA2 | 13 | 2.0 | 80.61 | 79.11 | 79.35 | 72.38 | 79.34 | 48.98 | 35.20 | 55.70 | 38.34 |
+| **TNL** | **15** | **2.0** | **76.64** | **81.56** | **82.18** | **75.61** | **77.61** | **50.51** | **46.40** | **60.06** | **53.01** |
+
+#### Table 3. Performance Comparison on SCROLLS
+
+Models up to 1 billion parameters on 2048 pre-training sequence length. PS: parameter size (billion). T: tokens (billion).
+
+| Model | PS (B) | T (B) | GovRep (R-1/2/L) | SumScr (R-1/2/L) | QMSum (R-1/2/L) | Qspr (F1) | Nrtv (F1) | QALT (EM) | CNLI (EM) | Avg |
+|---|---|---|---|---|---|---|---|---|---|---|
+| OPT | 0.35 | 0.30 | 2.52/0.53/2.24 | 7.72/0.68/6.52 | 8.05/1.79/6.6 | 13.13 | 10.13 | 29.05 | 9.16 | 7.55 |
+| Pythia | 0.40 | 0.30 | 4.96/1.19/4.06 | 2.03/0.2/1.79 | 7.51/1.43/6.08 | 15.27 | 8.24 | 28.57 | 15.24 | 7.43 |
+| RWKV | 0.43 | - | 1.63/0.4/1.49 | 0.94/0.11/0.76 | 10.19/2.26/8.06 | 13.16 | 9.76 | 26.32 | 16.49 | 7.04 |
+| **TNL** | **0.39** | **1.0** | **3.67/1.16/3.14** | **8.27/0.82/6.91** | **13.62/3.29/10.95** | **14.29** | **11.69** | **28.14** | **17.36** | **9.48** |
+| OPT | 1.3 | 0.3 | 5.7/2.09/4.41 | 10.17/0.82/8.29 | 12.36/3.15/9.85 | 18.37 | 13.42 | 29.15 | 12.44 | 10.02 |
+| Pythia | 1.4 | 0.3 | 4.03/1.25/3.33 | 8.34/0.87/6.97 | 13.17/3.4/10.92 | 16.09 | 11.91 | 28.72 | 9.06 | 9.08 |
+| Falcon | 1.0 | 0.35 | 2.74/0.67/2.37 | 10.95/1.28/8.66 | 13.29/3.09/10.58 | 16.17 | 12.91 | 29.19 | 14.75 | 9.74 |
+| **TNL** | **1.0** | **1.2** | **6.81/2.30/5.25** | **12.28/1.23/9.27** | **14.60/3.51/11.62** | **15.02** | **14.66** | **28.72** | **37.32** | **12.51** |
+
+### 5.3. TNL Ablation
+
+We conducted an extensive ablation analysis on various components of TNL, including positional encoding, gating mechanisms, GLA activation functions, GLU activation functions, and normalization functions.
+
+#### Table 4. Exploration of Positional Encoding
+
+LRPE-d leads to the most optimal outcome.
+
+| PE Methods | Params | Updates | Loss | PPL |
+|---|---|---|---|---|
+| Mix | 385M | 100K | 2.248 | 4.770 |
+| APE | 386M | 100K | 2.387 | 5.253 |
+| Exp-Decay | 385M | 100K | 2.267 | 4.834 |
+| LRPE | 385M | 100K | 2.287 | 4.899 |
+| LRPE-d | 385M | 100K | 2.236 | 4.728 |
+
+**Positional Encoding:** In our experiment comparing various PE strategies—Mix, Absolute Positional Encoding (APE), LRPE, Exponential Decay, and LRPE-d—our approach and LRPE-d demonstrated superior performance. We chose the Mix method for its ability to enhance training speed by up to 20%, despite being slightly less effective than LRPE-d.
+
+#### Table 5. Ablations on decay temperature
+
+| Temperature | Params | Updates | Loss | PPL |
+|---|---|---|---|---|
+| w/ temperature | 385M | 100K | 2.248 | 4.770 |
+| w/o temperature | 385M | 100K | 2.258 | 4.804 |
+
+We also perform ablations on the decay temperature (1 − l/L) in Eq. 10. The perplexity of the TNL is reduced by adding the decay temperature.
+
+#### Table 6. Ablations on gating mechanism
+
+| Gate | Params | Updates | Loss | PPL |
+|---|---|---|---|---|
+| w/ gate | 385M | 100K | 2.248 | 4.770 |
+| w/o gate | 379M | 100K | 2.263 | 4.820 |
+
+**Gating Mechanism:** We further investigate the impact of integrating a gating mechanism. According to Table 6, enabling the gate decreased the loss value from 2.263 to 2.248.
+
+#### Table 7. Exploration of Normalization Function
+
+| Norm Type | Params | Updates | Loss | PPL |
+|---|---|---|---|---|
+| SRMSNorm | 385M | 100K | 2.248 | 4.770 |
+| RMSNorm | 385M | 100K | 2.247 | 4.766 |
+| LayerNorm | 385M | 100K | 2.247 | 4.765 |
+
+**Normalization Functions:** Our study involved testing various normalization techniques—SRMSNorm, RMSNorm, and LayerNorm—on TNL, finding little difference in their effectiveness. However, we enhanced SRMSNorm using Triton, resulting in notable improvements in processing speed for larger dimensions.
+
+#### Table 8. Ablations on GLA activation functions
+
+| GLA Act | Params | Updates | Loss | PPL |
+|---|---|---|---|---|
+| Swish | 385M | 100K | 2.248 | 4.770 |
+| No Act | 385M | 100K | 2.283 | 4.882 |
+| 1+elu | 385M | 100K | 2.252 | 4.767 |
+
+**GLA Activation Functions:** In our study on the GLA mechanism, we evaluated activation functions, finding Swish and 1+elu to perform similarly. However, due to NaN issues with 1+elu in our 7B model, we opted for Swish.
+
+#### Table 9. Ablations on GLU activation functions
+
+| GLU Act | Params | Updates | Loss | PPL |
+|---|---|---|---|---|
+| No Act | 385M | 100K | 2.248 | 4.770 |
+| Swish | 385M | 100K | 2.254 | 4.788 |
+
+**GLU Activation Functions:** Our experiment additionally involved removing the activation function from the Gated Linear Units (GLU), showing minimal effect on outcomes. Therefore, we opted for the Simple Gated Linear Units (SGLU) configuration in our model.
+
+---
+
+## 6. Conclusion
+
+We introduced Lightning Attention, the first linear attention implementation that unleashed the full power of linear attention. As a result, our Lightning Attention can handle various sequence lengths with a constant speed under a constant memory footprint. The main concept is to divide the calculation of attention into intra-blocks and inter-blocks, while applying distinct computation techniques to perform the calculation. A new architecture, TNL, that is tailored for Lightning Attention is presented. TNL outperforms existing efficient language models in terms of both efficiency and accuracy and achieves competitive performance compared to state-of-the-art large language models using conventional transformer architectures.
+
+---
+
+## Acknowledgement
+
+This work is partially supported by the National Key R&D Program of China (NO.2022ZD0160100). We thank Songlin Yang for the helpful discussions.
+
+---
+
+## Impact Statement
+
+The introduction of Lightning Attention and its accompanying architecture TNL, heralds significant shifts in machine learning, particularly in language model efficiency and accessibility. By addressing the limitations of linear attention in varying sequence lengths without increasing memory consumption, this advancement democratizes access to state-of-the-art language models, potentially reducing the computational and environmental footprint of large-scale AI systems. Ethically, it underscores a move towards more sustainable AI practices, yet raises questions about the proliferation of powerful language models and their societal impacts, including concerns over privacy, misinformation, and the digital divide.
+
+---
+
+## Appendix
+
+### A. Linear Attention with Decay
+
+TransNormerLLM uses LRPE-d positional encoding, which has the following format:
+
+$$a_{ts} = q_t^\top k_s \lambda^{t-s} \exp^{i\theta(t-s)} \tag{15}$$
+
+According to (Qin et al., 2023b), LRPE can be decomposed into q and k, so we consider the following simplified form:
+
+$$a_{ts} = q_t^\top k_s \lambda^{t-s}$$
+
+$$o_t^\top = \sum_{s=1}^{t} a_{ts} v_t^\top = \sum_{s=1}^{t} q_t^\top k_s \lambda^{t-s} v_s^\top = q_t^\top \sum_{s=1}^{t} k_s \lambda^{t-s} v_s^\top \triangleq q_t^\top kv_t \tag{16}$$
+
+We call this Linear Attention with decay and prove it's equivalent to the recurrence form:
+
+$$kv_0 = 0, \quad kv_t = \lambda kv_{t-1} + k_t v_t^\top, \quad o_t^\top = q_t^\top kv_t \tag{17}$$
+
+We will use induction to prove kv̄<sub>t</sub> = kv<sub>t</sub>.
+
+**Base Case** (n = 1): kv̄₁ = k₁v₁⊤ = kv₁. (18)
+
+Assume the statement holds for n = m − 1, i.e., kv̄<sub>m−1</sub> = kv<sub>m−1</sub>. Then, when n = m:
+
+$$\bar{kv}_m = \sum_{s=1}^{m} k_s \lambda^{m-s} v_s^\top = \lambda \sum_{s=1}^{m-1} k_s \lambda^{m-1-s} v_s^\top + k_m v_m^\top = \lambda \bar{kv}_{m-1} + k_m v_m^\top = \lambda kv_{m-1} + k_m v_m^\top = kv_m \tag{19}$$
+
+the statement holds. Therefore, by induction, the statement holds for all n ≥ 1.
+
+### B. Lightning Attention with Decay
+
+We extended Lightning Attention to accommodate Linear Attention with decay. The complete algorithm can be found in Algorithm 5, 6.
+
+> **Algorithm 5: Lightning Attention (with decay) Forward Pass**
+>
+> **Input:** Q, K, V ∈ ℝ<sup>n×d</sup>, decay rate λ ∈ ℝ⁺, block sizes B.
+>
+> Divide X into T = n/B blocks X₁, X₂, …X<sub>T</sub> of size B × d each, where X ∈ {Q, K, V, O}.
+>
+> Initialize mask M ∈ ℝ<sup>B×B</sup>, where M<sub>ts</sub> = λ<sup>t−s</sup>, if t ≥ s, else 0.
+>
+> Initialize Λ = diag{λ, λ², …, λ<sup>B</sup>} ∈ ℝ<sup>B×B</sup>.
+>
+> Initialize KV = 0 ∈ ℝ<sup>d×d</sup>.
+>
+> **for** t = 1, …, T **do**
+> - Load Q<sub>t</sub>, K<sub>t</sub>, V<sub>t</sub> ∈ ℝ<sup>B×d</sup> from HBM to on-chip SRAM.
+> - On chip, compute O<sub>intra</sub> = [(Q<sub>t</sub>K<sub>t</sub>⊤) ⊙ M]V<sub>t</sub>.
+> - On chip, compute O<sub>inter</sub> = ΛQ<sub>t</sub>(KV).
+> - On chip, compute KV = λ<sup>B</sup>KV + (λ<sup>B</sup>Λ⁻¹K<sub>t</sub>)⊤V<sub>t</sub>.
+> - Write O<sub>t</sub> = O<sub>intra</sub> + O<sub>inter</sub> to HBM as the t-th block of O.
+>
+> **end for**
+>
+> **Return** O.
+
+> **Algorithm 6: Lightning Attention (with decay) Backward Pass**
+>
+> **Input:** Q, K, V, dO ∈ ℝ<sup>n×d</sup>, decay rate λ ∈ ℝ⁺, block sizes B.
+>
+> Divide X into T = n/B blocks X₁, X₂, …X<sub>T</sub> of size B × d each, where X ∈ {Q, K, V}.
+>
+> Divide dX into T = n/B blocks dX₁, dX₂, …dX<sub>T</sub> of size B × d each, where X ∈ {Q, K, V, O}.
+>
+> Initialize mask M ∈ ℝ<sup>B×B</sup>, where M<sub>ts</sub> = λ<sup>t−s</sup>, if t ≥ s, else 0.
+>
+> Initialize Λ = diag{λ, λ², …, λ<sup>B</sup>} ∈ ℝ<sup>B×B</sup>.
+>
+> Initialize KV = 0, dKV = 0 ∈ ℝ<sup>d×d</sup>.
+>
+> **for** t = 1, …, T **do**
+> - Load K<sub>t</sub>, V<sub>t</sub>, O<sub>t</sub>, dO<sub>t</sub> ∈ ℝ<sup>B×d</sup> from HBM to on-chip SRAM.
+> - On chip, compute dQ<sub>intra</sub> = [(dO<sub>t</sub>V<sub>t</sub>⊤) ⊙ M]K<sub>t</sub>.
+> - On chip, compute dQ<sub>inter</sub> = ΛdO<sub>t</sub>(KV)⊤.
+> - On chip, compute KV = λ<sup>B</sup>KV + (λ<sup>B</sup>Λ⁻¹K<sub>t</sub>)⊤V<sub>t</sub>.
+> - Write dQ<sub>t</sub> = dQ<sub>intra</sub> + dQ<sub>inter</sub> to HBM as the t-th block of dQ.
+>
+> **end for**
+>
+> **for** t = T, …, 1 **do**
+> - Load Q<sub>t</sub>, K<sub>t</sub>, V<sub>t</sub>, O<sub>t</sub>, dO<sub>t</sub> ∈ ℝ<sup>B×d</sup> from HBM to on-chip SRAM.
+> - On chip, compute dK<sub>intra</sub> = [(dO<sub>t</sub>V<sub>t</sub>⊤) ⊙ M]⊤Q<sub>t</sub>.
+> - On chip, compute dK<sub>inter</sub> = (λ<sup>B</sup>Λ⁻¹V<sub>t</sub>)(dKV)⊤.
+> - On chip, compute dV<sub>intra</sub> = [(Q<sub>t</sub>K<sub>t</sub>⊤) ⊙ M]⊤dO<sub>t</sub>.
+> - On chip, compute dV<sub>inter</sub> = (λ<sup>B</sup>Λ⁻¹K<sub>t</sub>)dKV.
+> - On chip, compute dKV = λ<sup>B</sup>dKV + (ΛQ<sub>t</sub>)⊤dO<sub>t</sub>.
+> - Write dK<sub>t</sub> = dK<sub>intra</sub> + dK<sub>inter</sub>, dV<sub>t</sub> = dV<sub>intra</sub> + dV<sub>inter</sub> to HBM as the t-th block of dK, dV.
+>
+> **end for**
+>
+> **Return** dQ, dK, dV.
+
+### C. Proofs
+
+Here we discuss linear attention with decay directly, because vanilla linear attention is the case of λ = 1.
+
+#### C.0.1. Forward Pass
+
+During forward pass of Linear attention with decay, the t-th output can be formulated as:
+
+$$o_t^\top = q_t^\top \sum_{s \leq t} \lambda^{t-s} k_s v_s^\top \tag{20}$$
+
+In a recursive form:
+
+$$kv_0 = 0 \in \mathbb{R}^{d \times d}, \quad kv_t = \lambda kv_{t-1} + k_t v_t^\top, \quad o_t^\top = q_t^\top(kv_t) \tag{21}$$
+
+where:
+
+$$kv_t = \sum_{s \leq t} \lambda^{t-s} k_s v_s^\top \tag{22}$$
+
+To perform tiling, let us write the equations in block form. Given the total sequence length n and block size B, X is divided into T = n/B blocks {X₁, X₂, …, X<sub>T</sub>} of size B × d each, where X ∈ {Q, K, V, O}.
+
+We first define:
+
+$$KV_0 = 0 \in \mathbb{R}^{d \times d}, \quad KV_t = \sum_{s \leq tB} \lambda^{tB-s} k_s v_s^\top \tag{23}$$
+
+Given KV<sub>t</sub>, the output of (t+1)-th block, i.e., tB + r, with 1 ≤ r ≤ B is:
+
+$$o_{tB+r}^\top = q_{tB+r}^\top \sum_{s \leq tB+r} \lambda^{tB+r-s} k_s v_s^\top = q_{tB+r}^\top \left( \sum_{s=tB+1}^{tB+r} \lambda^{tB+r-s} k_s v_s^\top + \lambda^r \sum_{s \leq tB} \lambda^{tB-s} k_s v_s^\top \right) \tag{24}$$
+
+Rewritten in matrix form:
+
+$$O_{t+1} = \underbrace{[(Q_{t+1}K_{t+1}^\top) \odot M]V_{t+1}}_{\text{Intra Block}} + \underbrace{\Lambda Q_{t+1}(KV_t)}_{\text{Inter Block}} \tag{25}$$
+
+where:
+
+$$M_{ts} = \begin{cases} \lambda^{t-s} & t \geq s \\ 0 & t < s \end{cases}, \quad \Lambda = \text{diag}\{1, \ldots, \lambda^{B-1}\} \tag{26}$$
+
+And the KV at (t+1)-th block:
+
+$$KV_{t+1} = \lambda^B KV_t + (\lambda^B \Lambda^{-1} K_t)^\top V_t \tag{27}$$
+
+#### C.0.2. Backward Pass
+
+For backward pass, given do<sub>t</sub>, we have:
+
+$$dq_t^\top = do_t^\top kv_t^\top \in \mathbb{R}^{1 \times d}$$
+
+$$dk_t^\top = v_t^\top dkv_t^\top \in \mathbb{R}^{1 \times d}$$
+
+$$dv_t^\top = k_t^\top dkv_t \in \mathbb{R}^{1 \times d}$$
+
+$$dkv_t = \sum_{s \geq t} \lambda^{s-t} q_s do_s^\top \in \mathbb{R}^{d \times d} \tag{28}$$
+
+By writing dkv<sub>t</sub> in a recursive form:
+
+$$dkv_{n+1} = 0 \in \mathbb{R}^{d \times d}, \quad dkv_{t-1} = \lambda dkv_t + q_{t-1} do_{t-1}^\top \tag{29}$$
+
+In block form, for dQ:
+
+$$dQ_{t+1} = \underbrace{[(dO_{t+1}V_{t+1}^\top) \odot M]K_{t+1}}_{\text{Intra Block}} + \underbrace{\Lambda dO_{t+1}(KV_t^\top)}_{\text{Inter Block}} \tag{32}$$
+
+For dK:
+
+$$dK_{t-1} = \underbrace{[(dO_{t-1}V_{t-1}^\top) \odot M]^\top Q_{t-1}}_{\text{Intra Block}} + \underbrace{\lambda^B \Lambda^{-1} V_{t-1}(dKV_t^\top)}_{\text{Inter Block}} \tag{34}$$
+
+For dV:
+
+$$dV_{t-1} = \underbrace{[(Q_{t-1}K_{t-1}^\top) \odot M]^\top dO_t}_{\text{Intra Block}} + \underbrace{\lambda^B \Lambda^{-1} K_{t-1}(dKV_t)}_{\text{Inter Block}} \tag{36}$$
+
+The recursive relation for dKV<sub>t</sub>:
+
+$$dKV_t = \lambda^B dKV_{t+1} + (\Lambda Q_t)^\top dO_t \tag{37}$$
+
+### D. Corpus
+
+We gather an extensive corpus of publicly accessible text from the internet, totaling over 700TB in size. The collected data are processed by our data preprocessing procedure, leaving a 6TB cleaned corpus with roughly 2 trillion tokens.
+
+#### Table 10. Statistics of our corpus
+
+| Dataset | Epochs | Tokens | Disk size |
+|---|---|---|---|
+| Academic Writings | 1.53 | 200 B | 672 GB |
+| Books | 2.49 | 198 B | 723 GB |
+| Code | 0.44 | 689 B | 1.4 TB |
+| Encyclopedia | 1.51 | 5 B | 18 GB |
+| Filtered Webpages | 1.00 | 882 B | 3.1 TB |
+| Others | 0.63 | 52 B | 154 GB |
+| **Total** | **-** | **2026 B** | **6 TB** |
+
+**Language Distribution:**
+
+| Language | Tokens | Disk size |
+|---|---|---|
+| English | 743 B | 2.9 TB |
+| Chinese | 555 B | 1.7 TB |
+| Code | 689 B | 1.4 TB |
+| Others | 39 B | 89 GB |
+| **Total** | **2026 B** | **6 TB** |
+
+#### D.1. Data Preprocessing
+
+Our data preprocessing procedure consists of three steps: 1) rule-based filtering, 2) deduplication, and 3) a self-cleaning scheme.
+
+**Rule-based filtering** rules include: removal of HTML tags and URLs, elimination of useless or abnormal strings, deduplication of punctuation marks, handling special characters, number standardization, and preservation of Markdown/LaTeX formats.
+
+**Deduplication:** We employ an efficient deduplication strategy at the document or line level using MinHash and Locality-Sensitive Hashing (LSH) algorithms.
+
+**Self-cleaning scheme:** Our data self-cleaning process involves an iterative loop of three steps: (1) Training a 385M evaluation model on the pre-processed corpus to act as a data quality filter; (2) Model-based data filtering using perplexity scores; (3) Human evaluation on a sampled portion of filtered data.
+
+#### D.2. Tokenization
+
+We tokenize the data with the Byte-Pair Encoding (BPE) algorithm. To enhance compatibility with Chinese language content, a significant number of common and uncommon Chinese characters have been incorporated into our vocabulary. In cases where vocabulary items are not present in the dictionary, the words are broken down into their constituent UTF-8 characters.
+
+### E. Distributed System Optimization
+
+We optimize our system to execute large-scale pre-training for TNL effectively. We employ fully sharded data parallelism (FSDP) (Zhao et al., 2023), activation checkpointing (Shoeybi et al., 2019), and automatic mixed precision (AMP) (Micikevicius et al., 2017) techniques. We used BFloat16 (Kalamkar et al., 2019) to enhance training stability. We implemented model parallelism tailored to Lightning Attention.
+
+**SGLU Model Parallelism.** Recall SGLU structure in (12):
+
+$$O = [(XW_v) \odot (XW_u)]W_o \tag{38}$$
+
+The model parallelism splits weight matrices W<sub>v</sub> and W<sub>u</sub> along their columns, obtains an output matrix splitting along its columns, then multiplies by another matrix split along its rows. This introduces a single all-reduce collective communication operation in both forward and backward passes.
+
+**GLA Model Parallelism.** Recall the GLA block in (11), its model parallelism version splits Q, K, V, U across heads and uses combined QKVU projection for computational efficiency.
+
+### F. Additional TNL Ablation
+
+#### Table 11. Transformer vs TNL
+
+| Method | Updates | Loss | PPL |
+|---|---|---|---|
+| Transformer-385M | 100K | 2.362 | 5.160 |
+| TNL-385M | 100K | 2.248 | 4.770 |
+| Transformer-1B | 100K | 2.061 | 4.765 |
+| TNL-1B | 100K | 1.896 | 3.729 |
+
+TNL performs better than Transformer in size of 385M and 1B under identical configurations by 5% and 9%, respectively.
+
+#### Table 12. TransNormer vs TNL
+
+| Method | Params | Updates | Loss | PPL |
+|---|---|---|---|---|
+| TNL | 385M | 100K | 2.248 | 4.770 |
+| TransNormer-T1 | 379M | 100K | 2.290 | 4.910 |
+| TransNormer-T2 | 379M | 100K | 2.274 | 4.858 |
+
+TNL exhibited an enhancement of 2% and 1% respectively over the original TransNormer.
+
+**Speed Normalization Functions.** We enhanced SRMSNorm using Triton, resulting in notable improvements in processing speed for larger dimensions, outperforming conventional PyTorch implementations.
+
+---
+
+## References
+
+- Almazrouei, E., et al. Falcon-40b: an open large language model with state-of-the-art performance. Technical report, Technology Innovation Institute, 2023.
+- Bahdanau, D., Cho, K., and Bengio, Y. Neural machine translation by jointly learning to align and translate, 2016.
+- Baichuan. Baichuan 2: Open large-scale language models. arXiv preprint arXiv:2309.10305, 2023.
+- Biderman, S., et al. Pythia: A suite for analyzing large language models across training and scaling, 2023.
+- Bisk, Y., et al. PIQA: Reasoning about physical commonsense in natural language, 2019.
+- Black, S., et al. GPT-NeoX-20B: An open-source autoregressive language model. arXiv preprint arXiv:2204.06745, 2022.
+- Choromanski, K. M., et al. Rethinking attention with performers. In ICLR, 2021.
+- Clark, C., et al. BoolQ: Exploring the surprising difficulty of natural yes/no questions, 2019.
+- Clark, P., et al. Think you have solved question answering? Try ARC, the AI2 reasoning challenge, 2018.
+- Dao, T. FlashAttention-2: Faster attention with better parallelism and work partitioning. arXiv preprint arXiv:2307.08691, 2023.
+- Dao, T., et al. FlashAttention: Fast and memory-efficient exact attention with IO-awareness. In NeurIPS, 2022a.
+- Dao, T., et al. Hungry hungry hippos: Towards language modeling with state space models. CoRR, abs/2212.14052, 2022b.
+- de Brébisson, A. and Vincent, P. A cheap linear attention mechanism with fast lookups and fixed-size representations, 2016.
+- Du, Z., et al. GLM: General language model pretraining with autoregressive blank infilling, 2022.
+- Fu, D. Y., et al. Simple hardware-efficient long convolutions for sequence modeling. CoRR, abs/2302.06646, 2023.
+- Gao, L., et al. A framework for few-shot language model evaluation. Version v0.0.1, 2021.
+- Geng, X. and Liu, H. OpenLLaMA: An open reproduction of LLaMA, 2023.
+- Gu, A., et al. HiPPO: Recurrent memory with optimal polynomial projections, 2020.
+- Gu, A., Goel, K., and Ré, C. Efficiently modeling long sequences with structured state spaces. In ICLR, 2022a.
+- Gu, A., Goel, K., and Ré, C. Efficiently modeling long sequences with structured state spaces. In ICLR, 2022b.
+- Gu, A., et al. On the parameterization and initialization of diagonal state space models, 2022c.
+- Gupta, A., Gu, A., and Berant, J. Diagonal state spaces are as effective as structured state spaces, 2022.
+- Hendrycks, D., et al. Measuring massive multitask language understanding, 2021.
+- Hua, W., et al. Transformer quality in linear time. arXiv preprint arXiv:2202.10447, 2022.
+- Huang, Y., et al. C-Eval: A multi-level multi-discipline Chinese evaluation suite for foundation models, 2023.
+- Jiang, A. Q., et al. Mistral 7B, 2023.
+- Kalamkar, D., et al. A study of BFloat16 for deep learning training. arXiv preprint arXiv:1905.12322, 2019.
+- Katharopoulos, A., et al. Transformers are RNNs: Fast autoregressive transformers with linear attention. In ICML, pp. 5156–5165, 2020.
+- Liu, H., et al. Pay attention to MLPs. NeurIPS, 34:9204–9215, 2021.
+- Liu, Z., et al. Neural architecture search on efficient transformers and beyond. arXiv preprint arXiv:2207.13955, 2022.
+- Mehta, H., et al. Long range language modeling via gated state spaces. arXiv preprint arXiv:2206.13947, 2022.
+- Micikevicius, P., et al. Mixed precision training. arXiv preprint arXiv:1710.03740, 2017.
+- Mihaylov, T., et al. Can a suit of armor conduct electricity? A new dataset for open book question answering, 2018.
+- Orvieto, A., et al. Resurrecting recurrent neural networks for long sequences, 2023a.
+- Orvieto, A., et al. Resurrecting recurrent neural networks for long sequences. CoRR, abs/2303.06349, 2023b.
+- Paszke, A., et al. PyTorch: An imperative style, high-performance deep learning library. NeurIPS, 32, 2019.
+- Peng, B., et al. RWKV: Reinventing RNNs for the transformer era, 2023a.
+- Peng, B., et al. RWKV: Reinventing RNNs for the transformer era, 2023b.
+- Press, O., Smith, N., and Lewis, M. Train short, test long: Attention with linear biases enables input length extrapolation. In ICLR, 2022.
+- Qin, Z., et al. The devil in linear transformer. In EMNLP, pp. 7025–7041, 2022a.
+- Qin, Z., et al. cosFormer: Rethinking softmax in attention. In ICLR, 2022b.
+- Qin, Z., et al. Toeplitz neural network for sequence modeling. In ICLR, 2023a.
+- Qin, Z., et al. Linearized relative positional encoding. Transactions on Machine Learning Research, 2023b.
+- Qin, Z., Yang, S., and Zhong, Y. Hierarchically gated recurrent neural network for sequence modeling. In NeurIPS, 2023c.
+- Qin, Z., Zhong, Y., and Deng, H. Exploring transformer extrapolation. In AAAI, 2024.
+- Ramachandran, P., Zoph, B., and Le, Q. V. Searching for activation functions, 2017.
+- Sakaguchi, K., et al. WinoGrande: An adversarial Winograd schema challenge at scale, 2019.
+- Sap, M., et al. SocialIQA: Commonsense reasoning about social interactions, 2019.
+- Shaham, U., et al. SCROLLS: Standardized comparison over long language sequences. arXiv preprint arXiv:2201.03533, 2022.
+- Shoeybi, M., et al. Megatron-LM: Training multi-billion parameter language models using model parallelism. arXiv preprint arXiv:1909.08053, 2019.
+- Tay, Y., et al. Synthesizer: Rethinking self-attention for transformer models. In ICML, pp. 10183–10192, 2021.
+- Team, M. N. et al. Introducing MPT-7B: A new standard for open-source, commercially usable LLMs, 2023.
+- Tillet, P., Kung, H.-T., and Cox, D. D. Triton: An intermediate language and compiler for tiled neural network computations. In ACM SIGPLAN, 2019.
+- Touvron, H., et al. LLaMA: Open and efficient foundation language models. arXiv preprint arXiv:2302.13971, 2023a.
+- Touvron, H., et al. LLaMA 2: Open foundation and fine-tuned chat models, 2023b.
+- Vaswani, A., et al. Attention is all you need. NeurIPS, 30, 2017.
+- Wang, B. and Komatsuzaki, A. GPT-J-6B: A 6 billion parameter autoregressive language model, 2021.
+- Workshop, B., et al. BLOOM: A 176B-parameter open-access multilingual language model, 2023.
+- Zellers, R., et al. HellaSwag: Can a machine really finish your sentence?, 2019.
+- Zeng, A., et al. GLM-130B: An open bilingual pre-trained model. arXiv preprint arXiv:2210.02414, 2022.
+- Zhang, S., et al. OPT: Open pre-trained transformer language models, 2022.
+- Zhao, Y., et al. PyTorch FSDP: Experiences on scaling fully sharded data parallel. arXiv preprint arXiv:2304.11277, 2023.
+- Zheng, L., et al. Linear complexity randomized self-attention mechanism. In ICML, pp. 27011–27041, 2022.
+- Zheng, L., et al. Efficient attention via control variates. In ICLR, 2023.
