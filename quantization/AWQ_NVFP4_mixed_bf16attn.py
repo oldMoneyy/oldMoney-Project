@@ -179,15 +179,23 @@ def apply_layer_smoothing(
 
     Since all attention projections stay BF16, we must NOT modify
     input_layernorm (feeds into attention) or o_norm (feeds into o_proj).
-    Only smooth post_attention_layernorm -> [gate, up] for MLP quantization.
+
+    Two smoothing groups:
+      Group 1: post_attention_layernorm -> [gate_proj, up_proj]
+      Group 2: up_proj -> [down_proj]  (from cyankiwi/compressed-tensors recipe)
+
+    Group 2 rationale: In SwiGLU, down_proj input = silu(gate(x)) * up(x).
+    The element-wise multiply creates activation outliers that are hard to
+    quantize in down_proj. Smoothing up_proj output → down_proj input
+    redistributes these outliers for better FP4 quantization.
 
     Removed vs AWQ_L_4_Mini_16_smoothed.py:
-      - Group 1 (input_layernorm → Q/K/V/Z): attention is BF16, don't touch
-      - Group 3 (o_norm → o_proj): attention is BF16, don't touch
+      - input_layernorm → Q/K/V/Z: attention is BF16, don't touch
+      - o_norm → o_proj: attention is BF16, don't touch
     """
     smooth_factors = {}
 
-    # --- Only group: post_attention_layernorm -> gate, up (ALL layers) ---
+    # --- Group 1: post_attention_layernorm -> gate, up (ALL layers) ---
     mlp_targets = ["mlp.gate_proj", "mlp.up_proj"]
     mlp_present = [t for t in mlp_targets if t in linears]
     post_ln = get_submodule_safe(layer, "post_attention_layernorm")
@@ -210,6 +218,38 @@ def apply_layer_smoothing(
         print(
             f"    Smooth [post_attn_layernorm] -> {mlp_present} "
             f"| s: min={s.min():.4f} max={s.max():.4f} std={s.std():.4f}"
+        )
+
+    # --- Group 2: up_proj -> down_proj (ALL layers) ---
+    # up_proj output feeds into down_proj input (after SwiGLU activation).
+    # Smooth the up_proj weight columns (output channels) against down_proj
+    # weight columns (input channels) to reduce activation outliers at
+    # the SwiGLU multiply boundary.
+    up_name = "mlp.up_proj"
+    down_name = "mlp.down_proj"
+    if up_name in linears and down_name in linears and down_name in observers:
+        down_w = linears[down_name].weight.data.to(torch.float32)
+        up_w = linears[up_name].weight.data.to(torch.float32)
+        down_h = observers[down_name].get_h_diag().to(down_w.device)
+
+        s2 = compute_smooth_factor([down_w], [down_h], alpha=alpha)
+
+        # Source (up_proj): divide output channels (rows) by s
+        # up_proj shape: [16384, 4096], rows = intermediate dim = down_proj input channels
+        # Dividing makes up_proj output smaller where s > 1 (high-activation channels)
+        linears[up_name].weight.data.div_(
+            s2.unsqueeze(1).to(linears[up_name].weight.dtype)
+        )
+        # Target (down_proj): multiply input channels (columns) by s
+        # down_proj shape: [4096, 16384], columns = intermediate dim
+        # Multiplying compensates: (act/s) @ (W*s)^T = act @ W^T (original)
+        linears[down_name].weight.data.mul_(
+            s2.unsqueeze(0).to(linears[down_name].weight.dtype)
+        )
+        smooth_factors[down_name] = s2
+        print(
+            f"    Smooth [up_proj] -> [down_proj] "
+            f"| s: min={s2.min():.4f} max={s2.max():.4f} std={s2.std():.4f}"
         )
 
     return smooth_factors
@@ -916,7 +956,7 @@ def main():
     parser.add_argument("--calib-data", required=True)
     parser.add_argument("--max-samples", type=int, default=64)
     parser.add_argument("--max-len", type=int, default=131072)
-    parser.add_argument("--mse-iters", type=int, default=80)
+    parser.add_argument("--mse-iters", type=int, default=120)
     parser.add_argument("--mse-max-shrink", type=float, default=0.60)
     parser.add_argument("--mse-error-norm", type=float, default=2.0)
     parser.add_argument("--smooth-alpha", type=float, default=0.5)

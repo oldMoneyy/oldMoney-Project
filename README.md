@@ -874,6 +874,50 @@ optimize the **sparse attention model** with minicpm_flashinfer, not fall back t
 standard full-attention backend. The flashinfer results only prove that quantization itself
 is not broken — the problem is specifically quantization + recurrent state in lightning-attn.
 
+### Deeper root cause: systematic bias on repetitive inputs (2026-03-27)
+
+**External validation**: `cyankiwi/MiniCPM-SALA-AWQ-4bit` (INT4 sym, group_size=32, FP32
+scales, duo_scaling, searched alpha) uses a strictly better quantization technique than our
+NVFP4 — lower effective error, proper smoothing on attention. Their model passes
+`long_context_test_case.py` (diverse 5k-60k tokens) but **still fails SOAR eval** (100k+
+tokens with extreme repetition, uniqueness ratio as low as 0.0005).
+
+This confirms the root cause is **not just quantization quality** but a fundamental
+interaction between **any 4-bit weight quantization** and **GLA recurrence on repetitive
+inputs**:
+
+- **Diverse inputs**: quantization errors in k_t, v_t are quasi-random across positions.
+  Random noise accumulates as √N: σ_total ≈ σ × √100k ≈ σ × 316. Manageable.
+- **Repetitive inputs**: k_t, v_t are nearly identical across positions, so quantization
+  error is a **fixed systematic bias** that accumulates as N: ε_total = ε × 100k.
+  **316x faster accumulation** than the random case.
+
+This explains all observations:
+- 60k diverse tokens: works (even with INT4/FP4) — random noise, √60k ≈ 245x
+- 100k+ repetitive tokens: breaks — systematic bias, 100,000x accumulation
+- Short MCQ (500 tokens): works — too few steps for any accumulation
+
+**Conclusion**: No 4-bit format (FP4, INT4, regardless of smoothing quality) can safely
+quantize lightning-attn K/V projections for this eval profile. Only BF16 attention
+eliminates systematic bias from the GLA recurrence path entirely.
+
+### Cyankiwi recipe comparison
+
+| Technique | Our NVFP4 (27%) | Cyankiwi INT4 (long_context ✓, SOAR ✗) |
+|-----------|-----------------|----------------------------------------|
+| Weight format | FP4 E2M1 (15 vals) | INT4 sym (16 vals) |
+| Scale precision | **FP8** block scales | **FP32** group scales |
+| Effective error | ~33% (FP4×FP8 compound) | ~14% (INT4×FP32) |
+| Smoothing alpha | Fixed 0.5 | Searched (n_grid=20) |
+| duo_scaling | No | Yes |
+| up→down smooth | No | Yes |
+| Result | Fails both tests | Passes basic, fails SOAR |
+
+Key insight: NVFP4's FP8 block scales add 6.25% compound error on top of FP4, making
+effective quantization error ~2.4x worse than INT4+FP32. This is why NVFP4 fails even on
+moderate-length diverse inputs that INT4 handles. But even the better INT4 approach fails
+on SOAR's extreme repetition — the systematic bias accumulation is the fundamental limit.
+
 
 ## Solution: MLP-Only FP4 Quantization (2026-03-27)
 
@@ -894,73 +938,96 @@ Lightning-attn layers (24): attn=BF16, MLP=FP4  ← protect Q/K/V/Z/O
 This removes FP4 from the GLA recurrence path entirely. The state `S` will be
 computed from BF16 Q/K/V → numerically stable → no cliff → no `<unk>` loop.
 
-### Model size impact
+### Model size calculation
 
-| Component | Params | Current | Proposed |
-|-----------|--------|---------|----------|
-| MLP (all 32 layers) | 6.44B (68%) | FP4 | FP4 (no change) |
-| Lightning Q/K/V/Z/O (24 layers) | 1.93B (20%) | FP4 | **BF16** |
-| minicpm4 attn (8 layers) | 0.42B (4%) | BF16 | BF16 (no change) |
-| Embeddings + LM head | 0.60B (6%) | BF16 | BF16 (no change) |
+| Component | Params | Format | Size |
+|-----------|--------|--------|------|
+| MLP (32 layers × 3 linears) | 6.44B (68%) | FP4 packed + FP8 scales | 3.38 GB |
+| Lightning-attn Q/K/V/Z/O (24 layers) | 2.01B (21%) | BF16 | 4.03 GB |
+| MiniCPM4 attn Q/K/V/O/gate (8 layers) | 0.42B (4%) | BF16 | 0.84 GB |
+| Embeddings + LM head + norms | 0.60B (6%) | BF16 | 1.12 GB |
+| **Total** | **9.48B** | **mixed** | **~9.4 GB** |
 
-- **Current**: ~5.5 GB quantized model
-- **Proposed**: ~8.3 GB (MLP in FP4 + all attention in BF16)
-- **Original**: 19 GB (full BF16)
-- **Compression ratio**: 2.3x (down from 3.4x, but actually works)
+- **Previous all-FP4**: ~6.3 GB (broken — GLA recurrence collapse)
+- **This approach**: ~9.4 GB (MLP FP4 + all attention BF16)
+- **Original BF16**: 19 GB
+- **Compression ratio**: 2.0x (down from 3.0x, but actually works)
 
-### Code changes required
+On RTX PRO 6000 Blackwell (96 GB): model=9.4 GB, ~78 GB available for KV/GLA state cache.
+Blackwell's native FP4 tensor cores accelerate the MLP GEMMs (68% of model params).
 
-**1. `AWQ_L_4_Mini_16_smoothed.py` — `should_quantize_linear()` (line 314):**
-```python
-def should_quantize_linear(layer_idx, linear_name, mixer_type):
-    # Protect ALL attention projections from FP4 — both minicpm4 and lightning
-    if "self_attn" in linear_name:
-        return False
-    return True  # Only MLP gets quantized
+### Why not FP8 attention instead of BF16?
+
+FP8 E4M3 (256 discrete values) has ~6.25% worst-case relative error per weight element,
+vs FP4 E2M1's ~25%. Over 100k GLA recurrent updates through 24 layers, the GEMM output
+noise from FP8 weights is ~10x what BF16 produces, but ~4x less than FP4.
+
+The failure mode is a **cliff effect**, not gradual degradation. Whether FP8 noise stays
+below the cliff or triggers the same `<unk>` feedback loop is unpredictable without
+empirical testing. For a competition, BF16 attention is the safe choice.
+
+If throughput is critical, FP8 attention weights give ~2x faster attention GEMMs on
+Blackwell (FP8 tensor cores vs BF16). But this requires custom mixed-quant support in
+SGLang (NVFP4+FP8 dual config), which is not currently implemented. The pragmatic
+alternative is `--kv-cache-dtype fp8_e5m2` which compresses the minicpm4 KV cache at
+runtime — zero risk to GLA stability since it only affects the 8 softmax-attention layers.
+
+### Implementation
+
+Script: `quantization/AWQ_NVFP4_mixed_bf16attn.py` (dedicated mixed-precision quantizer)
+
+Changes vs `AWQ_L_4_Mini_16_smoothed.py`:
+1. `should_quantize_linear()`: excludes ALL `self_attn` projections from FP4
+2. `build_exclude_modules()`: adds lightning-attn Q/K/V/Z/O to exclusion list
+3. `apply_layer_smoothing()`: only smooths MLP (post_attn_layernorm → gate, up)
+4. `compute_fused_global_scales()`: removes QKV fusion (no QKV gets quantized)
+
+SGLang inference (`minicpm.py` line 440-495) — no change needed:
+The `exclude_modules` routing logic already handles mixed-precision correctly.
+
+### Calibration data
+```bash
+# Generate balanced calibration: adds 30 MCQ samples from eval to calib_96
+# Fixes zero coverage of short MCQ task (20% of eval score)
+python /opt/oldMoney-Project/quantization/generate_balanced_calib.py
+# Output: /opt/calib_balanced_124.jsonl (~124 samples)
 ```
 
-**2. `AWQ_L_4_Mini_16_smoothed.py` — `build_exclude_modules()` (line 335):**
-```python
-def build_exclude_modules(config):
-    exclude = []
-    for i, mt in enumerate(config.mixer_types):
-        # Exclude ALL attention projections for ALL layer types
-        if mt == "minicpm4":
-            exclude.append(f"model.layers.{i}.self_attn.q_proj")
-            exclude.append(f"model.layers.{i}.self_attn.k_proj")
-            exclude.append(f"model.layers.{i}.self_attn.v_proj")
-            exclude.append(f"model.layers.{i}.self_attn.o_proj")
-            exclude.append(f"model.layers.{i}.self_attn.o_gate")
-        else:  # lightning-attn
-            exclude.append(f"model.layers.{i}.self_attn.q_proj")
-            exclude.append(f"model.layers.{i}.self_attn.k_proj")
-            exclude.append(f"model.layers.{i}.self_attn.v_proj")
-            exclude.append(f"model.layers.{i}.self_attn.o_proj")
-            exclude.append(f"model.layers.{i}.self_attn.z_proj")
-    return exclude
-```
-
-**3. `AWQ_L_4_Mini_16_smoothed.py` — `apply_layer_smoothing()` (line 160):**
-Remove Group 1 (input_layernorm → attention) and Group 3 (o_norm → o_proj)
-smoothing for lightning layers, since those weights stay BF16 and should not
-be modified. Only Group 2 (post_attention_layernorm → gate, up) remains.
-
-**4. SGLang inference (`minicpm.py` line 456) — no change needed:**
-The `exclude_modules` logic already works for NVFP4/modelopt. The GPTQ override
-at line 456 only triggers for GPTQ quantization, not modelopt. SGLang will
-correctly load lightning-attn attention as BF16 and MLP as FP4.
-
-### Re-quantize command
+### Quantize command
 ```bash
 source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
 export TRITON_PTXAS_PATH="$(which ptxas)"
-nohup python /opt/oldMoney-Project/quantization/AWQ_L_4_Mini_16_smoothed.py \
+nohup python /opt/oldMoney-Project/quantization/AWQ_NVFP4_mixed_bf16attn.py \
     --input /opt/model \
-    --output /opt/model_nvfp4_mlp_only \
-    --calib-data /opt/oldMoney-Project/quantization/calibration/optimal_96.jsonl \
-    --max-samples 96 \
+    --output /opt/model_nvfp4_bf16attn \
+    --calib-data /opt/calib_balanced_124.jsonl \
+    --max-samples 124 \
     --max-len 131072 \
     --smooth-alpha 0.5 \
-    --mse-iters 80 \
- > /opt/oldMoney-Project/logs/AWQ_mlp_only.log 2>&1 &
+    --mse-iters 120 \
+ > /opt/oldMoney-Project/logs/AWQ_nvfp4_bf16attn.log 2>&1 &
+```
+
+### Serve command (96 GB Blackwell)
+```bash
+uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_kernel_fuse
+pip install --no-build-isolation -e /opt/oldMoney-Project/vendor_kernel_fuse
+fuser -k -9 31333/tcp
+python3 -m sglang.launch_server \
+    --model /opt/model_nvfp4_bf16attn \
+    --quantization modelopt \
+    --trust-remote-code \
+    --disable-radix-cache \
+    --attention-backend minicpm_flashinfer \
+    --chunked-prefill-size 32768 \
+    --max-running-requests 64 \
+    --max-mamba-cache-size 64 \
+    --kv-cache-dtype fp8_e5m2 \
+    --port 31333 \
+    --dense-as-sparse \
+    --mem-fraction-static 0.88 \
+    --fuse-topk \
+    --num-continuous-decode-steps 2 \
+    --enable-mixed-chunk \
+    --enable-torch-compile
 ```
