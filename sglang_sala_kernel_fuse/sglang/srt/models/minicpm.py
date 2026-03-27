@@ -40,6 +40,15 @@ from sglang.srt.layers.linear import (
     RowParallelLinear,
 )
 from sglang.srt.layers.logits_processor import LogitsProcessor
+from sglang.srt.layers.minicpm_fused_ops import (
+    fused_qknorm,
+    fused_qknorm_rope,
+    fused_rmsnorm_scale,
+    fused_rmsnorm_sigmoid_gate,
+    fused_scale_residual,
+    fused_scale_residual_rmsnorm,
+    fused_sigmoid_gate,
+)
 from sglang.srt.layers.quantization.base_config import QuantizationConfig
 from sglang.srt.layers.radix_attention import RadixAttention
 from sglang.srt.layers.rotary_embedding import get_rope
@@ -195,7 +204,7 @@ class MiniCPMAttention(nn.Module):
 
         if self.use_output_gate:
             o_gate_output, _ = self.o_gate(hidden_states)
-            attn_output = attn_output * F.sigmoid(o_gate_output)
+            attn_output = fused_sigmoid_gate(attn_output, o_gate_output)
 
         output, _ = self.o_proj(attn_output)
         return output
@@ -321,10 +330,20 @@ class MiniCPMLightningMixer(nn.Module):
         q, k, v = qkv.split([self.q_size, self.kv_size, self.kv_size], dim=-1)
 
         if self.qk_norm:
-            q = self.q_norm(q.reshape(-1, self.head_dim))
-            k = self.k_norm(k.reshape(-1, self.head_dim))
+            q = q.reshape(-1, self.head_dim)
+            k = k.reshape(-1, self.head_dim)
+            if self.use_rope:
+                # Fused: QK RMSNorm + RoPE in one kernel (saves 5 launches per layer)
+                fused_qknorm_rope(
+                    q, k, self.q_norm.weight, self.k_norm.weight,
+                    self.rotary_emb.cos_sin_cache, positions,
+                    self.rms_norm_eps, self.num_heads, self.num_kv_heads,
+                )
+            else:
+                fused_qknorm(q, k, self.q_norm.weight, self.k_norm.weight, self.rms_norm_eps)
 
-        if self.use_rope:
+        if not self.qk_norm and self.use_rope:
+            # RoPE without QK norm (fallback, not used by MiniCPM-SALA)
             q = q.reshape(-1, self.num_heads * self.head_dim)
             k = k.reshape(-1, self.num_kv_heads * self.head_dim)
             orig_dtype = q.dtype
@@ -370,12 +389,17 @@ class MiniCPMLightningMixer(nn.Module):
 
         o = o.reshape(-1, self.num_heads * self.head_dim)
 
-        if self.use_output_norm:
-            o = self.o_norm(o)
-
-        if self.use_output_gate:
+        if self.use_output_norm and self.use_output_gate:
             z, _ = self.z_proj(hidden_states)
-            o = o * F.sigmoid(z)
+            o = fused_rmsnorm_sigmoid_gate(o, z, self.o_norm.weight, self.rms_norm_eps)
+        elif self.use_output_norm:
+            o = self.o_norm(o)
+            if self.use_output_gate:
+                z, _ = self.z_proj(hidden_states)
+                o = fused_sigmoid_gate(o, z)
+        elif self.use_output_gate:
+            z, _ = self.z_proj(hidden_states)
+            o = fused_sigmoid_gate(o, z)
 
         y, _ = self.o_proj(o)
         return y
@@ -452,10 +476,12 @@ class MiniCPMDecoderLayer(nn.Module):
             if is_excluded(f"{layer_prefix}.mlp"):
                 mlp_quant_config = None
 
-            # Legacy GPTQ override (forces uniform config)
+            # GPTQ: respect exclude_modules for mixed-precision models
             if hasattr(quant_config, "get_name") and quant_config.get_name().startswith("gptq"):
-                attn_quant_config = quant_config
-                mlp_quant_config = quant_config
+                if not is_excluded(f"{layer_prefix}.self_attn"):
+                    attn_quant_config = quant_config
+                if not is_excluded(f"{layer_prefix}.mlp"):
+                    mlp_quant_config = quant_config
         # ------------------------------------------------------------------------
 
         if self.mixer_type == "minicpm4":
@@ -544,59 +570,40 @@ class MiniCPMDecoderLayer(nn.Module):
         forward_batch: ForwardBatch,
         residual: Optional[torch.Tensor],
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        import time
-        
-        # Only profile during real forward, not CUDA graph capture
-        do_profile = (hidden_states.shape[0] > 100) and not torch.cuda.is_current_stream_capturing()
+        # Cross-layer fusion: if residual is not None, the previous layer returned
+        # (mlp_output, residual) without doing the final residual+scale+layernorm.
+        # We fuse that here with this layer's input_layernorm.
+        if residual is not None:
+            # Fused: residual + hidden_states * scale -> new_residual -> input_layernorm
+            hidden_states, residual = fused_scale_residual_rmsnorm(
+                hidden_states, residual,
+                self.config.scale_depth / math.sqrt(self.config.num_hidden_layers),
+                self.input_layernorm.weight,
+                self.input_layernorm.variance_epsilon,
+            )
+        else:
+            # First layer: no previous MLP output to fuse with
+            residual = hidden_states
+            hidden_states = self.input_layernorm(hidden_states)
 
-        if do_profile:
-            torch.cuda.synchronize()
-            t0 = time.perf_counter()
-        
-        residual = hidden_states
-        hidden_states = self.input_layernorm(hidden_states)
-
-        if do_profile:
-            torch.cuda.synchronize()
-            t1 = time.perf_counter()
-        
         hidden_states = self.self_attn(
             positions=positions,
             hidden_states=hidden_states,
             forward_batch=forward_batch,
         )
 
-        if do_profile:
-            torch.cuda.synchronize()
-            t2 = time.perf_counter()
-        
-        hidden_states = residual + hidden_states * (
-            self.config.scale_depth / math.sqrt(self.config.num_hidden_layers)
+        # Fused: residual + hidden_states * scale -> new_residual -> post_attn_layernorm
+        hidden_states, residual = fused_scale_residual_rmsnorm(
+            hidden_states, residual,
+            self.config.scale_depth / math.sqrt(self.config.num_hidden_layers),
+            self.post_attention_layernorm.weight,
+            self.post_attention_layernorm.variance_epsilon,
         )
-        residual = hidden_states
-        hidden_states = self.post_attention_layernorm(hidden_states)
 
-        if do_profile:
-            torch.cuda.synchronize()
-            t3 = time.perf_counter()
-        
         hidden_states = self.mlp(hidden_states)
 
-        if do_profile:
-            torch.cuda.synchronize()
-            t4 = time.perf_counter()
-        
-        hidden_states = residual + hidden_states * (
-            self.config.scale_depth / math.sqrt(self.config.num_hidden_layers)
-        )
-
-        # PROFILE
-        # if do_profile:
-        #     attn_ms = (t2 - t1) * 1000
-        #     mlp_ms = (t4 - t3) * 1000
-        #     print(f"[Layer {self.layer_id}] type={self.mixer_type} attn={attn_ms:.1f}ms mlp={mlp_ms:.1f}ms tokens={hidden_states.shape[0]}", flush=True)
-        
-        return hidden_states, None
+        # Return raw MLP output + residual for cross-layer fusion with next layer
+        return hidden_states, residual
     # dotv ######################################################################
 
 
@@ -651,7 +658,12 @@ class MiniCPMModel(nn.Module):
                 forward_batch,
                 residual,
             )
-        hidden_states = self.norm(hidden_states)
+        # After last layer: hidden_states is raw MLP output, residual is carried.
+        # Fused: residual + mlp_out * scale in one kernel, then norm is in MiniCPMForCausalLM.
+        hidden_states = fused_scale_residual(
+            hidden_states, residual,
+            self.config.scale_depth / math.sqrt(self.config.num_hidden_layers),
+        )
         return hidden_states
 
 
@@ -694,7 +706,13 @@ class MiniCPMForCausalLM(nn.Module):
         if input_embeds is not None:
             input_embeds = input_embeds * self.config.scale_emb
         hidden_states = self.model(input_ids, positions, forward_batch, input_embeds)
-        hidden_states = hidden_states / self.scale_width
+        # Fused: norm + / scale_width in one kernel
+        hidden_states = fused_rmsnorm_scale(
+            hidden_states,
+            self.model.norm.weight,
+            self.model.norm.variance_epsilon,
+            self.scale_width,
+        )
         if self.config.tie_word_embeddings:
             lm_head = self.model.embed_tokens
         else:

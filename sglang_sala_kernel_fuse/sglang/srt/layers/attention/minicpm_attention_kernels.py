@@ -403,20 +403,25 @@ class FlashInferKernel(AttentionKernel):
             valid_pages = kv_indptr[-1].item()
             kv_indices_valid = kv_indices[:valid_pages]
 
-            # --- 【动态 Mini-Pool 提取与精度修复】 ---
-            # 1. 找出当前 batch 实际引用的 KV 页，避免 64GB 显存 OOM
+            # --- Fused FP8 gather + dequant (replaces 3 separate kernels) ---
             used_pages, new_kv_indices = torch.unique(kv_indices_valid, return_inverse=True)
             new_kv_indices = new_kv_indices.to(torch.int32)
-            
-            # 2. 提取并转换（仅转换用到的几十MB数据）
-            mini_k_cache = params.k_cache[used_pages].to(self.model_dtype)
-            mini_v_cache = params.v_cache[used_pages].to(self.model_dtype)
-            
-            # 3. [精度修复] 如果存在反量化 Scale，必须乘回去才能还原真实的浮点值！
-            if params.k_descale is not None:
-                mini_k_cache = mini_k_cache * params.k_descale
-            if params.v_descale is not None:
-                mini_v_cache = mini_v_cache * params.v_descale
+
+            try:
+                import fused_kernel_extension
+                # Fused: gather + fp8→bf16 + scale in one kernel
+                k_scale_tensor = params.k_descale if params.k_descale is not None else torch.ones(1, device=params.k_cache.device)
+                v_scale_tensor = params.v_descale if params.v_descale is not None else torch.ones(1, device=params.v_cache.device)
+                mini_k_cache = fused_kernel_extension.fused_fp8_gather_dequant(params.k_cache, used_pages, k_scale_tensor)
+                mini_v_cache = fused_kernel_extension.fused_fp8_gather_dequant(params.v_cache, used_pages, v_scale_tensor)
+            except ImportError:
+                # Fallback: original 3-step approach
+                mini_k_cache = params.k_cache[used_pages].to(self.model_dtype)
+                mini_v_cache = params.v_cache[used_pages].to(self.model_dtype)
+                if params.k_descale is not None:
+                    mini_k_cache = mini_k_cache * params.k_descale
+                if params.v_descale is not None:
+                    mini_v_cache = mini_v_cache * params.v_descale
             # ----------------------------------------
             
             self._safe_resize_flashinfer_buffers(

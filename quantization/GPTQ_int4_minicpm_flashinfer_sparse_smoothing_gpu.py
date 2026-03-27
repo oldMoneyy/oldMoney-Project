@@ -615,12 +615,19 @@ def save_quantized_model(quantized_state, original_state, args, config):
     except ImportError:
         torch.save(state_dict, os.path.join(args.output, "pytorch_model.bin"))
 
+    # Build exclude_modules list for MiniCPM4 attention layers kept in BF16
+    exclude_modules = []
+    if hasattr(config, "mixer_types"):
+        for i, mt in enumerate(config.mixer_types):
+            if mt == "minicpm4":
+                exclude_modules.append(f"model.layers.{i}.self_attn")
+
     quant_config = {
         "bits": args.bits, "group_size": args.group_size, "desc_act": False,
         "sym": args.sym, "damp_percent": args.damp, "true_sequential": False,
         "model_name_or_path": args.input, "model_file_base_name": "model",
         "quant_method": "gptq", "is_marlin_format": False, "checkpoint_format": "gptq",
-        "mixed_precision": True
+        "mixed_precision": True, "exclude_modules": exclude_modules
     }
     with open(os.path.join(args.output, "quantize_config.json"), "w") as f:
         json.dump(quant_config, f, indent=2)
