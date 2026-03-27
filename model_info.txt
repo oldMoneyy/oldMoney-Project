@@ -1,0 +1,210 @@
+================================================================================
+MiniCPM-SALA Model Summary (openbmb/MiniCPM-SALA)
+================================================================================
+
+OVERVIEW
+  Architecture:        MiniCPMSALAForCausalLM (causal language model)
+  Total Parameters:    9,477,203,968 (~9.48B)
+  Model Size:          18,954,407,936 bytes (~18.95 GB, bfloat16)
+  Vocab Size:          73,448
+  Max Context Length:  524,288 tokens (512K)
+  Precision:           bfloat16
+  Transformers:        v4.56.0
+
+================================================================================
+CORE DIMENSIONS
+================================================================================
+  Hidden size:              4,096
+  Intermediate (FFN) size:  16,384 (4x hidden)
+  Attention heads:          32
+  KV heads:                 2 (GQA ratio 16:1, for minicpm4 layers)
+  Head dim:                 128
+  Number of layers:         32
+
+================================================================================
+HYBRID ATTENTION ARCHITECTURE (SALA = Sparse Attention + Linear Attention)
+================================================================================
+
+The model uses a mixed attention strategy across its 32 layers:
+  - 8 layers use "minicpm4" (sparse softmax attention with GQA)
+  - 24 layers use "lightning-attn" (linear attention with full MHA)
+
+Layer layout (M = minicpm4, L = lightning-attn):
+  Layer  0: M    Layer  1: L    Layer  2: L    Layer  3: L
+  Layer  4: L    Layer  5: L    Layer  6: L    Layer  7: L
+  Layer  8: L    Layer  9: M    Layer 10: L    Layer 11: L
+  Layer 12: L    Layer 13: L    Layer 14: L    Layer 15: L
+  Layer 16: M    Layer 17: M    Layer 18: L    Layer 19: L
+  Layer 20: L    Layer 21: L    Layer 22: M    Layer 23: L
+  Layer 24: L    Layer 25: L    Layer 26: L    Layer 27: L
+  Layer 28: L    Layer 29: M    Layer 30: M    Layer 31: M
+
+Pattern: minicpm4 layers are placed at strategic positions —
+  beginning (0), middle boundaries (9, 16-17, 22), and end (29-31) —
+  acting as "anchors" with full softmax attention, while lightning-attn
+  layers handle the bulk of computation with O(n) linear attention.
+
+Parameter distribution by layer type:
+  lightning-attn (24 layers):   6,845,405,184  (72.2%)
+  minicpm4 (8 layers):          2,030,108,672  (21.4%)
+  non-layer (embed/norm/head):    601,690,112  ( 6.3%)
+  TOTAL:                        9,477,203,968
+
+================================================================================
+LAYER TYPE DETAILS
+================================================================================
+
+LIGHTNING-ATTN LAYERS (~285,225,216 params each)
+  Full Multi-Head Attention (32 heads, 32 KV heads):
+    q_proj:    4096 × 4096  (16,777,216)
+    k_proj:    4096 × 4096  (16,777,216)
+    v_proj:    4096 × 4096  (16,777,216)
+    o_proj:    4096 × 4096  (16,777,216)
+    z_proj:    4096 × 4096  (16,777,216)  ← gating projection unique to lightning-attn
+    q_norm:    128                         ← RMSNorm on queries
+    k_norm:    128                         ← RMSNorm on keys
+    o_norm:    4096                        ← RMSNorm on output
+  MLP (SwiGLU):
+    gate_proj: 16384 × 4096 (67,108,864)
+    up_proj:   16384 × 4096 (67,108,864)
+    down_proj: 4096 × 16384 (67,108,864)
+  LayerNorms:
+    input_layernorm:          4096
+    post_attention_layernorm: 4096
+  Features:
+    - Uses RoPE (lightning_use_rope: true)
+    - Scale: 1/sqrt(d)
+    - head_dim: 128, num_heads: 32, num_kv_heads: 32
+
+MINICPM4 LAYERS (~253,763,584 params each)
+  Grouped-Query Attention (32 heads, 2 KV heads → 16:1 GQA):
+    q_proj:    4096 × 4096  (16,777,216)
+    k_proj:    256 × 4096   ( 1,048,576)  ← compressed (only 2 KV heads)
+    v_proj:    256 × 4096   ( 1,048,576)  ← compressed (only 2 KV heads)
+    o_proj:    4096 × 4096  (16,777,216)
+    o_gate:    4096 × 4096  (16,777,216)  ← output gate (replaces z_proj/norms)
+  MLP (SwiGLU):
+    gate_proj: 16384 × 4096 (67,108,864)
+    up_proj:   16384 × 4096 (67,108,864)
+    down_proj: 4096 × 16384 (67,108,864)
+  LayerNorms:
+    input_layernorm:          4096
+    post_attention_layernorm: 4096
+  Features:
+    - No RoPE (attn_use_rope: false)
+    - ~31M fewer params per layer due to compressed KV projections
+    - Output gating instead of z_proj
+
+NON-LAYER PARAMETERS
+  model.embed_tokens:  73448 × 4096  (300,843,008)
+  lm_head:             73448 × 4096  (300,843,008)
+  model.norm:          4096          (      4,096)
+  Note: embed_tokens and lm_head are NOT tied (tie_word_embeddings: false)
+
+================================================================================
+SPARSE ATTENTION CONFIG (minicpm4 layers)
+================================================================================
+  kernel_size:   32
+  kernel_stride: 16
+  init_blocks:   1
+  block_size:    64
+  window_size:   2,048  (sliding window for local attention)
+  topk:          64     (top-k sparse block selection)
+  dense_len:     8,192  (fully dense prefix length)
+  use_nope:      false
+
+Mechanism: sliding window (2048 tokens) + top-k sparse selection (64 blocks)
+           + dense prefix (first 8192 tokens attend to everything)
+
+================================================================================
+COMPONENT SUMMARY (across all 32 layers)
+================================================================================
+  mlp.down_proj                        2,147,483,648  (22.66%)
+  mlp.gate_proj                        2,147,483,648  (22.66%)
+  mlp.up_proj                          2,147,483,648  (22.66%)
+  self_attn.o_proj                       536,870,912  ( 5.66%)
+  self_attn.q_proj                       536,870,912  ( 5.66%)
+  self_attn.k_proj                       411,041,792  ( 4.34%)
+  self_attn.v_proj                       411,041,792  ( 4.34%)
+  self_attn.z_proj                       402,653,184  ( 4.25%)
+  lm_head.weight                         300,843,008  ( 3.17%)
+  model.embed_tokens.weight              300,843,008  ( 3.17%)
+  self_attn.o_gate                       134,217,728  ( 1.42%)
+  input_layernorm                            131,072  ( 0.00%)
+  post_attention_layernorm                   131,072  ( 0.00%)
+  self_attn.o_norm                            98,304  ( 0.00%)
+  model.norm.weight                            4,096  ( 0.00%)
+  self_attn.k_norm                             3,072  ( 0.00%)
+  self_attn.q_norm                             3,072  ( 0.00%)
+
+  MLP total:           6,442,450,944  (67.98%)
+  Attention total:     2,432,696,800  (25.67%)
+  Embeddings total:      601,686,016  ( 6.35%)
+
+================================================================================
+ADDITIONAL CONFIGURATION
+================================================================================
+  Activation function:    SiLU
+  QK normalization:       enabled (qk_norm: true)
+  Output gate:            enabled (use_output_gate: true)
+  Output norm:            enabled (use_output_norm: true)
+  Attn output gate:       enabled (attn_use_output_gate: true)
+  RMS norm epsilon:       1e-06
+  Initializer range:      0.1
+  RoPE theta:             10,000.0
+
+  muP (Maximal Update Parametrization):
+    scale_emb:        12
+    scale_depth:      1.4
+    mup_denominator:  32
+    dim_model_base:   256
+
+  Tokenizer:
+    BOS token ID: 1
+    EOS token IDs: [2, 73440]
+    PAD token ID: 2
+
+  Storage:
+    Format:     safetensors (4 shards)
+    Caching:    enabled (use_cache: true)
+    Auto-map:   custom classes in configuration_minicpm_sala / modeling_minicpm_sala
+
+================================================================================
+PER-LAYER PARAMETER COUNTS
+================================================================================
+  lm_head.weight                         [non-layer]        300,843,008
+  model.embed_tokens                     [non-layer]        300,843,008
+  model.norm                             [non-layer]              4,096
+  model.layers.0                         [minicpm4]          253,763,584
+  model.layers.1                         [lightning-attn]    285,225,216
+  model.layers.2                         [lightning-attn]    285,225,216
+  model.layers.3                         [lightning-attn]    285,225,216
+  model.layers.4                         [lightning-attn]    285,225,216
+  model.layers.5                         [lightning-attn]    285,225,216
+  model.layers.6                         [lightning-attn]    285,225,216
+  model.layers.7                         [lightning-attn]    285,225,216
+  model.layers.8                         [lightning-attn]    285,225,216
+  model.layers.9                         [minicpm4]          253,763,584
+  model.layers.10                        [lightning-attn]    285,225,216
+  model.layers.11                        [lightning-attn]    285,225,216
+  model.layers.12                        [lightning-attn]    285,225,216
+  model.layers.13                        [lightning-attn]    285,225,216
+  model.layers.14                        [lightning-attn]    285,225,216
+  model.layers.15                        [lightning-attn]    285,225,216
+  model.layers.16                        [minicpm4]          253,763,584
+  model.layers.17                        [minicpm4]          253,763,584
+  model.layers.18                        [lightning-attn]    285,225,216
+  model.layers.19                        [lightning-attn]    285,225,216
+  model.layers.20                        [lightning-attn]    285,225,216
+  model.layers.21                        [lightning-attn]    285,225,216
+  model.layers.22                        [minicpm4]          253,763,584
+  model.layers.23                        [lightning-attn]    285,225,216
+  model.layers.24                        [lightning-attn]    285,225,216
+  model.layers.25                        [lightning-attn]    285,225,216
+  model.layers.26                        [lightning-attn]    285,225,216
+  model.layers.27                        [lightning-attn]    285,225,216
+  model.layers.28                        [lightning-attn]    285,225,216
+  model.layers.29                        [minicpm4]          253,763,584
+  model.layers.30                        [minicpm4]          253,763,584
+  model.layers.31                        [minicpm4]          253,763,584
+  TOTAL:                                                   9,477,203,968
