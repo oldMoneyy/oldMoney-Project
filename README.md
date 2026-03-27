@@ -692,3 +692,106 @@ Full analysis log: `optimization_log/20260327_data_analysis.txt`
 The `model_nvfp4_smoothed` (AWQ_L_4_Mini_16_smoothed, smooth-alpha=0.5, mse-iters=80,
 64 calib samples) is **not competition-ready**. The 27.18% accuracy is far below acceptable.
 The FP4 (E2M1, 15 discrete values) precision is insufficient for this model architecture.
+
+
+## Deep Analysis: Why NVFP4 Fails on Long Sequences (2026-03-27)
+
+### Architecture: 24/32 layers are recurrent (Lightning-Attn)
+
+```
+Layer  0: minicpm4       — attn=BF16, MLP=FP4
+Layer  1-8: lightning-attn — ALL=FP4 (with smoothing)  ← recurrent
+Layer  9: minicpm4       — attn=BF16, MLP=FP4
+Layer 10-15: lightning-attn — ALL=FP4 (with smoothing) ← recurrent
+Layer 16-17: minicpm4    — attn=BF16, MLP=FP4
+Layer 18-21: lightning-attn — ALL=FP4 (with smoothing) ← recurrent
+Layer 22: minicpm4       — attn=BF16, MLP=FP4
+Layer 23-28: lightning-attn — ALL=FP4 (with smoothing) ← recurrent
+Layer 29-31: minicpm4    — attn=BF16, MLP=FP4
+```
+
+**24 lightning-attn layers** with ALL projections (Q, K, V, Z, O) in FP4.
+**8 minicpm4 layers** with attention in BF16, only MLP in FP4.
+
+### Root cause: Recurrent state error accumulation
+
+Lightning-attn uses Simple GLA (Gated Linear Attention), a recurrent mechanism:
+```
+S_t = decay * S_{t-1} + k_t^T @ v_t    (state update)
+o_t = q_t @ S_t                         (output)
+```
+
+The state `S` is updated at every token position. Over a 100k+ token sequence,
+`S` is updated 100k+ times through 24 recurrent layers. Each update uses
+FP4-quantized Q, K, V projections. The quantization error compounds
+**multiplicatively** through the recurrence:
+
+- **Short sequences (MCQ, 143-712 tokens)**: State updated ~500 times.
+  Error stays manageable. Model gets 40% accuracy (some gibberish in reasoning).
+- **Long sequences (niah/qa/fwe/cwe, 25k-135k tokens)**: State updated
+  100k+ times. Error explodes. Model collapses to `<unk>` or gibberish.
+
+This is fundamentally different from standard attention (minicpm4 layers),
+where each position is computed independently — no error accumulation.
+
+### Scale factor math verification
+
+Traced the complete dequantization path:
+
+**Quantization script:**
+```
+global_sf = 2688 / max_weight_amax
+weight_scale_2 = 1 / global_sf = max_weight_amax / 2688
+input_scale = act_amax / 2688
+```
+
+**SGLang inference:**
+```
+alpha = input_scale * weight_scale_2 = act_amax * max_amax / 2688^2
+input_scale_inv = 2688 / act_amax
+```
+
+**Full reconstruction:**
+```
+out = (x * 2688/act_amax) @ (W * 2688/max_amax) * (act_amax * max_amax / 2688^2)
+    = x @ W × 1  ✓ (scales cancel correctly)
+```
+
+The scale factor math is correct. The issue is not a scale mismatch.
+
+### Run-to-run instability (77% → 22% → 50%)
+
+The non-smoothed NVFP4 model (AWQ_L_4_Mini_16.py) showed wildly different accuracy
+across runs. This is caused by:
+
+1. **CUDA graph non-determinism**: Server uses `cuda graph: True`. Different kernel
+   captures on each restart → different numerical paths → different results at FP4.
+2. **Recurrent state amplification**: In the GLA recurrence, a tiny difference in
+   one early token's Q/K/V (from CUDA non-determinism ~1e-7) gets amplified through
+   100k state updates, potentially flipping the output from correct to garbage.
+3. **This doesn't happen in standard attention** because each position is independent.
+
+### Why calibration with long sequences doesn't help
+
+The calibration data IS mostly long sequences (mean 48k tokens). The MSE during
+quantization is low (4.5e-06). But MSE measures **static weight approximation error**,
+not **dynamic recurrent state accumulation error**. The calibration process:
+
+1. Collects activation statistics (H_diag) through forward passes
+2. Finds optimal block scales to minimize weight reconstruction error
+3. Does NOT simulate the recurrent state accumulation over long sequences
+
+The weights look correct in isolation (low MSE), but when used in the GLA recurrence
+over 100k+ tokens, the compound error becomes catastrophic.
+
+### Potential fixes
+
+1. **Keep lightning-attn Q/K/V in BF16, only quantize MLP**: This eliminates the
+   recurrent state error at the cost of model size (~1.5x larger). The recurrent
+   layers' attention projections are the most sensitive.
+2. **Reduce recurrent layers from FP4**: Keep only MLP of lightning layers in FP4,
+   keep Q/K/V/Z/O in BF16. Similar to how minicpm4 layers already work.
+3. **Test with `--disable-cuda-graph`**: May stabilize run-to-run variance.
+4. **Fall back to GPTQ INT4**: Dense GPTQ + flashinfer already passes all tests.
+   INT4 has 16 values (similar to FP4's 15) but uses integer arithmetic which is
+   more deterministic and doesn't have the same floating-point accumulation issues.
