@@ -65,7 +65,8 @@ for test_name, prompt in tests:
 
         if r.status_code == 200:
             data = r.json()
-            content = data['choices'][0]['message']['content']
+            print(f"      Raw response: {data}")
+            content = data['choices'][0]['message']['content'] or ''
 
             if '</think>' in content:
                 answer = content.split('</think>')[-1].strip()
