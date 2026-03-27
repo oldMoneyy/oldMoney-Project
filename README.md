@@ -177,6 +177,11 @@ python /opt/oldMoney-Project/bench/long_context_test_case.py
 The answers are: `Paris`, `BLUE-TIGER-42`, `Alice Zhang, 1987`.
 
 
+KL divergence test:
+```bash
+cd /opt/oldMoney-Project/quantization && python /opt/oldMoney-Project/quantization/fast_eval.py --mode eval --api-base http://127.0.0.1:31333
+```
+
 
 
 
@@ -473,14 +478,13 @@ nohup python3 -m sglang.launch_server \
 cd /opt
 fuser -k -9 31333/tcp
 nohup python3 -m sglang.launch_server \
-    --model /opt/model_nvfp4_awq_v3 \
+    --model /tmp/model_nvfp4_smoothed \
     --quantization modelopt \
     --trust-remote-code \
     --disable-radix-cache \
     --attention-backend minicpm_flashinfer \
     --chunked-prefill-size 32768 \
-    --max-running-requests 32 \
-    --skip-server-warmup \
+    --max-running-requests 64 \
     --port 31333 \
     --log-level info \
     --dense-as-sparse \

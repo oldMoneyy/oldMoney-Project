@@ -398,3 +398,419 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
     model.layers.14.self_attn.v_proj [4096x4096] 0.1s | MSE=5.011e-06 RelErr=8.041e-03
     model.layers.14.self_attn.z_proj [4096x4096] 0.1s | MSE=4.019e-06 RelErr=8.178e-03
   Propagating hidden states...
+  Layer 14 done in 52.7s
+
+======================================================================
+[Layer 15/31] lightning-attn
+======================================================================
+  Mixer: lightning-attn | Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Phase 1: Collecting activations (64 samples)...
+  Phase 2: Channel smoothing (alpha=0.5)...
+    Smooth [input_layernorm] -> ['self_attn.q_proj', 'self_attn.k_proj', 'self_attn.v_proj', 'self_attn.z_proj'] | s: min=0.6058 max=2.6831 std=0.1099
+    Smooth [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.0903 max=2.3222 std=0.1012
+    Smooth [o_norm] -> [o_proj] | s: min=0.1335 max=1.8583 std=0.1815
+  NVFP4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+    [qkv] fused global_sf=1890.4615 (max_amax=1.421875)
+    [gate_up] fused global_sf=4382.9809 (max_amax=0.613281)
+  Phase 5: AWQ MSE search (80 iters)...
+    model.layers.15.mlp.down_proj [4096x16384] 0.5s | MSE=4.745e-06 RelErr=8.198e-03
+    model.layers.15.mlp.gate_proj [16384x4096] 0.4s | MSE=4.573e-06 RelErr=7.904e-03
+    model.layers.15.mlp.up_proj [16384x4096] 0.4s | MSE=4.644e-06 RelErr=7.860e-03
+    model.layers.15.self_attn.k_proj [4096x4096] 0.1s | MSE=5.107e-06 RelErr=8.094e-03
+    model.layers.15.self_attn.o_proj [4096x4096] 0.1s | MSE=4.759e-06 RelErr=7.897e-03
+    model.layers.15.self_attn.q_proj [4096x4096] 0.1s | MSE=4.723e-06 RelErr=8.072e-03
+    model.layers.15.self_attn.v_proj [4096x4096] 0.1s | MSE=5.057e-06 RelErr=7.995e-03
+    model.layers.15.self_attn.z_proj [4096x4096] 0.1s | MSE=4.029e-06 RelErr=8.156e-03
+  Propagating hidden states...
+  Layer 15 done in 54.5s
+
+======================================================================
+[Layer 16/31] minicpm4
+======================================================================
+  Mixer: minicpm4 | Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  Phase 1: Collecting activations (64 samples)...
+  Phase 2: Channel smoothing (alpha=0.5)...
+    Smooth [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.1341 max=1.8330 std=0.1119
+  BF16 (kept): ['self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  NVFP4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+    [gate_up] fused global_sf=3640.8889 (max_amax=0.738281)
+  Phase 5: AWQ MSE search (80 iters)...
+    model.layers.16.mlp.down_proj [4096x16384] 0.5s | MSE=4.695e-06 RelErr=8.260e-03
+    model.layers.16.mlp.gate_proj [16384x4096] 0.4s | MSE=4.690e-06 RelErr=7.891e-03
+    model.layers.16.mlp.up_proj [16384x4096] 0.4s | MSE=4.594e-06 RelErr=7.844e-03
+  Propagating hidden states...
+  Layer 16 done in 47.7s
+
+======================================================================
+[Layer 17/31] minicpm4
+======================================================================
+  Mixer: minicpm4 | Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  Phase 1: Collecting activations (64 samples)...
+  Phase 2: Channel smoothing (alpha=0.5)...
+    Smooth [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.1451 max=2.3487 std=0.1182
+  BF16 (kept): ['self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  NVFP4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+    [gate_up] fused global_sf=3780.9231 (max_amax=0.710938)
+  Phase 5: AWQ MSE search (80 iters)...
+    model.layers.17.mlp.down_proj [4096x16384] 0.5s | MSE=4.620e-06 RelErr=8.295e-03
+    model.layers.17.mlp.gate_proj [16384x4096] 0.4s | MSE=4.919e-06 RelErr=7.870e-03
+    model.layers.17.mlp.up_proj [16384x4096] 0.4s | MSE=4.470e-06 RelErr=7.831e-03
+  Propagating hidden states...
+  Layer 17 done in 47.6s
+
+======================================================================
+[Layer 18/31] lightning-attn
+======================================================================
+  Mixer: lightning-attn | Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Phase 1: Collecting activations (64 samples)...
+  Phase 2: Channel smoothing (alpha=0.5)...
+    Smooth [input_layernorm] -> ['self_attn.q_proj', 'self_attn.k_proj', 'self_attn.v_proj', 'self_attn.z_proj'] | s: min=0.0327 max=2.3734 std=0.1320
+    Smooth [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.1732 max=2.1422 std=0.1308
+    Smooth [o_norm] -> [o_proj] | s: min=0.4422 max=2.3658 std=0.1588
+  NVFP4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+    [qkv] fused global_sf=1686.5882 (max_amax=1.593750)
+    [gate_up] fused global_sf=4950.5612 (max_amax=0.542969)
+  Phase 5: AWQ MSE search (80 iters)...
+    model.layers.18.mlp.down_proj [4096x16384] 0.5s | MSE=4.641e-06 RelErr=8.165e-03
+    model.layers.18.mlp.gate_proj [16384x4096] 0.4s | MSE=4.797e-06 RelErr=7.858e-03
+    model.layers.18.mlp.up_proj [16384x4096] 0.4s | MSE=4.632e-06 RelErr=7.823e-03
+    model.layers.18.self_attn.k_proj [4096x4096] 0.1s | MSE=5.010e-06 RelErr=8.053e-03
+    model.layers.18.self_attn.o_proj [4096x4096] 0.1s | MSE=4.699e-06 RelErr=7.913e-03
+    model.layers.18.self_attn.q_proj [4096x4096] 0.1s | MSE=4.617e-06 RelErr=8.046e-03
+    model.layers.18.self_attn.v_proj [4096x4096] 0.1s | MSE=5.069e-06 RelErr=7.952e-03
+    model.layers.18.self_attn.z_proj [4096x4096] 0.1s | MSE=4.239e-06 RelErr=8.108e-03
+  Propagating hidden states...
+  Layer 18 done in 53.6s
+
+======================================================================
+[Layer 19/31] lightning-attn
+======================================================================
+  Mixer: lightning-attn | Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Phase 1: Collecting activations (64 samples)...
+  Phase 2: Channel smoothing (alpha=0.5)...
+    Smooth [input_layernorm] -> ['self_attn.q_proj', 'self_attn.k_proj', 'self_attn.v_proj', 'self_attn.z_proj'] | s: min=0.2007 max=1.9340 std=0.1138
+    Smooth [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.1715 max=1.7393 std=0.1303
+    Smooth [o_norm] -> [o_proj] | s: min=0.4731 max=2.1125 std=0.1652
+  NVFP4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+    [qkv] fused global_sf=1529.1733 (max_amax=1.757812)
+    [gate_up] fused global_sf=3801.8122 (max_amax=0.707031)
+  Phase 5: AWQ MSE search (80 iters)...
+    model.layers.19.mlp.down_proj [4096x16384] 0.5s | MSE=4.807e-06 RelErr=8.211e-03
+    model.layers.19.mlp.gate_proj [16384x4096] 0.4s | MSE=4.639e-06 RelErr=7.867e-03
+    model.layers.19.mlp.up_proj [16384x4096] 0.4s | MSE=4.813e-06 RelErr=7.831e-03
+    model.layers.19.self_attn.k_proj [4096x4096] 0.1s | MSE=4.771e-06 RelErr=8.055e-03
+    model.layers.19.self_attn.o_proj [4096x4096] 0.1s | MSE=4.639e-06 RelErr=7.920e-03
+    model.layers.19.self_attn.q_proj [4096x4096] 0.1s | MSE=4.549e-06 RelErr=8.045e-03
+    model.layers.19.self_attn.v_proj [4096x4096] 0.1s | MSE=4.971e-06 RelErr=8.011e-03
+    model.layers.19.self_attn.z_proj [4096x4096] 0.1s | MSE=4.276e-06 RelErr=8.158e-03
+  Propagating hidden states...
+  Layer 19 done in 53.9s
+
+======================================================================
+[Layer 20/31] lightning-attn
+======================================================================
+  Mixer: lightning-attn | Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Phase 1: Collecting activations (64 samples)...
+  Phase 2: Channel smoothing (alpha=0.5)...
+    Smooth [input_layernorm] -> ['self_attn.q_proj', 'self_attn.k_proj', 'self_attn.v_proj', 'self_attn.z_proj'] | s: min=0.0733 max=3.7589 std=0.1118
+    Smooth [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.1476 max=1.9641 std=0.1216
+    Smooth [o_norm] -> [o_proj] | s: min=0.3977 max=2.2999 std=0.1364
+  NVFP4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+    [qkv] fused global_sf=1954.9091 (max_amax=1.375000)
+    [gate_up] fused global_sf=5663.6049 (max_amax=0.474609)
+  Phase 5: AWQ MSE search (80 iters)...
+    model.layers.20.mlp.down_proj [4096x16384] 0.5s | MSE=4.879e-06 RelErr=8.239e-03
+    model.layers.20.mlp.gate_proj [16384x4096] 0.4s | MSE=4.509e-06 RelErr=7.865e-03
+    model.layers.20.mlp.up_proj [16384x4096] 0.4s | MSE=4.872e-06 RelErr=7.833e-03
+    model.layers.20.self_attn.k_proj [4096x4096] 0.1s | MSE=5.142e-06 RelErr=8.037e-03
+    model.layers.20.self_attn.o_proj [4096x4096] 0.1s | MSE=4.638e-06 RelErr=7.892e-03
+    model.layers.20.self_attn.q_proj [4096x4096] 0.1s | MSE=4.698e-06 RelErr=8.030e-03
+    model.layers.20.self_attn.v_proj [4096x4096] 0.1s | MSE=4.904e-06 RelErr=7.991e-03
+    model.layers.20.self_attn.z_proj [4096x4096] 0.1s | MSE=4.267e-06 RelErr=8.083e-03
+  Propagating hidden states...
+  Layer 20 done in 52.9s
+
+======================================================================
+[Layer 21/31] lightning-attn
+======================================================================
+  Mixer: lightning-attn | Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Phase 1: Collecting activations (64 samples)...
+  Phase 2: Channel smoothing (alpha=0.5)...
+    Smooth [input_layernorm] -> ['self_attn.q_proj', 'self_attn.k_proj', 'self_attn.v_proj', 'self_attn.z_proj'] | s: min=0.1526 max=3.0768 std=0.1192
+    Smooth [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.0937 max=1.8467 std=0.1096
+    Smooth [o_norm] -> [o_proj] | s: min=0.4033 max=2.2215 std=0.1894
+  NVFP4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+    [qkv] fused global_sf=1404.3429 (max_amax=1.914062)
+    [gate_up] fused global_sf=4071.7633 (max_amax=0.660156)
+  Phase 5: AWQ MSE search (80 iters)...
+    model.layers.21.mlp.down_proj [4096x16384] 0.5s | MSE=5.007e-06 RelErr=8.364e-03
+    model.layers.21.mlp.gate_proj [16384x4096] 0.4s | MSE=4.501e-06 RelErr=7.922e-03
+    model.layers.21.mlp.up_proj [16384x4096] 0.4s | MSE=4.922e-06 RelErr=7.887e-03
+    model.layers.21.self_attn.k_proj [4096x4096] 0.1s | MSE=4.799e-06 RelErr=8.173e-03
+    model.layers.21.self_attn.o_proj [4096x4096] 0.1s | MSE=4.673e-06 RelErr=7.911e-03
+    model.layers.21.self_attn.q_proj [4096x4096] 0.1s | MSE=4.692e-06 RelErr=8.182e-03
+    model.layers.21.self_attn.v_proj [4096x4096] 0.1s | MSE=4.981e-06 RelErr=8.124e-03
+    model.layers.21.self_attn.z_proj [4096x4096] 0.1s | MSE=4.368e-06 RelErr=8.270e-03
+  Propagating hidden states...
+  Layer 21 done in 53.5s
+
+======================================================================
+[Layer 22/31] minicpm4
+======================================================================
+  Mixer: minicpm4 | Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  Phase 1: Collecting activations (64 samples)...
+  Phase 2: Channel smoothing (alpha=0.5)...
+    Smooth [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.2074 max=2.0406 std=0.1056
+  BF16 (kept): ['self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  NVFP4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+    [gate_up] fused global_sf=4221.6442 (max_amax=0.636719)
+  Phase 5: AWQ MSE search (80 iters)...
+    model.layers.22.mlp.down_proj [4096x16384] 0.5s | MSE=4.942e-06 RelErr=8.330e-03
+    model.layers.22.mlp.gate_proj [16384x4096] 0.4s | MSE=4.440e-06 RelErr=7.919e-03
+    model.layers.22.mlp.up_proj [16384x4096] 0.4s | MSE=4.877e-06 RelErr=7.897e-03
+  Propagating hidden states...
+  Layer 22 done in 48.9s
+
+======================================================================
+[Layer 23/31] lightning-attn
+======================================================================
+  Mixer: lightning-attn | Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Phase 1: Collecting activations (64 samples)...
+  Phase 2: Channel smoothing (alpha=0.5)...
+    Smooth [input_layernorm] -> ['self_attn.q_proj', 'self_attn.k_proj', 'self_attn.v_proj', 'self_attn.z_proj'] | s: min=0.1851 max=2.6688 std=0.1045
+    Smooth [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.2195 max=1.8561 std=0.1013
+    Smooth [o_norm] -> [o_proj] | s: min=0.4540 max=3.0448 std=0.1494
+  NVFP4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+    [qkv] fused global_sf=1801.3822 (max_amax=1.492188)
+    [gate_up] fused global_sf=4120.5269 (max_amax=0.652344)
+  Phase 5: AWQ MSE search (80 iters)...
+    model.layers.23.mlp.down_proj [4096x16384] 0.5s | MSE=5.007e-06 RelErr=8.389e-03
+    model.layers.23.mlp.gate_proj [16384x4096] 0.4s | MSE=4.453e-06 RelErr=7.935e-03
+    model.layers.23.mlp.up_proj [16384x4096] 0.4s | MSE=4.923e-06 RelErr=7.913e-03
+    model.layers.23.self_attn.k_proj [4096x4096] 0.1s | MSE=5.397e-06 RelErr=8.035e-03
+    model.layers.23.self_attn.o_proj [4096x4096] 0.1s | MSE=4.572e-06 RelErr=7.898e-03
+    model.layers.23.self_attn.q_proj [4096x4096] 0.1s | MSE=4.817e-06 RelErr=8.028e-03
+    model.layers.23.self_attn.v_proj [4096x4096] 0.1s | MSE=4.840e-06 RelErr=8.015e-03
+    model.layers.23.self_attn.z_proj [4096x4096] 0.1s | MSE=4.222e-06 RelErr=8.129e-03
+  Propagating hidden states...
+  Layer 23 done in 54.2s
+
+======================================================================
+[Layer 24/31] lightning-attn
+======================================================================
+  Mixer: lightning-attn | Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Phase 1: Collecting activations (64 samples)...
+  Phase 2: Channel smoothing (alpha=0.5)...
+    Smooth [input_layernorm] -> ['self_attn.q_proj', 'self_attn.k_proj', 'self_attn.v_proj', 'self_attn.z_proj'] | s: min=0.4141 max=2.9258 std=0.1156
+    Smooth [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.0815 max=2.1196 std=0.0935
+    Smooth [o_norm] -> [o_proj] | s: min=0.4419 max=2.1176 std=0.1521
+  NVFP4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+    [qkv] fused global_sf=1703.2871 (max_amax=1.578125)
+    [gate_up] fused global_sf=4439.5355 (max_amax=0.605469)
+  Phase 5: AWQ MSE search (80 iters)...
+    model.layers.24.mlp.down_proj [4096x16384] 0.5s | MSE=5.080e-06 RelErr=8.440e-03
+    model.layers.24.mlp.gate_proj [16384x4096] 0.4s | MSE=4.429e-06 RelErr=7.969e-03
+    model.layers.24.mlp.up_proj [16384x4096] 0.4s | MSE=4.978e-06 RelErr=7.952e-03
+    model.layers.24.self_attn.k_proj [4096x4096] 0.1s | MSE=5.364e-06 RelErr=8.024e-03
+    model.layers.24.self_attn.o_proj [4096x4096] 0.1s | MSE=4.611e-06 RelErr=7.904e-03
+    model.layers.24.self_attn.q_proj [4096x4096] 0.1s | MSE=4.812e-06 RelErr=8.050e-03
+    model.layers.24.self_attn.v_proj [4096x4096] 0.1s | MSE=4.846e-06 RelErr=8.016e-03
+    model.layers.24.self_attn.z_proj [4096x4096] 0.1s | MSE=4.240e-06 RelErr=8.125e-03
+  Propagating hidden states...
+  Layer 24 done in 54.2s
+
+======================================================================
+[Layer 25/31] lightning-attn
+======================================================================
+  Mixer: lightning-attn | Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Phase 1: Collecting activations (64 samples)...
+  Phase 2: Channel smoothing (alpha=0.5)...
+    Smooth [input_layernorm] -> ['self_attn.q_proj', 'self_attn.k_proj', 'self_attn.v_proj', 'self_attn.z_proj'] | s: min=0.1636 max=3.5857 std=0.1168
+    Smooth [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.1798 max=2.6352 std=0.1054
+    Smooth [o_norm] -> [o_proj] | s: min=0.4065 max=2.6380 std=0.1550
+  NVFP4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+    [qkv] fused global_sf=1387.3548 (max_amax=1.937500)
+    [gate_up] fused global_sf=4713.2055 (max_amax=0.570312)
+  Phase 5: AWQ MSE search (80 iters)...
+    model.layers.25.mlp.down_proj [4096x16384] 0.5s | MSE=5.503e-06 RelErr=8.923e-03
+    model.layers.25.mlp.gate_proj [16384x4096] 0.4s | MSE=4.442e-06 RelErr=8.002e-03
+    model.layers.25.mlp.up_proj [16384x4096] 0.4s | MSE=5.096e-06 RelErr=7.990e-03
+    model.layers.25.self_attn.k_proj [4096x4096] 0.1s | MSE=5.257e-06 RelErr=8.080e-03
+    model.layers.25.self_attn.o_proj [4096x4096] 0.1s | MSE=4.686e-06 RelErr=7.873e-03
+    model.layers.25.self_attn.q_proj [4096x4096] 0.1s | MSE=4.878e-06 RelErr=8.090e-03
+    model.layers.25.self_attn.v_proj [4096x4096] 0.1s | MSE=4.916e-06 RelErr=8.001e-03
+    model.layers.25.self_attn.z_proj [4096x4096] 0.1s | MSE=4.299e-06 RelErr=8.130e-03
+  Propagating hidden states...
+  Layer 25 done in 53.8s
+
+======================================================================
+[Layer 26/31] lightning-attn
+======================================================================
+  Mixer: lightning-attn | Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Phase 1: Collecting activations (64 samples)...
+  Phase 2: Channel smoothing (alpha=0.5)...
+    Smooth [input_layernorm] -> ['self_attn.q_proj', 'self_attn.k_proj', 'self_attn.v_proj', 'self_attn.z_proj'] | s: min=0.2243 max=2.7797 std=0.1582
+    Smooth [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.2496 max=2.2501 std=0.1066
+    Smooth [o_norm] -> [o_proj] | s: min=0.2966 max=2.0519 std=0.1967
+  NVFP4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+    [qkv] fused global_sf=1274.3111 (max_amax=2.109375)
+    [gate_up] fused global_sf=5571.8866 (max_amax=0.482422)
+  Phase 5: AWQ MSE search (80 iters)...
+    model.layers.26.mlp.down_proj [4096x16384] 0.5s | MSE=5.500e-06 RelErr=8.754e-03
+    model.layers.26.mlp.gate_proj [16384x4096] 0.4s | MSE=4.451e-06 RelErr=7.921e-03
+    model.layers.26.mlp.up_proj [16384x4096] 0.4s | MSE=5.082e-06 RelErr=7.900e-03
+    model.layers.26.self_attn.k_proj [4096x4096] 0.1s | MSE=6.061e-06 RelErr=8.139e-03
+    model.layers.26.self_attn.o_proj [4096x4096] 0.1s | MSE=4.915e-06 RelErr=7.886e-03
+    model.layers.26.self_attn.q_proj [4096x4096] 0.1s | MSE=5.130e-06 RelErr=8.176e-03
+    model.layers.26.self_attn.v_proj [4096x4096] 0.1s | MSE=4.881e-06 RelErr=8.024e-03
+    model.layers.26.self_attn.z_proj [4096x4096] 0.1s | MSE=4.614e-06 RelErr=8.247e-03
+  Propagating hidden states...
+  Layer 26 done in 54.0s
+
+======================================================================
+[Layer 27/31] lightning-attn
+======================================================================
+  Mixer: lightning-attn | Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Phase 1: Collecting activations (64 samples)...
+  Phase 2: Channel smoothing (alpha=0.5)...
+    Smooth [input_layernorm] -> ['self_attn.q_proj', 'self_attn.k_proj', 'self_attn.v_proj', 'self_attn.z_proj'] | s: min=0.1866 max=3.0631 std=0.1112
+    Smooth [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.0866 max=2.4476 std=0.1070
+    Smooth [o_norm] -> [o_proj] | s: min=0.3715 max=2.3636 std=0.1995
+  NVFP4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+    [qkv] fused global_sf=1922.1453 (max_amax=1.398438)
+    [gate_up] fused global_sf=5334.3256 (max_amax=0.503906)
+  Phase 5: AWQ MSE search (80 iters)...
+    model.layers.27.mlp.down_proj [4096x16384] 0.5s | MSE=5.529e-06 RelErr=8.669e-03
+    model.layers.27.mlp.gate_proj [16384x4096] 0.4s | MSE=4.428e-06 RelErr=7.937e-03
+    model.layers.27.mlp.up_proj [16384x4096] 0.4s | MSE=5.156e-06 RelErr=7.916e-03
+    model.layers.27.self_attn.k_proj [4096x4096] 0.1s | MSE=4.945e-06 RelErr=8.163e-03
+    model.layers.27.self_attn.o_proj [4096x4096] 0.1s | MSE=4.773e-06 RelErr=7.901e-03
+    model.layers.27.self_attn.q_proj [4096x4096] 0.1s | MSE=4.827e-06 RelErr=8.191e-03
+    model.layers.27.self_attn.v_proj [4096x4096] 0.1s | MSE=4.950e-06 RelErr=8.119e-03
+    model.layers.27.self_attn.z_proj [4096x4096] 0.1s | MSE=4.471e-06 RelErr=8.221e-03
+  Propagating hidden states...
+  Layer 27 done in 53.1s
+
+======================================================================
+[Layer 28/31] lightning-attn
+======================================================================
+  Mixer: lightning-attn | Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Phase 1: Collecting activations (64 samples)...
+  Phase 2: Channel smoothing (alpha=0.5)...
+    Smooth [input_layernorm] -> ['self_attn.q_proj', 'self_attn.k_proj', 'self_attn.v_proj', 'self_attn.z_proj'] | s: min=0.6153 max=3.0846 std=0.1539
+    Smooth [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.0326 max=2.3960 std=0.1097
+    Smooth [o_norm] -> [o_proj] | s: min=0.2015 max=2.7635 std=0.1942
+  NVFP4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+    [qkv] fused global_sf=1542.8879 (max_amax=1.742188)
+    [gate_up] fused global_sf=5710.6058 (max_amax=0.470703)
+  Phase 5: AWQ MSE search (80 iters)...
+    model.layers.28.mlp.down_proj [4096x16384] 0.5s | MSE=5.606e-06 RelErr=8.610e-03
+    model.layers.28.mlp.gate_proj [16384x4096] 0.4s | MSE=4.401e-06 RelErr=7.936e-03
+    model.layers.28.mlp.up_proj [16384x4096] 0.4s | MSE=5.221e-06 RelErr=7.916e-03
+    model.layers.28.self_attn.k_proj [4096x4096] 0.1s | MSE=5.822e-06 RelErr=8.393e-03
+    model.layers.28.self_attn.o_proj [4096x4096] 0.1s | MSE=4.722e-06 RelErr=7.928e-03
+    model.layers.28.self_attn.q_proj [4096x4096] 0.1s | MSE=5.228e-06 RelErr=8.449e-03
+    model.layers.28.self_attn.v_proj [4096x4096] 0.1s | MSE=4.885e-06 RelErr=8.410e-03
+    model.layers.28.self_attn.z_proj [4096x4096] 0.1s | MSE=4.815e-06 RelErr=8.545e-03
+  Propagating hidden states...
+  Layer 28 done in 55.5s
+
+======================================================================
+[Layer 29/31] minicpm4
+======================================================================
+  Mixer: minicpm4 | Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  Phase 1: Collecting activations (64 samples)...
+  Phase 2: Channel smoothing (alpha=0.5)...
+    Smooth [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.1218 max=2.4073 std=0.1057
+  BF16 (kept): ['self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  NVFP4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+    [gate_up] fused global_sf=4880.3404 (max_amax=0.550781)
+  Phase 5: AWQ MSE search (80 iters)...
+    model.layers.29.mlp.down_proj [4096x16384] 0.5s | MSE=5.747e-06 RelErr=8.707e-03
+    model.layers.29.mlp.gate_proj [16384x4096] 0.4s | MSE=4.332e-06 RelErr=7.946e-03
+    model.layers.29.mlp.up_proj [16384x4096] 0.4s | MSE=5.272e-06 RelErr=7.921e-03
+  Propagating hidden states...
+  Layer 29 done in 49.9s
+
+======================================================================
+[Layer 30/31] minicpm4
+======================================================================
+  Mixer: minicpm4 | Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  Phase 1: Collecting activations (64 samples)...
+  Phase 2: Channel smoothing (alpha=0.5)...
+    Smooth [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.1410 max=2.9871 std=0.1143
+  BF16 (kept): ['self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  NVFP4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+    [gate_up] fused global_sf=4096.0000 (max_amax=0.656250)
+  Phase 5: AWQ MSE search (80 iters)...
+    model.layers.30.mlp.down_proj [4096x16384] 0.5s | MSE=5.924e-06 RelErr=9.284e-03
+    model.layers.30.mlp.gate_proj [16384x4096] 0.4s | MSE=4.349e-06 RelErr=7.998e-03
+    model.layers.30.mlp.up_proj [16384x4096] 0.4s | MSE=5.293e-06 RelErr=7.986e-03
+  Propagating hidden states...
+  Layer 30 done in 49.5s
+
+======================================================================
+[Layer 31/31] minicpm4
+======================================================================
+  Mixer: minicpm4 | Linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  Phase 1: Collecting activations (64 samples)...
+  Phase 2: Channel smoothing (alpha=0.5)...
+    Smooth [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.0365 max=2.7136 std=0.1337
+  BF16 (kept): ['self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  NVFP4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+    [gate_up] fused global_sf=2646.6462 (max_amax=1.015625)
+  Phase 5: AWQ MSE search (80 iters)...
+    model.layers.31.mlp.down_proj [4096x16384] 0.5s | MSE=5.933e-06 RelErr=1.057e-02
+    model.layers.31.mlp.gate_proj [16384x4096] 0.4s | MSE=4.459e-06 RelErr=8.080e-03
+    model.layers.31.mlp.up_proj [16384x4096] 0.4s | MSE=5.123e-06 RelErr=8.048e-03
+  Propagating hidden states...
+  Layer 31 done in 49.7s
+
+[Phase 4] Saving to /tmp/model_nvfp4_smoothed (Total: 6.33 GB)...
+  Saved model-00001-of-00002.safetensors
+  Saved model-00002-of-00002.safetensors
+  Patched config.json with 40 exclude_modules
+  Excluded: 40 modules across 8 layers
+
+======================================================================
+QUANTIZATION ERROR SUMMARY
+======================================================================
+  Layer  0: avg_MSE=3.087e-06 worst=mlp.down_proj (3.844e-06)
+  Layer  1: avg_MSE=3.185e-06 worst=mlp.down_proj (4.278e-06)
+  Layer  2: avg_MSE=3.990e-06 worst=mlp.down_proj (4.686e-06)
+  Layer  3: avg_MSE=4.328e-06 worst=self_attn.v_proj (4.767e-06)
+  Layer  4: avg_MSE=4.191e-06 worst=self_attn.o_proj (4.658e-06)
+  Layer  5: avg_MSE=4.357e-06 worst=self_attn.v_proj (4.786e-06)
+  Layer  6: avg_MSE=4.381e-06 worst=self_attn.v_proj (4.871e-06)
+  Layer  7: avg_MSE=4.421e-06 worst=self_attn.v_proj (4.878e-06)
+  Layer  8: avg_MSE=4.546e-06 worst=self_attn.v_proj (4.993e-06)
+  Layer  9: avg_MSE=4.558e-06 worst=mlp.gate_proj (4.703e-06)
+  Layer 10: avg_MSE=4.558e-06 worst=self_attn.v_proj (4.835e-06)
+  Layer 11: avg_MSE=4.564e-06 worst=self_attn.v_proj (4.960e-06)
+  Layer 12: avg_MSE=4.598e-06 worst=self_attn.v_proj (4.902e-06)
+  Layer 13: avg_MSE=4.627e-06 worst=self_attn.k_proj (4.963e-06)
+  Layer 14: avg_MSE=4.613e-06 worst=self_attn.v_proj (5.011e-06)
+  Layer 15: avg_MSE=4.705e-06 worst=self_attn.k_proj (5.107e-06)
+  Layer 16: avg_MSE=4.659e-06 worst=mlp.down_proj (4.695e-06)
+  Layer 17: avg_MSE=4.669e-06 worst=mlp.gate_proj (4.919e-06)
+  Layer 18: avg_MSE=4.713e-06 worst=self_attn.v_proj (5.069e-06)
+  Layer 19: avg_MSE=4.683e-06 worst=self_attn.v_proj (4.971e-06)
+  Layer 20: avg_MSE=4.739e-06 worst=self_attn.k_proj (5.142e-06)
+  Layer 21: avg_MSE=4.743e-06 worst=mlp.down_proj (5.007e-06)
+  Layer 22: avg_MSE=4.753e-06 worst=mlp.down_proj (4.942e-06)
+  Layer 23: avg_MSE=4.779e-06 worst=self_attn.k_proj (5.397e-06)
+  Layer 24: avg_MSE=4.795e-06 worst=self_attn.k_proj (5.364e-06)
+  Layer 25: avg_MSE=4.885e-06 worst=mlp.down_proj (5.503e-06)
+  Layer 26: avg_MSE=5.079e-06 worst=self_attn.k_proj (6.061e-06)
+  Layer 27: avg_MSE=4.885e-06 worst=mlp.down_proj (5.529e-06)
+  Layer 28: avg_MSE=5.087e-06 worst=self_attn.k_proj (5.822e-06)
+  Layer 29: avg_MSE=5.117e-06 worst=mlp.down_proj (5.747e-06)
+  Layer 30: avg_MSE=5.189e-06 worst=mlp.down_proj (5.924e-06)
+  Layer 31: avg_MSE=5.172e-06 worst=mlp.down_proj (5.933e-06)
+
+  Global avg MSE: 4.570e-06
+  Global max MSE: 6.061e-06
+
+[DONE] NVFP4 quantization complete!
+
+[INFO] Total time: 28.1 min
