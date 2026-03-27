@@ -8,7 +8,7 @@ Run on your server:
       --eval-data /opt/SOAR-Toolkit/eval_dataset/perf_public_set.jsonl \
       --tokenizer /opt/model \
       --predictions-bf16 /opt/SOAR-Toolkit/outputs/20260322_020604/predictions.jsonl \
-      --predictions-awq /opt/SOAR-Toolkit/outputs/20260321_163020/predictions.jsonl
+      --predictions-awq /opt/SOAR-Toolkit/outputs/20260322_050407/predictions.jsonl
 """
 
 import os

@@ -755,7 +755,11 @@ root@C.33196571:/opt/SOAR-Toolkit$
 
 
 
-
+python /opt/oldMoney-Project/quantization/calibration/ANALYZE_DATA.py \
+  --eval-data /opt/SOAR-Toolkit/eval_dataset/perf_public_set.jsonl \
+  --tokenizer /opt/model \
+  --predictions-bf16 /opt/SOAR-Toolkit/outputs/20260322_020604/predictions.jsonl \
+  --predictions-awq /opt/SOAR-Toolkit/outputs/20260325_053307/predictions.jsonl
 
 
 

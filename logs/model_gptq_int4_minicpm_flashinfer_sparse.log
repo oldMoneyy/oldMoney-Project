@@ -1,0 +1,33 @@
+nohup: ignoring input
+[INFO] Using Deterministic Seed: 42
+======================================================================
+Advanced GPTQ Quantizer for MiniCPM-SALA (Mixed Precision + Smoothing)
+======================================================================
+  Input:           /opt/model
+  Output:          /opt/model_gptq_int4_minicpm_flashinfer_sparse
+  Bits:            4 (MiniCPM4 Attention forced to BF16)
+  Smooth Alpha:    0.5
+  Max length:      131072
+======================================================================
+[INFO] Using device: cuda:0
+[INFO] Loaded 64 calibration samples, 3,013,323 tokens (max_len=131072)
+[INFO] Loading model from /opt/model (CPU)...
+Skipping import of cpp extensions due to incompatible torch version 2.8.0+cu128 for torchao version 0.16.0             Please see https://github.com/pytorch/ao/issues/2919 for more info
+Current Python version 3.10 is below the recommended 3.11 version. It is recommended to upgrade to Python 3.11 or higher for the best experience.
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loading checkpoint shards:   0%|                                                                                                                                    | 0/4 [00:00<?, ?it/s]Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:00<00:00, 161.96it/s]
+[INFO] Model has 32 layers
+[INFO] Phase 1: Computing initial hidden states...
+
+======================================================================
+[LAYER 0/31] type=minicpm4
+======================================================================
+  BF16 (kept): ['self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  INT4 (quantizing): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  Collecting Hessians (64 samples)...
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj']
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj [4096x16384] MSE=1.989200e-05 RelErr=0.2122 (1.8s)
+    mlp.gate_proj [16384x4096] MSE=9.537610e-06 RelErr=0.1844 (0.4s)
+    mlp.up_proj [16384x4096] MSE=1.159823e-05 RelErr=0.1704 (0.4s)
+  Updating hidden states for next layer...

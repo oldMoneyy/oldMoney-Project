@@ -302,7 +302,22 @@ nohup python3 /opt/oldMoney-Project/quantization/GPTQ_int4_minicpm_flashinfer_sp
 tail -f /opt/oldMoney-Project/logs/model_gptq_int4_minicpm_flashinfer_sparse.log
 ```
 
+Smoothing sparse quantization:
+```bash
+source /opt/oldMoney-Project/quantization/venv/bin/activate
+export LD_LIBRARY_PATH=/opt/oldMoney-Project/quantization/venv/lib/python3.10/site-packages/torch/lib:$LD_LIBRARY_PATH
+nohup python3 /opt/oldMoney-Project/quantization/GPTQ_int4_minicpm_flashinfer_sparse_smoothing_gpu.py \
+    --input /opt/model \
+    --output /opt/model_gptq_int4_minicpm_flashinfer_sparse \
+    --bits 4 \
+    --group-size 128 \
+    --calib-data /opt/oldMoney-Project/quantization/calibration/optimal_64.jsonl \
+    --max-samples 64 \
+    --max-len 131072 \
+    > /opt/oldMoney-Project/logs/model_gptq_int4_minicpm_flashinfer_sparse.log 2>&1 &
 
+tail -f /opt/oldMoney-Project/logs/model_gptq_int4_minicpm_flashinfer_sparse.log
+```
 
 
 ## Deploy Quantized Models
@@ -415,41 +430,15 @@ python /opt/oldMoney-Project/quantization/AWQ_L_4_Mini_16.py \
 
 export TRITON_PTXAS_PATH="$(which ptxas)"
 source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
-python /opt/oldMoney-Project/quantization/AWQ_L_MLP_4_MiniAttn_16.py \
- --input /opt/model \
- --output /opt/model_nvfp4_awq_lmlp4_m16 \
- --calib-data /opt/oldMoney-Project/quantization/calibration/optimal_64.jsonl \
- --max-samples 64 \
- --max-len 131072 \
- --mse-iters 200 \
- --mse-max-shrink 0.60 \
- --mse-error-norm 2.0
-
-export TRITON_PTXAS_PATH="$(which ptxas)"
-source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
-nohup python /opt/oldMoney-Project/quantization/AWQ_MLP_4_Attn_16.py \
- --input /opt/model \
- --output /opt/model_awq_mlp4_attn16 \
- --calib-data /opt/oldMoney-Project/quantization/calibration/optimal_64.jsonl \
- --max-samples 64 \
- --max-len 131072 \
- --mse-iters 200 \
- --mse-max-shrink 0.60 \
- --mse-error-norm 2.0 \
- > /opt/oldMoney-Project/logs/model_awq_mlp4_attn16.log 2>&1 &
-
-export TRITON_PTXAS_PATH="$(which ptxas)"
-source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
-nohup python /opt/oldMoney-Project/quantization/AWQ_Lattn_Mini_16_Lmlp_4.py \
- --input /opt/model \
- --output /opt/model_AWQ_Lattn_Mini_16_Lmlp_4 \
- --calib-data /opt/oldMoney-Project/quantization/calibration/optimal_64.jsonl \
- --max-samples 64 \
- --max-len 131072 \
- --mse-iters 200 \
- --mse-max-shrink 0.60 \
- --mse-error-norm 2.0 \
- > /opt/oldMoney-Project/logs/AWQ_Lattn_Mini_16_Lmlp_4.log 2>&1 &
+nohup python /opt/oldMoney-Project/quantization/AWQ_L_4_Mini_16_smoothed.py \
+    --input /opt/model \
+    --output /tmp/model_nvfp4_smoothed \
+    --calib-data /opt/oldMoney-Project/quantization/calibration/optimal_64.jsonl \
+    --max-samples 64 \
+    --max-len 131072 \
+    --smooth-alpha 0.5 \
+    --mse-iters 80 \
+ > /opt/oldMoney-Project/logs/AWQ_L_4_Mini_16_smoothed.log 2>&1 &
 ```
 
 
