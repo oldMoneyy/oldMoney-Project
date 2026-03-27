@@ -646,3 +646,49 @@ python /opt/oldMoney-Project/bench/test_repetitive_samples.py
 ```
 
 Full analysis log: `optimization_log/20260327_data_analysis.txt`
+
+
+## Full Eval Results (model_nvfp4_smoothed, 2026-03-27)
+
+**Overall: 27.18% accuracy (40/150 correct)**
+
+| Task | Correct | Total | Accuracy | None/Empty |
+|------|---------|-------|----------|------------|
+| mcq  | 12      | 30    | 40.0%    | 0          |
+| niah | 13      | 30    | 43.3%    | 15         |
+| qa   | 8       | 30    | 26.7%    | 17         |
+| fwe  | 7       | 30    | 23.3%    | 19         |
+| cwe  | 0       | 30    | 0.0%     | 15         |
+
+**Failure breakdown: 150 total = 40 correct + 42 wrong + 66 None/Empty + 2 unknown**
+
+### Three failure modes observed
+
+1. **Token-0 collapse (44%)**: Model generates `<think>\n` then immediately all `<unk>` (token 0).
+   65,536 tokens of nothing. Content = None. Affects all long-context tasks.
+
+2. **Gibberish loops (~20%)**: Model generates real but nonsensical tokens in Chinese/English
+   fragments: `哥伦`, `婚姻关系`, `横坐标`, `backdrop`, `Waters`, `fortunate`, `quito`,
+   `UTF`, `snap`, `pedag` — repeating in loops until max tokens. Even MCQ answers contain
+   this gibberish mixed with reasoning.
+
+3. **Wrong but coherent (~8%)**: Model reasons coherently but picks wrong answer.
+   Only seen in MCQ (short inputs). This is normal model error, not quantization damage.
+
+### Key observations
+
+- **MCQ (short inputs)**: 0 None cases but only 40% accuracy. Many wrong answers contain
+  gibberish Chinese characters mixed with English reasoning — the model is partially broken
+  even on short inputs.
+- **CWE (word counting)**: Completely broken. 0% accuracy, 50% None. Task requires precise
+  token tracking which FP4 cannot support.
+- **Concurrency matters**: Under concurrency=64, even samples that passed in isolation
+  (like idx=34) now fail. Concurrent batch processing amplifies FP4 precision issues.
+- **Gibberish tokens are consistent**: The same ~20 Chinese/English fragments appear across
+  all failing samples, suggesting specific token embeddings are corrupted at FP4 precision.
+
+### Verdict
+
+The `model_nvfp4_smoothed` (AWQ_L_4_Mini_16_smoothed, smooth-alpha=0.5, mse-iters=80,
+64 calib samples) is **not competition-ready**. The 27.18% accuracy is far below acceptable.
+The FP4 (E2M1, 15 discrete values) precision is insufficient for this model architecture.

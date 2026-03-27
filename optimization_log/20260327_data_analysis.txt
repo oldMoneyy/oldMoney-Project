@@ -94,3 +94,48 @@ RECOMMENDATIONS
    b. Adding more extreme repetitive samples to calib data
    c. Using FP8 instead of FP4 for layers most sensitive to repetition
 3. The 30 short MCQ samples should work fine - not a concern.
+
+
+====================================================================
+2026-03-27 Full Eval: model_nvfp4_smoothed — 27.18% accuracy
+====================================================================
+
+RESULT: 40/150 correct (27.18%)
+Duration: 3888.73s, Output TPS: 343.41
+
+BREAKDOWN BY TASK
+-----------------
+  mcq:  12/30 (40.0%) | 0 None
+  niah: 13/30 (43.3%) | 15 None
+  qa:    8/30 (26.7%) | 17 None
+  fwe:   7/30 (23.3%) | 19 None
+  cwe:   0/30 ( 0.0%) | 15 None
+
+  Total None/Empty: 66/150 (44%)
+
+THREE FAILURE MODES
+-------------------
+1. Token-0 collapse: 66 samples produce only <unk> tokens. Content=None.
+2. Gibberish loops: ~30 samples generate repeating Chinese/English fragments
+   (哥伦, 婚姻关系, 横坐标, backdrop, Waters, fortunate, quito, UTF, snap)
+   These are real tokens but completely nonsensical.
+3. Wrong but coherent: ~12 MCQ samples reason but pick wrong answer.
+
+CRITICAL FINDING: CONCURRENCY AMPLIFIES FAILURE
+------------------------------------------------
+idx=34 (31k tokens) passed in isolation testing but failed under
+concurrency=64 eval. Batch processing with many concurrent requests
+appears to worsen FP4 numerical instability, possibly due to shared
+CUDA resources or memory pressure affecting computation precision.
+
+CRITICAL FINDING: GIBBERISH ON SHORT MCQ
+-----------------------------------------
+Even MCQ (143-712 tokens, high uniqueness ratio) shows gibberish
+Chinese characters in wrong answers. This means FP4 damage is NOT
+limited to long/repetitive inputs — the model's token embeddings
+or early layers are fundamentally corrupted at this precision.
+
+VERDICT
+-------
+model_nvfp4_smoothed is NOT competition-ready at 27.18% accuracy.
+FP4 E2M1 (15 discrete values) is insufficient for MiniCPM-SALA.
