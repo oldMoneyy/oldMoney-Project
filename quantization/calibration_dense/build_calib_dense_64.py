@@ -3,20 +3,20 @@
 Build 64-sample calibration dataset for dense flashinfer NVFP4 quantization.
 
 Strategy (following champion 曹议's insight):
-  - 56 semantic-rich long samples (LongBench + FineWeb-Edu)
+  - 56 semantic-rich long samples (pg19 books + FineWeb-Edu)
   - 8 low-semantic samples (niah/fwe/cwe from eval, with gold answers appended)
   - All truncated to --max-len tokens (default 131072)
   - Semantic data prioritized over repetitive patterns
 
 Data sources:
-  1. zai-org/LongBench — long-context QA/summarization tasks (diverse, semantic)
-  2. HuggingFaceFW/fineweb-edu — high-quality educational web text
+  1. emozilla/pg19 — Project Gutenberg books (very long, 100k+ tokens)
+  2. HuggingFaceFW/fineweb-edu — high-quality educational web text (mid-range)
   3. SOAR eval perf_public_set.jsonl — 8 niah/fwe/cwe with gold answers
 
 Usage (on server):
     pip install datasets
     python build_calib_dense_64.py \
-        --eval-path /opt/SOAR-Toolkit/eval_dataset/perf_public_set.jsonl \
+        --eval-path /opt/oldMoney-Project/SOAR-Toolkit/eval_dataset/perf_public_set.jsonl \
         --tokenizer-path /opt/model \
         --output calib_dense_64.jsonl \
         --max-len 131072
@@ -31,63 +31,48 @@ import argparse
 from pathlib import Path
 
 
-def download_longbench(max_samples: int = 40, min_chars: int = 20000) -> list:
+def download_pg19(max_samples: int = 20) -> list:
     """
-    Download from zai-org/LongBench, select long semantic samples.
-    Prioritizes subsets with real documents (QA, summarization).
+    Download books from emozilla/pg19 (Project Gutenberg).
+    Books are naturally 100k-500k+ tokens — perfect for long calibration.
+    Uses streaming to limit download size.
     """
     from datasets import load_dataset
 
     samples = []
+    scanned = 0
 
-    # LongBench has multiple configs — pick the most semantic-rich ones
-    # These contain real documents with questions
-    semantic_configs = [
-        "multifieldqa_en",
-        "multifieldqa_zh",
-        "qasper",
-        "narrativeqa",
-        "multi_news",
-        "gov_report",
-        "passage_retrieval_en",
-        "passage_retrieval_zh",
-        "musique",
-        "hotpotqa",
-        "2wikimqa",
-        "dureader",
-        "lsht",
-        "vcsum",
-    ]
-
-    for config_name in semantic_configs:
-        if len(samples) >= max_samples:
-            break
-        try:
-            print(f"  Loading LongBench/{config_name}...")
-            ds = load_dataset("zai-org/LongBench", config_name, split="test")
-            for item in ds:
-                if len(samples) >= max_samples:
-                    break
-                # Build text from context + input
-                ctx = item.get("context", "")
-                inp = item.get("input", "")
-                text = f"{ctx}\n\n{inp}".strip()
-                if len(text) < min_chars:
-                    continue
+    print(f"  Streaming pg19 books (target: {max_samples} samples)...")
+    try:
+        ds = load_dataset(
+            "emozilla/pg19",
+            split="train",
+            streaming=True,
+        )
+        for item in ds:
+            scanned += 1
+            text = item.get("text", "")
+            # pg19 books are very long, take any with >50k chars
+            if len(text) >= 50000:
                 samples.append({
                     "question": text,
-                    "_source": f"longbench_{config_name}",
+                    "_source": "pg19_book",
                     "_chars": len(text),
                 })
-        except Exception as e:
-            print(f"  [WARN] Failed to load {config_name}: {e}")
-            continue
+                print(f"    Book {len(samples)}: {len(text):,} chars")
+                if len(samples) >= max_samples:
+                    break
+            if scanned >= 500:  # pg19 has ~28k books, 500 is enough
+                break
+    except Exception as e:
+        print(f"  [WARN] pg19 failed: {e}")
 
-    print(f"  LongBench: collected {len(samples)} samples (min {min_chars} chars)")
+    print(f"  pg19: collected {len(samples)} books from {scanned} scanned")
     return samples
 
 
-def download_fineweb_edu(max_samples: int = 20, min_chars: int = 30000) -> list:
+def download_fineweb_edu(max_samples: int = 40, min_chars: int = 30000,
+                         max_scan: int = 50000) -> list:
     """
     Stream from HuggingFaceFW/fineweb-edu, pick longest documents.
     Uses streaming to avoid downloading the full dataset (~10TB).
@@ -96,13 +81,12 @@ def download_fineweb_edu(max_samples: int = 20, min_chars: int = 30000) -> list:
 
     samples = []
     scanned = 0
-    max_scan = 50000  # scan at most this many documents to find long ones
 
-    print(f"  Streaming FineWeb-Edu (scanning up to {max_scan} docs for long ones)...")
+    print(f"  Streaming FineWeb-Edu (scanning up to {max_scan} docs, min {min_chars} chars)...")
     try:
         ds = load_dataset(
             "HuggingFaceFW/fineweb-edu",
-            name="sample-10BT",  # use the 10BT sample, much smaller
+            name="sample-10BT",
             split="train",
             streaming=True,
         )
@@ -124,13 +108,7 @@ def download_fineweb_edu(max_samples: int = 20, min_chars: int = 30000) -> list:
     except Exception as e:
         print(f"  [WARN] FineWeb-Edu streaming failed: {e}")
 
-    print(f"  FineWeb-Edu: collected {len(samples)} samples from {scanned} scanned (min {min_chars} chars)")
-
-    # If we didn't get enough long samples, lower the threshold and rescan
-    if len(samples) < max_samples:
-        print(f"  [INFO] Only got {len(samples)}/{max_samples} from FineWeb-Edu.")
-        print(f"  [INFO] This is OK — LongBench will fill the remaining slots.")
-
+    print(f"  FineWeb-Edu: collected {len(samples)} samples from {scanned} scanned")
     return samples
 
 
@@ -143,13 +121,6 @@ def load_eval_low_semantic(
     """
     Load niah/fwe/cwe samples from eval data.
     Appends gold answer to the question for better activation coverage.
-
-    Eval layout (perf_public_set.jsonl):
-      indices 0-29:   mcq
-      indices 30-59:  niah
-      indices 60-89:  qa
-      indices 90-119: fwe
-      indices 120-149: cwe
     """
     samples = []
     all_eval = []
@@ -158,12 +129,10 @@ def load_eval_low_semantic(
         for line in f:
             all_eval.append(json.loads(line.strip()))
 
-    # Group by task
     niah_pool = [s for s in all_eval if s.get("task") == "niah"]
     fwe_pool = [s for s in all_eval if s.get("task") == "fwe"]
     cwe_pool = [s for s in all_eval if s.get("task") == "cwe"]
 
-    # If task field not present, use index-based fallback
     if not niah_pool:
         niah_pool = all_eval[30:60]
     if not fwe_pool:
@@ -171,7 +140,6 @@ def load_eval_low_semantic(
     if not cwe_pool:
         cwe_pool = all_eval[120:150]
 
-    # Pick longest samples from each category (most representative)
     def by_length(s):
         return len(s.get("question", ""))
 
@@ -180,11 +148,9 @@ def load_eval_low_semantic(
     cwe_pool.sort(key=by_length, reverse=True)
 
     def build_sample(item, task_name):
-        """Concatenate question + gold answer for fuller activation coverage."""
         q = item.get("question", "")
         gold = item.get("gold", "")
         if gold:
-            # Append gold answer so the calibration covers answer-phase activations
             text = f"{q}\n\nAnswer: {gold}"
         else:
             text = q
@@ -230,7 +196,7 @@ def main():
     )
     parser.add_argument(
         "--eval-path", type=str,
-        default="/opt/SOAR-Toolkit/eval_dataset/perf_public_set.jsonl",
+        default="/opt/oldMoney-Project/SOAR-Toolkit/eval_dataset/perf_public_set.jsonl",
         help="Path to SOAR eval perf_public_set.jsonl",
     )
     parser.add_argument(
@@ -246,10 +212,8 @@ def main():
     parser.add_argument("--n-niah", type=int, default=3)
     parser.add_argument("--n-fwe", type=int, default=3)
     parser.add_argument("--n-cwe", type=int, default=2)
-    parser.add_argument(
-        "--longbench-min-chars", type=int, default=20000,
-        help="Minimum character count for LongBench samples",
-    )
+    parser.add_argument("--n-pg19", type=int, default=20,
+                        help="Number of pg19 books (long, 100k+ tokens)")
     parser.add_argument(
         "--fineweb-min-chars", type=int, default=30000,
         help="Minimum character count for FineWeb-Edu samples",
@@ -266,31 +230,31 @@ def main():
     n_semantic = args.total_samples - n_low_semantic
 
     print("=" * 70)
-    print("  Dense Calibration Data Builder")
+    print("  Dense Calibration Data Builder (v2: pg19 + FineWeb-Edu)")
     print("=" * 70)
     print(f"  Total samples:    {args.total_samples}")
-    print(f"  Semantic:         {n_semantic} (LongBench + FineWeb-Edu)")
+    print(f"  Semantic:         {n_semantic} (pg19 books + FineWeb-Edu)")
     print(f"  Low-semantic:     {n_low_semantic} ({args.n_niah} niah + {args.n_fwe} fwe + {args.n_cwe} cwe)")
+    print(f"  pg19 books:       {args.n_pg19} (long, fills 50-131k bucket)")
     print(f"  Max token length: {args.max_len}")
     print()
 
-    # ---- Step 1: Download semantic data ----
-    print("[Step 1] Downloading LongBench...")
-    longbench_samples = download_longbench(
-        max_samples=n_semantic,
-        min_chars=args.longbench_min_chars,
-    )
+    # ---- Step 1: Download pg19 books (long samples) ----
+    print("[Step 1] Downloading pg19 books...")
+    pg19_samples = download_pg19(max_samples=args.n_pg19)
 
-    remaining = n_semantic - len(longbench_samples)
+    # ---- Step 2: Download FineWeb-Edu (mid-range samples) ----
+    n_fineweb = n_semantic - len(pg19_samples)
     fineweb_samples = []
-    if remaining > 0:
-        print(f"\n[Step 2] Downloading FineWeb-Edu ({remaining} more needed)...")
+    if n_fineweb > 0:
+        print(f"\n[Step 2] Downloading FineWeb-Edu ({n_fineweb} more needed)...")
         fineweb_samples = download_fineweb_edu(
-            max_samples=remaining,
+            max_samples=n_fineweb,
             min_chars=args.fineweb_min_chars,
+            max_scan=args.fineweb_max_scan,
         )
     else:
-        print(f"\n[Step 2] LongBench provided enough samples, skipping FineWeb-Edu.")
+        print(f"\n[Step 2] pg19 provided enough samples, skipping FineWeb-Edu.")
 
     # ---- Step 3: Load eval low-semantic data ----
     print(f"\n[Step 3] Loading eval low-semantic data...")
@@ -303,12 +267,12 @@ def main():
         )
     else:
         print(f"  [WARN] Eval file not found: {args.eval_path}")
-        print(f"  [WARN] Skipping eval samples. You can add them manually later.")
+        print(f"  [WARN] Skipping eval samples.")
         eval_samples = []
 
     # ---- Step 4: Combine and balance ----
     print(f"\n[Step 4] Combining...")
-    semantic_pool = longbench_samples + fineweb_samples
+    semantic_pool = pg19_samples + fineweb_samples
     # Sort by length (longest first) and pick top n_semantic
     semantic_pool.sort(key=lambda x: x.get("_chars", 0), reverse=True)
     semantic_selected = semantic_pool[:n_semantic]
@@ -318,13 +282,11 @@ def main():
 
     if actual_total < args.total_samples:
         print(f"  [WARN] Only got {actual_total}/{args.total_samples} samples.")
-        print(f"  [INFO] Filling remaining slots with shorter LongBench/FineWeb samples...")
-        # Add more from the pool if available
         extra = [s for s in semantic_pool[n_semantic:]]
         while len(all_samples) < args.total_samples and extra:
             all_samples.append(extra.pop(0))
 
-    # Shuffle to prevent task clustering (important for layer-by-layer calibration)
+    # Shuffle to prevent task clustering
     random.shuffle(all_samples)
 
     # ---- Step 5: Tokenize and report stats ----
@@ -335,19 +297,15 @@ def main():
             args.tokenizer_path, trust_remote_code=True
         )
         all_samples = tokenize_and_truncate(all_samples, tokenizer, args.max_len)
-        has_tokens = True
     except Exception as e:
-        print(f"  [WARN] Tokenizer not available ({e}). Skipping token counting.")
-        print(f"  [INFO] Token counts will be estimated from char length.")
+        print(f"  [WARN] Tokenizer not available ({e}). Estimating token counts.")
         for s in all_samples:
-            s["_tokens"] = s.get("_chars", len(s["question"])) // 4  # rough estimate
-        has_tokens = False
+            s["_tokens"] = s.get("_chars", len(s["question"])) // 4
 
     # ---- Step 6: Save ----
     print(f"\n[Step 6] Saving to {args.output}...")
     with open(args.output, "w", encoding="utf-8") as f:
         for s in all_samples:
-            # Only write the fields needed by quantizer + metadata
             out = {
                 "question": s["question"],
                 "_source": s.get("_source", "unknown"),
@@ -366,9 +324,8 @@ def main():
     token_lengths = []
     for s in all_samples:
         src = s.get("_source", "unknown")
-        # Simplify source name
-        if "longbench" in src:
-            key = "LongBench"
+        if "pg19" in src:
+            key = "pg19"
         elif "fineweb" in src:
             key = "FineWeb-Edu"
         elif "eval" in src:
@@ -388,7 +345,6 @@ def main():
         print(f"    Max:    {max(token_lengths):,}")
         print(f"    Mean:   {sum(token_lengths) // len(token_lengths):,}")
         print(f"    Total:  {sum(token_lengths):,}")
-        # Bucket distribution
         buckets = {"<10k": 0, "10-50k": 0, "50-100k": 0, "100-131k": 0}
         for t in token_lengths:
             if t < 10000:
