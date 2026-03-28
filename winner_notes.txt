@@ -1,0 +1,129 @@
+SOAR 2026 Winner Notes Summary
+===============================
+
+
+WEEK 3 CHAMPION: 曹议 (SlightwindSec) — 3x consecutive champion
+================================================================
+
+Background: LLM inference framework dev & model optimization engineer at a
+domestic compute platform. 2+ years experience in inference acceleration and
+low-bit quantization.
+
+Quantization: NVFP4
+  - E2M1 format (1 sign, 2 exponent, 1 mantissa), range ~[-6, 6]
+  - Dual-scale mechanism:
+    - Per-16-element group: FP8 (E4M3) block scale
+    - Per-tensor: FP32 global scale
+  - Chosen because Blackwell has native NVFP4 hardware acceleration
+
+Precision instability problem (精度抖动):
+  - Same code, same config, different submission batches give different accuracy
+  - Only 3 submissions/day, so instability wastes attempts
+  - Must solve instability OR improve accuracy to absorb the variance
+
+Local evaluation tool — KL-divergence based:
+  Phase 1 (baseline, run once):
+    - BF16 model, greedy decode on built-in prompts
+    - Extract last 128 tokens' top-256 logprobs
+    - Save per batch_size (1/8/32) as sparse baseline files
+  Phase 2 (test quantized model):
+    - Send same prompts to quantized model
+    - Compare against baseline with 3 metrics:
+      1. KL divergence (lower = better)
+      2. Cosine similarity (higher = better)
+      3. Top-1 match rate
+  Design details:
+    - Top-256 sparse representation (SGLang doesn't support full vocab logprobs)
+      covers >99.9% probability mass, remainder uniformly distributed for smoothing
+    - Zero GPU footprint — baseline stored as numpy on CPU
+    - Known limitation: only measures prefill-phase precision, not decode error propagation
+  Purpose: quick pre-submission validation, filters out bad configs before wasting submissions
+
+Eval dataset analysis (150 samples, 5 task types x 30 each):
+  - MCQ: short, semantically rich
+  - Needle-in-haystack: long, low semantic relevance
+  - Document QA: long, high semantic relevance
+  - Coded text frequency (fwe): long, very low semantic relevance (random words/UUIDs)
+  - Word list counting (cwe): long, very low semantic relevance
+
+Calibration data insight (CRITICAL):
+  - Reference eval data distribution when building calibration set
+  - BUT: reduce proportion of low-semantic-relevance data (random words, UUIDs)
+  - Use more semantically coherent data instead
+  - Quote: "过多的随机单词和UUID数据可能会对校准过程产生负面影响"
+    (Too much random word and UUID data can negatively impact calibration)
+
+Status: 97% of maximum prize threshold achieved. Focusing on stability over speed.
+
+
+WEEK 4 CHAMPION: 智算一队 (Li Xiaochen + Liu)
+===============================================
+
+Background:
+  - Li Xiaochen: student, LLM inference optimization, familiar with vLLM/SGLang,
+    experience in quantization and KV cache compression
+  - Liu: GPU operator optimization engineer, familiar with Hopper/Blackwell
+    architecture, GEMM and Attention optimization experience
+
+Infrastructure first:
+  - Fully ran SGLang + MiniCPM-SALA inference pipeline locally before optimizing
+  - Built local evaluation benchmark matching official speed evaluation set's
+    length distribution
+  - Local scores proportional to online scores — high confidence in local eval
+  - Analyzed official accuracy eval set for task distribution and input length
+
+Operator fusion:
+  - Profiled model forward pass, identified fusible operators
+  - Fused RMSNorm + RoPE (SGLang provides fusible operator library)
+  - Rewrote some operators for better performance
+
+Quantization journey:
+  1. W8A8 dynamic quantization (INT8 weights + INT8 activations)
+     -> Almost no speedup. Abandoned.
+  2. W8A16 (INT8 weights, BF16 activations)
+     -> Near-zero accuracy loss, but limited performance gain. Not enough.
+  3. W4A16 GPTQ + Marlin (FINAL CHOICE)
+     -> GPTQ preserves higher precision than RTN at same bit width
+     -> Marlin kernel: near-theoretical 4x bandwidth savings at small batch
+     -> Perfect for decode-phase memory-bound workloads
+     -> Model size compressed to ~1/4 original
+     -> Significant latency reduction across all concurrency levels
+
+Calibration data:
+  - Iterated multiple rounds ("反复迭代了好几轮")
+  - Adjusted data distribution based on eval task distribution
+  - Calibration data quality has significant impact on quantization accuracy
+
+Result: Broke 3-week championship streak, unlocked "special bounty prize"
+
+
+KEY TAKEAWAYS FOR oldMoney
+==========================
+
+1. BOTH winners use real quantization with minicpm_flashinfer (sparse attention).
+   NOT flashinfer (dense). Quantization + sparse attention IS viable.
+
+2. Quantization approaches that work:
+   - NVFP4 (曹议): native Blackwell acceleration, dual-scale mechanism
+   - W4A16 GPTQ + Marlin (智算一队): mature path, great decode throughput
+
+3. Calibration data is critical:
+   - Match eval task distribution broadly
+   - REDUCE random/UUID/low-semantic content (counterintuitive!)
+   - Use semantically coherent data
+   - Iterate multiple rounds
+
+4. Local KL-divergence eval tool is essential:
+   - Compare top-256 logprobs between quantized and BF16
+   - Fast iteration without wasting submissions
+   - We already have fast_eval.py — refine it
+
+5. Operator fusion matters:
+   - RMSNorm + RoPE fusion
+   - Other fusible operators in the forward pass
+   - We already have sglang_sala_kernel_fuse — verify it's working
+
+6. Infrastructure first:
+   - Both winners built reliable local eval before optimizing
+   - Both analyzed the eval dataset distribution
+   - Iterate fast, validate locally, submit confidently
