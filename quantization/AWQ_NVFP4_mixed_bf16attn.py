@@ -219,6 +219,12 @@ def apply_layer_smoothing(
             f"    Smooth [post_attn_layernorm] -> {mlp_present} "
             f"| s: min={s.min():.4f} max={s.max():.4f} std={s.std():.4f}"
         )
+        if s.min() < 0.01:
+            print(f"    ⚠ OUTLIER: Group 1 smooth s_min={s.min():.6f} < 0.01 (extreme channel imbalance)")
+        if s.max() > 50:
+            print(f"    ⚠ OUTLIER: Group 1 smooth s_max={s.max():.4f} > 50 (may distort weights)")
+        if torch.isnan(s).any():
+            print(f"    ⚠ BUG: Group 1 smooth factor contains NaN!")
 
     # --- Group 2: up_proj -> down_proj (ALL layers) ---
     # up_proj output feeds into down_proj input (after SwiGLU activation).
@@ -251,6 +257,12 @@ def apply_layer_smoothing(
             f"    Smooth [up_proj] -> [down_proj] "
             f"| s: min={s2.min():.4f} max={s2.max():.4f} std={s2.std():.4f}"
         )
+        if s2.min() < 0.01:
+            print(f"    ⚠ OUTLIER: Group 2 smooth s_min={s2.min():.6f} < 0.01")
+        if s2.max() > 50:
+            print(f"    ⚠ OUTLIER: Group 2 smooth s_max={s2.max():.4f} > 50")
+        if torch.isnan(s2).any():
+            print(f"    ⚠ BUG: Group 2 smooth factor contains NaN!")
 
     return smooth_factors
 
@@ -508,14 +520,29 @@ def collect_activations(
                     position_ids=all_pos_ids[i].to(device),
                     use_cache=False,
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"    ⚠ WARNING: Sample {i} failed: {type(e).__name__}: {e}")
             del inp
             if (i + 1) % 4 == 0:
                 nuke_caches()
 
     for h in hooks:
         h.remove()
+
+    # --- Diagnostics: check observer health ---
+    for n, obs in observers.items():
+        if obs.nsamples == 0:
+            print(f"    ⚠ BUG: Observer '{n}' collected 0 samples!")
+        elif obs.nsamples < len(calib_data) * 0.5:
+            print(f"    ⚠ WARNING: Observer '{n}' only got {obs.nsamples}/{len(calib_data)} samples")
+        h_diag = obs.get_h_diag()
+        if torch.isnan(h_diag).any() or torch.isinf(h_diag).any():
+            print(f"    ⚠ BUG: Observer '{n}' H_diag has NaN/Inf!")
+        if obs.act_amax > 1e4:
+            print(f"    ⚠ OUTLIER: Observer '{n}' act_amax={obs.act_amax:.1f} (very large activation)")
+        if obs.act_amax == 0.0:
+            print(f"    ⚠ BUG: Observer '{n}' act_amax=0 (no activations recorded)")
+
     return observers
 
 
@@ -564,6 +591,22 @@ def quantize_single_linear(
         f"    {full_name} [{N}x{K}] {dt:.1f}s | "
         f"MSE={mse_val:.3e} RelErr={rel_err:.3e}"
     )
+
+    # --- Diagnostics: quantization quality ---
+    if rel_err > 0.05:
+        print(f"    ⚠ BAD: RelErr={rel_err:.3e} > 5% — this weight is poorly quantized!")
+    elif rel_err > 0.02:
+        print(f"    ⚠ WARNING: RelErr={rel_err:.3e} > 2% — elevated quantization error")
+    if mse_val > 1e-3:
+        print(f"    ⚠ OUTLIER: MSE={mse_val:.3e} > 1e-3 — unusually high")
+    if torch.isnan(Q_deq).any() or torch.isinf(Q_deq).any():
+        print(f"    ⚠ BUG: Dequantized weights contain NaN/Inf!")
+    if bscales.min() <= 0:
+        print(f"    ⚠ BUG: Block scale has non-positive value: min={bscales.min():.3e}")
+    # Check for zero rows (dead weights after quantization)
+    zero_rows = (Q_deq.abs().sum(dim=1) == 0).sum().item()
+    if zero_rows > 0:
+        print(f"    ⚠ WARNING: {zero_rows}/{N} rows are all-zero after quantization")
 
     ln_mod.weight.data = Q_deq.to(ln_mod.weight.dtype)
 
@@ -628,6 +671,17 @@ def process_layer(
         print(f"  BF16 (kept): {names_bf16}")
     if names_to_quantize:
         print(f"  NVFP4 (quantizing): {names_to_quantize}")
+
+    # --- Diagnostics: verify quantization plan ---
+    for name in names_to_quantize:
+        if "self_attn" in name:
+            print(f"  ⚠ BUG: Attention projection '{name}' is being quantized! Should be BF16!")
+    if not names_bf16:
+        print(f"  ⚠ WARNING: No BF16 weights in layer {layer_idx} — all linears quantized")
+    attn_in_bf16 = [n for n in names_bf16 if "self_attn" in n]
+    expected_attn = [n for n in linear_names if "self_attn" in n]
+    if len(attn_in_bf16) != len(expected_attn):
+        print(f"  ⚠ BUG: Only {len(attn_in_bf16)}/{len(expected_attn)} attention projs in BF16!")
 
     # Phase 4: Fused global scales
     fused_scales = {}
@@ -890,6 +944,7 @@ def quantize_model(args):
 
         # Propagate hidden states
         print("  Propagating hidden states...")
+        nan_count = 0
         with torch.no_grad():
             for i in range(len(calib_data)):
                 inp = hs_store.load(i, device)
@@ -899,10 +954,16 @@ def quantize_model(args):
                     position_ids=all_pos_ids[i].to(device),
                     use_cache=False,
                 )
-                hs_store.save(i, out[0])
-                del inp, out
+                hs = out[0]
+                if torch.isnan(hs).any() or torch.isinf(hs).any():
+                    nan_count += 1
+                hs_store.save(i, hs)
+                del inp, out, hs
                 if (i + 1) % 4 == 0:
                     nuke_caches()
+
+        if nan_count > 0:
+            print(f"  ⚠ BUG: {nan_count}/{len(calib_data)} hidden states have NaN/Inf after layer {layer_idx}!")
 
         layer = layer.cpu()
         model.model.layers[layer_idx] = layer

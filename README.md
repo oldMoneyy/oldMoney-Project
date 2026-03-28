@@ -1,9 +1,11 @@
+# oldMoney Project
+
+Team **oldMoney** — SOAR Competition: MiniCPM-SALA optimization on NVIDIA Blackwell.
 
 
-# Pull, Push and Mocking
+## Server Setup
 
 Once access the server:
-
 ```bash
 echo "root:123456" | chpasswd
 sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
@@ -17,16 +19,11 @@ git clone https://oldMoneyy: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@github.com/
 
 Steps to push commits:
 ```bash
-git config --global user.name "github_user_name"
-git config --global user.email "github_user_email"
-
 git config --global user.name "boris-dotv"
 git config --global user.email "1322553126@qq.com"
 
 cd /opt/oldMoney-Project
-
 git pull
-
 git add .
 git commit -m "What are the commits about"
 git remote set-url origin https://oldMoneyy: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@github.com/oldMoneyy/oldMoney-Project.git
@@ -42,9 +39,10 @@ bash simulate_soar.sh submission_20260322.tar.gz
 ```
 
 
-# TODO
+## TODO
+
 1. Support `--kv-cache-dtype fp8_e5m2` for minicpm backend (**DONE**).
-2. Test original model's smax performance with minicpm_flashinfer and flashinfer (uv pip install --no-deps -e /opt/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python) respectively.
+2. Test original model's smax performance with minicpm_flashinfer and flashinfer.
 3. Test dense, sparse GPTQ W4 and original model's smax performance and accuracy.
 4. Create an attention backend router that process short inputs by flashinfer and long inputs by minicpm_flashinfer.
 
@@ -53,7 +51,7 @@ bash simulate_soar.sh submission_20260322.tar.gz
 # SGLang Serving
 
 
-## Environment for SGLang Serving
+## Environment
 
 Download model, toolkit and uv:
 ```bash
@@ -89,28 +87,9 @@ apt update
 apt install psmisc lsof -y
 ```
 
-
-
-
-How to kill a sglang process:
+Install SGLang (pick one):
 ```bash
-pkill -f sglang.launch
-```
-
-See GPU info:
-```bash
-python -c "import torch; print(f'GPU: {torch.cuda.get_device_name(0)}\nCompute Capability: SM{torch.cuda.get_device_capability(0)[0]}{torch.cuda.get_device_capability(0)[1]}')"
-python -c "import torch; print(f'PyTorch Version: {torch.__version__}\nCUDA Version: {torch.version.cuda}\nHas FP8 E4M3: {hasattr(torch, \"float8_e4m3fn\")}')"
-```
-
-
-
-
-Copy a backup of original env:
-```bash
-# uv pip install --no-deps -e /opt/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python
-
-# Optimized version:      
+# Optimized version:
 uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_kernel_fuse
 pip install --no-build-isolation -e /opt/oldMoney-Project/vendor_kernel_fuse
 
@@ -119,24 +98,26 @@ pip uninstall fused_kernel_extension
 uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
 ```
 
-What I have done to the environment:
+Environment changes we made:
 1. Updated `if model_runner.server_args.fuse_topk:` logic in minicpm_backend.py for JIT redundant compiling.
 2. Added fp8_e5m2 KV Cache support.
 3. Fixed minicpm_fuse_kernel.py import error.
 4. Optimized `build_sparse_prefill_metadata`, `build_token_mappings`.
 
+Useful commands:
+```bash
+# Kill sglang
+pkill -f sglang.launch
+
+# GPU info
+python -c "import torch; print(f'GPU: {torch.cuda.get_device_name(0)}\nCompute Capability: SM{torch.cuda.get_device_capability(0)[0]}{torch.cuda.get_device_capability(0)[1]}')"
+python -c "import torch; print(f'PyTorch Version: {torch.__version__}\nCUDA Version: {torch.version.cuda}\nHas FP8 E4M3: {hasattr(torch, \"float8_e4m3fn\")}')"
+```
 
 
+## Start Serving
 
-
-
-
-
-
-
-## Start a Serving
-
-SALA official huggingface start command:
+SALA official start command:
 ```bash
 cd /opt
 fuser -k -9 31333/tcp
@@ -155,11 +136,9 @@ nohup python3 -m sglang.launch_server \
 ```
 
 
+## Testing
 
-## Curl Test
-
-(1) Send a simple request:
-
+### Curl test
 ```bash
 curl http://localhost:31333/v1/chat/completions \
   -H "Content-Type: application/json" \
@@ -180,41 +159,26 @@ curl http://localhost:31333/v1/chat/completions \
   }'
 ```
 
-
-
-
-
-
-
-
-(2) Send three long requests (5k, 40k, 60k):
-
+### Long context test (5k, 40k, 60k tokens)
 ```bash
 python /opt/oldMoney-Project/bench/long_context_test_case.py
 ```
-The answers are: `Paris`, `BLUE-TIGER-42`, `Alice Zhang, 1987`.
+Expected answers: `Paris`, `BLUE-TIGER-42`, `Alice Zhang, 1987`.
 
-
-KL divergence test:
+### KL divergence test
 ```bash
 cd /opt/oldMoney-Project/quantization && python /opt/oldMoney-Project/quantization/fast_eval.py --mode eval --api-base http://127.0.0.1:31333
 ```
 
-
-
-
-
-
-
-(3) Simple profile:  
+### Profiling
 In `MiniCPMSparseBackend.forward_extend`, `MiniCPMSparseBackend.init_forward_metadata`, `MiniCPMDecoderLayer.forward`, `FlashInferKernel.forward` there are profiling codes.
-
 ```bash
 python /opt/oldMoney-Project/bench/profile_prefill.py
 ```
 
 
 ## Performance Test
+
 Generate the performance test set:
 ```bash
 python /opt/oldMoney-Project/bench/gen_competition_bench.py
@@ -239,55 +203,48 @@ python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31333 \
 ```
 
 
-
 ## Accuracy Test
 
 ```bash
 cd /opt/SOAR-Toolkit
 nohup python3 eval_model.py \
   --api_base http://127.0.0.1:31333 \
-  --model_path /tmp/model_nvfp4_smoothed \
+  --model_path /tmp/model_nvfp4_smoothed/ \
   --data_path eval_dataset/perf_public_set.jsonl \
   --concurrency 64 \
   --num_samples 150 \
   --verbose \
-  > /opt/oldMoney-Project/logs/model_nvfp4_smoothed_unk_problem.log 2>&1 &
+  > /opt/oldMoney-Project/logs/model_nvfp4_smoothed.log 2>&1 &
 ```
 
 
 
+# GPTQ Quantization
 
-# GPTQ
 
+## Environment
 
-## Environment for GPTQ
-
-First time to prepare:
+First time setup:
 ```bash
 bash /opt/oldMoney-Project/quantization/GPTQ_INT4_env.sh
 tail -f /opt/oldMoney-Project/logs/GPTQ_INT4_env.log
 ```
 
-
-
-Activate the environment:
+Activate:
 ```bash
 source /opt/oldMoney-Project/quantization/venv/bin/activate
 export LD_LIBRARY_PATH=/opt/oldMoney-Project/quantization/venv/lib/python3.10/site-packages/torch/lib:$LD_LIBRARY_PATH
 ```
 
 
-
-
-## Prepare Calibration Data
+## Calibration Data
 
 ```bash
 python3 /opt/oldMoney-Project/quantization/generate_ultimate_64.py
 ```
 
 
-
-## Quantize Model
+## Quantize
 
 Pure dense quantization:
 ```bash
@@ -306,9 +263,7 @@ nohup python3 /opt/oldMoney-Project/quantization/GPTQ_int4_flashinfer_dense_gpu.
 tail -f /opt/oldMoney-Project/logs/model_gptq_int4_flashinfer_dense.log
 ```
 
-
-
-Original sparse quantization (# config.sparse_config["dense_len"] = 655360):
+Original sparse quantization:
 ```bash
 source /opt/oldMoney-Project/quantization/venv/bin/activate
 export LD_LIBRARY_PATH=/opt/oldMoney-Project/quantization/venv/lib/python3.10/site-packages/torch/lib:$LD_LIBRARY_PATH
@@ -343,7 +298,7 @@ tail -f /opt/oldMoney-Project/logs/model_gptq_int4_minicpm_flashinfer_sparse.log
 ```
 
 
-## Deploy Quantized Models
+## Deploy GPTQ Models
 
 Sparse:
 ```bash
@@ -366,13 +321,6 @@ python3 -m sglang.launch_server \
     --enable-mixed-chunk \
     --enable-torch-compile
 ```
-
-Findings:
-1. `--chunked-prefill-size 8192` would affect the accuracy for sparse model.
-2. float16 has better accuracy.
-3. flashinfer is far far far far far faster than minicpm_flashinfer.
-3. pure dense based quantized model with flashinfer can pass all 3 long context test cases while sparse based quantized model with minicpm_flashinfer can only pass the first one.
-4. original model with minicpm_flashinfer can pass all 3 long context test cases while with flashinfer it can only pass the first two.
 
 Dense:
 ```bash
@@ -398,33 +346,34 @@ python3 -m sglang.launch_server \
     --enable-torch-compile
 ```
 
+## GPTQ Findings
 
-1. Original model + minicpm_flashinfer → passes all 3 tests ✓
+1. `--chunked-prefill-size 8192` would affect the accuracy for sparse model.
+2. float16 has better accuracy.
+3. flashinfer is far far far far far faster than minicpm_flashinfer.
+4. pure dense based quantized model with flashinfer can pass all 3 long context test cases while sparse based quantized model with minicpm_flashinfer can only pass the first one.
+5. original model with minicpm_flashinfer can pass all 3 long context test cases while with flashinfer it can only pass the first two.
+
+Long context test results:
+1. Original model + minicpm_flashinfer → passes all 3 tests
 2. Original model + flashinfer → passes only first 2 tests
-3. Dense-quantized model + flashinfer → passes all 3 tests ✓
-4. Dense-quantized model + minicpm_flashinfer → passes only first test ✗
-5. Sparse-quantized model + minicpm_flashinfer → passes only first test ✗
+3. Dense-quantized model + flashinfer → passes all 3 tests
+4. Dense-quantized model + minicpm_flashinfer → passes only first test
+5. Sparse-quantized model + minicpm_flashinfer → passes only first test
 
 
 
+# AWQ NVFP4 Quantization
 
 
+## Environment
 
-
-
-
-
-
-
-# AWQ
-
-Prepare environment for AWQ:
 ```bash
 bash /opt/oldMoney-Project/quantization/AWQ_NVFP4_env.sh
 tail -f /opt/oldMoney-Project/logs/AWQ_NVFP4_env.log
 ```
 
-Working like shit... Still optimizing.
+## Previous AWQ Attempts (all-FP4)
 
 ```bash
 uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
@@ -466,16 +415,7 @@ nohup python /opt/oldMoney-Project/quantization/AWQ_L_4_Mini_16_smoothed.py \
  > /opt/oldMoney-Project/logs/AWQ_L_4_Mini_16_smoothed.log 2>&1 &
 ```
 
-
-## KL Divergence Quick Evaluation
-
-```bash
-
-
-```
-
-
-
+## Deploy AWQ Models
 
 ```bash
 cd /opt
@@ -510,37 +450,35 @@ nohup python3 -m sglang.launch_server \
     --dense-as-sparse \
     --mem-fraction-static 0.82 \
     > /opt/server.log 2>&1 &
-
 ```
 
+## AWQ Benchmark Result
 
-Duration result for `model_nvfp4_awq_v2` with no torch compile on RTX 6000D:
+`model_nvfp4_awq_v2` with no torch compile on RTX 6000D:
 ```text
 ============ Serving Benchmark Result ============
-Backend:                                 sglang    
-Traffic request rate:                    inf       
-Max request concurrency:                 not set   
-Successful requests:                     64        
-Benchmark duration (s):                  684.45    
-Total input tokens:                      3885243   
-Total input text tokens:                 3885243   
-Total generated tokens:                  409876    
-Total generated tokens (retokenized):    323190    
-Request throughput (req/s):              0.09      
-Input token throughput (tok/s):          5676.48   
-Output token throughput (tok/s):         598.84    
-Peak output token throughput (tok/s):    1882.00   
-Peak concurrent requests:                64        
-Total token throughput (tok/s):          6275.33   
-Concurrency:                             30.86     
+Backend:                                 sglang
+Traffic request rate:                    inf
+Max request concurrency:                 not set
+Successful requests:                     64
+Benchmark duration (s):                  684.45
+Total input tokens:                      3885243
+Total input text tokens:                 3885243
+Total generated tokens:                  409876
+Total generated tokens (retokenized):    323190
+Request throughput (req/s):              0.09
+Input token throughput (tok/s):          5676.48
+Output token throughput (tok/s):         598.84
+Peak output token throughput (tok/s):    1882.00
+Peak concurrent requests:                64
+Total token throughput (tok/s):          6275.33
+Concurrency:                             30.86
 ```
-
-
-
 
 
 
 # Key Files
+
 ```bash
 # modeling:
 # /opt/oldMoney-Project/sglang_sala_cp/sglang/srt/models/minicpm.py
@@ -570,24 +508,19 @@ bash /opt/oldMoney-Project/utils_prompt/export_files.sh
 
 
 
-# Data Analysis: NVFP4 Token-0 Collapse (2026-03-27)
+# Analysis
 
-## Problem
+
+## NVFP4 Token-0 Collapse
 
 NVFP4-quantized model generates `<unk>` (token ID 0) on highly repetitive inputs.
 The model produces a few valid tokens then degenerates into all-zero token IDs,
 resulting in `content: null` in the API response.
 
-## Root Cause
-
-FP4 quantization causes numerical collapse on extremely repetitive input patterns.
-The model's hidden state accumulates precision errors when processing thousands of
-near-identical tokens until it can no longer produce meaningful output.
-
 **Not a length issue** — 71k diverse tokens work fine. **A repetition issue** — 14k
 tokens of identical text causes collapse.
 
-## Repetition Threshold Test
+### Repetition Threshold Test
 
 | Repeats | Prompt Tokens | Result    |
 |---------|--------------|-----------|
@@ -599,7 +532,7 @@ tokens of identical text causes collapse.
 | 2,500   | 17,521       | **Breaks** |
 | 71k diverse | 71,333   | Works     |
 
-## Eval vs Calib Dataset Comparison (2026-03-27)
+### Eval vs Calib Dataset Comparison
 
 |                    | Eval (perf_public_set) | Calib (optimal_64) | Calib (optimal_96) |
 |--------------------|------------------------|-------------------|-------------------|
@@ -637,15 +570,8 @@ tokens of identical text causes collapse.
   This is the entire MCQ task category from eval — zero coverage in calibration.
 - Eval has more extreme repetition (ratio 0.0005) than calib's worst (0.0015).
 - calib_96 added 30 more samples vs calib_64, improving long-sequence coverage
-  (20k-131k bucket: 40→53 samples, closer to eval's 120), but still doesn't cover
+  (20k-131k bucket: 40->53 samples, closer to eval's 120), but still doesn't cover
   the short MCQ range at all.
-
-### What calib_96 improved vs calib_64
-- +4 samples in [1k-5k), +2 in [10k-20k), +7 in [20k-50k), +8 in [50k-100k), +9 in [100k-131k)
-- Added needle-in-haystack sample idx=92 (31,320 tok, ratio=0.0019) — one of eval's
-  most repetitive samples, now covered in calibration
-- Better coverage of coded text (fwe) and word list (cwe) tasks at all length tiers
-- Total calibration tokens: 4.9M (vs 3.0M in calib_64)
 
 ### At-Risk Eval Samples (most repetitive)
 | Eval idx | Tokens  | Uniqueness | Task                  | In calib_96? |
@@ -658,7 +584,7 @@ tokens of identical text causes collapse.
 Test result: idx=34 (31k tok, ratio=0.0019) **passed** in isolation but **failed**
 under concurrency=64.
 
-## Analysis Scripts
+### Analysis Scripts
 
 ```bash
 # Analyze token stats and repetition for eval vs calib_64 vs calib_96
@@ -673,7 +599,6 @@ python /opt/oldMoney-Project/bench/test_repetitive_samples.py
 
 Full analysis log: `optimization_log/20260327_data_analysis.txt`
 
-### Hints for future analysis
 <!--
 AI notes for future sessions analyzing calibration/eval data:
 
@@ -707,7 +632,7 @@ AI notes for future sessions analyzing calibration/eval data:
 -->
 
 
-## Full Eval Results (model_nvfp4_smoothed, 2026-03-27)
+## Full Eval Results (model_nvfp4_smoothed)
 
 **Overall: 27.18% accuracy (40/150 correct)**
 
@@ -721,15 +646,13 @@ AI notes for future sessions analyzing calibration/eval data:
 
 **Failure breakdown: 150 total = 40 correct + 42 wrong + 66 None/Empty + 2 unknown**
 
-### Three failure modes observed
+### Three failure modes
 
 1. **Token-0 collapse (44%)**: Model generates `<think>\n` then immediately all `<unk>` (token 0).
    65,536 tokens of nothing. Content = None. Affects all long-context tasks.
 
 2. **Gibberish loops (~20%)**: Model generates real but nonsensical tokens in Chinese/English
-   fragments: `哥伦`, `婚姻关系`, `横坐标`, `backdrop`, `Waters`, `fortunate`, `quito`,
-   `UTF`, `snap`, `pedag` — repeating in loops until max tokens. Even MCQ answers contain
-   this gibberish mixed with reasoning.
+   fragments repeating in loops until max tokens.
 
 3. **Wrong but coherent (~8%)**: Model reasons coherently but picks wrong answer.
    Only seen in MCQ (short inputs). This is normal model error, not quantization damage.
@@ -739,40 +662,36 @@ AI notes for future sessions analyzing calibration/eval data:
 - **MCQ (short inputs)**: 0 None cases but only 40% accuracy. Many wrong answers contain
   gibberish Chinese characters mixed with English reasoning — the model is partially broken
   even on short inputs.
-- **CWE (word counting)**: Completely broken. 0% accuracy, 50% None. Task requires precise
-  token tracking which FP4 cannot support.
+- **CWE (word counting)**: Completely broken. 0% accuracy, 50% None.
 - **Concurrency matters**: Under concurrency=64, even samples that passed in isolation
-  (like idx=34) now fail. Concurrent batch processing amplifies FP4 precision issues.
-- **Gibberish tokens are consistent**: The same ~20 Chinese/English fragments appear across
-  all failing samples, suggesting specific token embeddings are corrupted at FP4 precision.
+  (like idx=34) now fail.
 
 ### Verdict
 
 The `model_nvfp4_smoothed` (AWQ_L_4_Mini_16_smoothed, smooth-alpha=0.5, mse-iters=80,
-64 calib samples) is **not competition-ready**. The 27.18% accuracy is far below acceptable.
-The FP4 (E2M1, 15 discrete values) precision is insufficient for this model architecture.
+64 calib samples) is **not competition-ready**. 27.18% accuracy is far below acceptable.
 
 
-## Deep Analysis: Why NVFP4 Fails — `<unk>` Collapse Mechanism (2026-03-27)
+## Root Cause: FP4 in GLA Recurrence
 
 ### Architecture: 24/32 layers are recurrent (Lightning-Attn)
 
 ```
 Layer  0: minicpm4       — attn=BF16, MLP=FP4
-Layer  1-8: lightning-attn — ALL=FP4 (with smoothing)  ← recurrent
+Layer  1-8: lightning-attn — ALL=FP4 (with smoothing)  <- recurrent
 Layer  9: minicpm4       — attn=BF16, MLP=FP4
-Layer 10-15: lightning-attn — ALL=FP4 (with smoothing) ← recurrent
+Layer 10-15: lightning-attn — ALL=FP4 (with smoothing) <- recurrent
 Layer 16-17: minicpm4    — attn=BF16, MLP=FP4
-Layer 18-21: lightning-attn — ALL=FP4 (with smoothing) ← recurrent
+Layer 18-21: lightning-attn — ALL=FP4 (with smoothing) <- recurrent
 Layer 22: minicpm4       — attn=BF16, MLP=FP4
-Layer 23-28: lightning-attn — ALL=FP4 (with smoothing) ← recurrent
+Layer 23-28: lightning-attn — ALL=FP4 (with smoothing) <- recurrent
 Layer 29-31: minicpm4    — attn=BF16, MLP=FP4
 ```
 
 **24 lightning-attn layers** with ALL projections (Q, K, V, Z, O) in FP4.
 **8 minicpm4 layers** with attention in BF16, only MLP in FP4.
 
-### Root cause: FP4 creates numerically fragile GLA state → `<unk>` feedback loop
+### FP4 creates numerically fragile GLA state
 
 Lightning-attn uses Simple GLA (Gated Linear Attention), a recurrent mechanism:
 ```
@@ -780,122 +699,78 @@ S_t = decay * S_{t-1} + k_t^T @ v_t    (state update)
 o_t = q_t @ S_t                         (output)
 ```
 
-The failure is NOT gradual error accumulation — it's a **cliff effect + feedback loop**:
+The failure is a **cliff effect + feedback loop**:
 
 **Phase 1 — Prefill builds a fragile state:**
 During prefill of 100k+ tokens, the GLA state `S` is updated at every position
 through 24 recurrent layers, each using FP4-quantized Q, K, V. The accumulated
-FP4 noise doesn't destroy the state outright — it pushes `S` to the **edge of
-numerical instability**. Whether it tips over depends on CUDA non-determinism
-(kernel launch order, floating-point rounding in graph captures). This is why the
-same input with temp=0.0 sometimes works and sometimes doesn't.
+FP4 noise pushes `S` to the **edge of numerical instability**. Whether it tips
+over depends on CUDA non-determinism (kernel launch order, floating-point rounding
+in graph captures). This is why the same input with temp=0.0 sometimes works and
+sometimes doesn't.
 
 **Phase 2 — First few tokens still work:**
-The model outputs `<think>\n` because:
-- The 8 minicpm4 anchor layers (BF16 attention, no recurrence) still provide
-  clean signal through standard softmax attention
-- `<think>` is a high-probability token that doesn't require precise state
+The model outputs `<think>\n` because the 8 minicpm4 anchor layers (BF16 attention)
+still provide clean signal, and `<think>` is a high-probability token.
 
-**Phase 3 — `<unk>` feedback loop locks in:**
+**Phase 3 — Feedback loop locks in:**
 Once the fragile lightning-attn state produces one bad output, the model emits
-token 0 (`<unk>`). The `<unk>` embedding feeds back as input to the next step.
-Since `<unk>` is a meaningless token, its embedding provides no useful signal:
+token 0 (`<unk>`). The `<unk>` embedding feeds back as meaningless input:
 ```
-bad state → <unk> → meaningless embedding → k_t^T @ v_t is garbage
-→ state gets worse → <unk> → ... → 65,536 <unk> tokens
+bad state -> <unk> -> meaningless embedding -> k_t^T @ v_t is garbage
+-> state gets worse -> <unk> -> ... -> 65,536 <unk> tokens
 ```
-This is a **positive feedback loop**, not gradual degradation. The transition
-from "working" to "65k <unk>" is instantaneous.
+This is a **positive feedback loop**. The transition from "working" to "65k <unk>"
+is instantaneous.
 
 **Phase 4 — Sometimes recovers:**
-The GLA decay factor (`g_gamma` from ALiBi slopes) gradually attenuates old state:
-`S_t = decay * S_{t-1} + ...`. After enough `<unk>` tokens, the corrupted prefill
-state gets forgotten. If the `<unk>` embedding's k^T @ v accidentally pushes `S`
-into a stable region, the model escapes the loop and produces real tokens again.
+The GLA decay factor gradually attenuates old state. After enough `<unk>` tokens,
+the corrupted prefill state gets forgotten and the model can escape the loop.
 
-### Evidence supporting this mechanism
+### Evidence
 
 | Observation | Explanation |
 |-------------|-------------|
-| `<unk>` starts after only a few generated tokens | State is already fragile from prefill, not generated-token error |
-| temp=0.0 gives different results across runs | CUDA non-determinism tips borderline state over the cliff |
-| Short MCQ (40% acc, 0 `<unk>`) | ~500 state updates — not enough to reach instability edge |
+| `<unk>` starts after only a few generated tokens | State is already fragile from prefill |
+| temp=0.0 gives different results across runs | CUDA non-determinism tips borderline state |
+| Short MCQ (40% acc, 0 `<unk>`) | ~500 state updates — not enough to reach instability |
 | Long sequences (44% `<unk>`) | 100k+ state updates — state is at the cliff edge |
-| Same gibberish fragments across samples | Specific token embeddings are corrupted at FP4 precision |
+| Same gibberish fragments across samples | Specific token embeddings corrupted at FP4 precision |
 | Concurrency amplifies failure | Batched FP4 arithmetic introduces more non-determinism |
-| Model sometimes stops `<unk>` mid-generation | GLA decay attenuates corrupted state, model escapes loop |
-| Run-to-run instability (77% → 22% → 50%) | Different CUDA graph captures → different numerical paths |
+| Model sometimes stops `<unk>` mid-generation | GLA decay attenuates corrupted state |
+| Run-to-run instability (77% -> 22% -> 50%) | Different CUDA graph captures -> different numerical paths |
 
 ### Scale factor math verification
 
-Traced the complete dequantization path:
+```
+Quantization:  global_sf = 2688 / max_weight_amax
+               weight_scale_2 = 1 / global_sf
+               input_scale = act_amax / 2688
 
-**Quantization script:**
-```
-global_sf = 2688 / max_weight_amax
-weight_scale_2 = 1 / global_sf = max_weight_amax / 2688
-input_scale = act_amax / 2688
-```
+Inference:     alpha = input_scale * weight_scale_2
+               input_scale_inv = 2688 / act_amax
 
-**SGLang inference:**
-```
-alpha = input_scale * weight_scale_2 = act_amax * max_amax / 2688^2
-input_scale_inv = 2688 / act_amax
-```
-
-**Full reconstruction:**
-```
-out = (x * 2688/act_amax) @ (W * 2688/max_amax) * (act_amax * max_amax / 2688^2)
-    = x @ W × 1  ✓ (scales cancel correctly)
+Reconstruction: out = (x * 2688/act_amax) @ (W * 2688/max_amax) * (act_amax * max_amax / 2688^2)
+                    = x @ W * 1   (scales cancel correctly)
 ```
 
 The scale factor math is correct. The issue is not a scale mismatch.
 
-### Why calibration with long sequences doesn't help
-
-The calibration data IS mostly long sequences (mean 48k tokens). The MSE during
-quantization is low (4.5e-06). But MSE measures **static weight approximation error**,
-not **dynamic recurrent state stability**. The calibration process:
-
-1. Collects activation statistics (H_diag) through forward passes
-2. Finds optimal block scales to minimize weight reconstruction error
-3. Does NOT simulate the GLA recurrence or test for state stability
-
-The weights look correct in isolation (low MSE), but FP4's 15 discrete values
-cannot preserve the fine-grained numerical relationships that keep the GLA state
-stable over 100k+ recurrent updates.
-
-### Why flashinfer is NOT an option
-
-Dense GPTQ + flashinfer achieves 77-79% accuracy and passes all 3 long context tests,
-but **flashinfer uses full softmax attention** — it completely bypasses the model's sparse
-attention (SALA) architecture. This defeats the entire purpose. Our goal is to build and
-optimize the **sparse attention model** with minicpm_flashinfer, not fall back to a
-standard full-attention backend. The flashinfer results only prove that quantization itself
-is not broken — the problem is specifically quantization + recurrent state in lightning-attn.
-
-### Deeper root cause: systematic bias on repetitive inputs (2026-03-27)
+### Systematic bias on repetitive inputs
 
 **External validation**: `cyankiwi/MiniCPM-SALA-AWQ-4bit` (INT4 sym, group_size=32, FP32
-scales, duo_scaling, searched alpha) uses a strictly better quantization technique than our
-NVFP4 — lower effective error, proper smoothing on attention. Their model passes
-`long_context_test_case.py` (diverse 5k-60k tokens) but **still fails SOAR eval** (100k+
-tokens with extreme repetition, uniqueness ratio as low as 0.0005).
+scales, duo_scaling, searched alpha) uses a strictly better quantization technique. Their
+model passes `long_context_test_case.py` (diverse 5k-60k tokens) but **still fails SOAR
+eval** (100k+ tokens with extreme repetition).
 
-This confirms the root cause is **not just quantization quality** but a fundamental
-interaction between **any 4-bit weight quantization** and **GLA recurrence on repetitive
-inputs**:
+This confirms the root cause is a fundamental interaction between **any 4-bit weight
+quantization** and **GLA recurrence on repetitive inputs**:
 
-- **Diverse inputs**: quantization errors in k_t, v_t are quasi-random across positions.
-  Random noise accumulates as √N: σ_total ≈ σ × √100k ≈ σ × 316. Manageable.
-- **Repetitive inputs**: k_t, v_t are nearly identical across positions, so quantization
-  error is a **fixed systematic bias** that accumulates as N: ε_total = ε × 100k.
+- **Diverse inputs**: quantization errors are quasi-random across positions.
+  Random noise accumulates as sqrt(N). Manageable.
+- **Repetitive inputs**: k_t, v_t are nearly identical, so quantization
+  error is a **fixed systematic bias** that accumulates as N.
   **316x faster accumulation** than the random case.
-
-This explains all observations:
-- 60k diverse tokens: works (even with INT4/FP4) — random noise, √60k ≈ 245x
-- 100k+ repetitive tokens: breaks — systematic bias, 100,000x accumulation
-- Short MCQ (500 tokens): works — too few steps for any accumulation
 
 **Conclusion**: No 4-bit format (FP4, INT4, regardless of smoothing quality) can safely
 quantize lightning-attn K/V projections for this eval profile. Only BF16 attention
@@ -903,52 +778,46 @@ eliminates systematic bias from the GLA recurrence path entirely.
 
 ### Cyankiwi recipe comparison
 
-| Technique | Our NVFP4 (27%) | Cyankiwi INT4 (long_context ✓, SOAR ✗) |
-|-----------|-----------------|----------------------------------------|
+| Technique | Our NVFP4 (27%) | Cyankiwi INT4 (long_context pass, SOAR fail) |
+|-----------|-----------------|----------------------------------------------|
 | Weight format | FP4 E2M1 (15 vals) | INT4 sym (16 vals) |
 | Scale precision | **FP8** block scales | **FP32** group scales |
-| Effective error | ~33% (FP4×FP8 compound) | ~14% (INT4×FP32) |
+| Effective error | ~33% (FP4*FP8 compound) | ~14% (INT4*FP32) |
 | Smoothing alpha | Fixed 0.5 | Searched (n_grid=20) |
 | duo_scaling | No | Yes |
-| up→down smooth | No | Yes |
+| up->down smooth | No | Yes |
 | Result | Fails both tests | Passes basic, fails SOAR |
 
-Key insight: NVFP4's FP8 block scales add 6.25% compound error on top of FP4, making
-effective quantization error ~2.4x worse than INT4+FP32. This is why NVFP4 fails even on
-moderate-length diverse inputs that INT4 handles. But even the better INT4 approach fails
-on SOAR's extreme repetition — the systematic bias accumulation is the fundamental limit.
 
-
-## Solution: MLP-Only FP4 Quantization (2026-03-27)
+## Solution: MLP-Only FP4 Quantization
 
 ### Strategy: Protect ALL attention projections, quantize only MLP
 
-The current quantization plan:
+The broken quantization plan:
 ```
-MiniCPM4 layers (8):     attn=BF16, MLP=FP4  ← already correct
-Lightning-attn layers (24): ALL=FP4           ← THIS CAUSES THE COLLAPSE
+MiniCPM4 layers (8):       attn=BF16, MLP=FP4  <- already correct
+Lightning-attn layers (24): ALL=FP4             <- THIS CAUSES THE COLLAPSE
 ```
 
 The fix:
 ```
-MiniCPM4 layers (8):     attn=BF16, MLP=FP4  ← no change
-Lightning-attn layers (24): attn=BF16, MLP=FP4  ← protect Q/K/V/Z/O
+MiniCPM4 layers (8):       attn=BF16, MLP=FP4  <- no change
+Lightning-attn layers (24): attn=BF16, MLP=FP4  <- protect Q/K/V/Z/O
 ```
 
-This removes FP4 from the GLA recurrence path entirely. The state `S` will be
-computed from BF16 Q/K/V → numerically stable → no cliff → no `<unk>` loop.
+This removes FP4 from the GLA recurrence path entirely.
 
-### Model size calculation
+### Model size
 
 | Component | Params | Format | Size |
 |-----------|--------|--------|------|
-| MLP (32 layers × 3 linears) | 6.44B (68%) | FP4 packed + FP8 scales | 3.38 GB |
+| MLP (32 layers * 3 linears) | 6.44B (68%) | FP4 packed + FP8 scales | 3.38 GB |
 | Lightning-attn Q/K/V/Z/O (24 layers) | 2.01B (21%) | BF16 | 4.03 GB |
 | MiniCPM4 attn Q/K/V/O/gate (8 layers) | 0.42B (4%) | BF16 | 0.84 GB |
 | Embeddings + LM head + norms | 0.60B (6%) | BF16 | 1.12 GB |
 | **Total** | **9.48B** | **mixed** | **~9.4 GB** |
 
-- **Previous all-FP4**: ~6.3 GB (broken — GLA recurrence collapse)
+- **Previous all-FP4**: ~6.3 GB (broken)
 - **This approach**: ~9.4 GB (MLP FP4 + all attention BF16)
 - **Original BF16**: 19 GB
 - **Compression ratio**: 2.0x (down from 3.0x, but actually works)
@@ -958,28 +827,22 @@ Blackwell's native FP4 tensor cores accelerate the MLP GEMMs (68% of model param
 
 ### Why not FP8 attention instead of BF16?
 
-FP8 E4M3 (256 discrete values) has ~6.25% worst-case relative error per weight element,
-vs FP4 E2M1's ~25%. Over 100k GLA recurrent updates through 24 layers, the GEMM output
-noise from FP8 weights is ~10x what BF16 produces, but ~4x less than FP4.
-
 The failure mode is a **cliff effect**, not gradual degradation. Whether FP8 noise stays
-below the cliff or triggers the same `<unk>` feedback loop is unpredictable without
-empirical testing. For a competition, BF16 attention is the safe choice.
+below the cliff is unpredictable without empirical testing. For a competition, BF16
+attention is the safe choice.
 
-If throughput is critical, FP8 attention weights give ~2x faster attention GEMMs on
-Blackwell (FP8 tensor cores vs BF16). But this requires custom mixed-quant support in
-SGLang (NVFP4+FP8 dual config), which is not currently implemented. The pragmatic
-alternative is `--kv-cache-dtype fp8_e5m2` which compresses the minicpm4 KV cache at
-runtime — zero risk to GLA stability since it only affects the 8 softmax-attention layers.
+The pragmatic alternative is `--kv-cache-dtype fp8_e5m2` which compresses the minicpm4
+KV cache at runtime — zero risk to GLA stability since it only affects the 8
+softmax-attention layers.
 
 ### Implementation
 
-Script: `quantization/AWQ_NVFP4_mixed_bf16attn.py` (dedicated mixed-precision quantizer)
+Script: `quantization/AWQ_NVFP4_mixed_bf16attn.py`
 
 Changes vs `AWQ_L_4_Mini_16_smoothed.py`:
 1. `should_quantize_linear()`: excludes ALL `self_attn` projections from FP4
 2. `build_exclude_modules()`: adds lightning-attn Q/K/V/Z/O to exclusion list
-3. `apply_layer_smoothing()`: only smooths MLP (post_attn_layernorm → gate, up)
+3. `apply_layer_smoothing()`: only smooths MLP (post_attn_layernorm -> gate, up)
 4. `compute_fused_global_scales()`: removes QKV fusion (no QKV gets quantized)
 
 SGLang inference (`minicpm.py` line 440-495) — no change needed:
@@ -1014,7 +877,7 @@ uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_kernel_fuse
 pip install --no-build-isolation -e /opt/oldMoney-Project/vendor_kernel_fuse
 fuser -k -9 31333/tcp
 python3 -m sglang.launch_server \
-    --model /opt/model_nvfp4_bf16attn \
+    --model /tmp/model_nvfp4_smoothed/ \
     --quantization modelopt \
     --trust-remote-code \
     --disable-radix-cache \
@@ -1022,14 +885,35 @@ python3 -m sglang.launch_server \
     --chunked-prefill-size 32768 \
     --max-running-requests 64 \
     --max-mamba-cache-size 64 \
-    --kv-cache-dtype fp8_e5m2 \
     --port 31333 \
     --dense-as-sparse \
-    --mem-fraction-static 0.88 \
-    --fuse-topk \
-    --num-continuous-decode-steps 2 \
-    --enable-mixed-chunk \
-    --enable-torch-compile
+    --mem-fraction-static 0.8 \
+    > /opt/server.log 2>&1 &
+```
+
+### Suspected fused kernel issue (2026-03-28, needs confirmation)
+
+When serving NVFP4 quantized models, using the fused kernel (`sglang_sala_kernel_fuse` +
+`vendor_kernel_fuse`) appears to cause the `<unk>` token-0 collapse. Switching to the
+baseline `sglang_sala_cp` eliminates the problem — quantized models produce correct output.
+
+If confirmed, this means the `<unk>` collapse was NOT caused by FP4 quantization precision
+or GLA recurrence instability, but by a numerical bug in the fused kernel code. The earlier
+analysis about systematic bias accumulation in lightning-attn may be incorrect or secondary.
+
+Status: **needs further investigation**. Test plan:
+1. Deploy full NVFP4 model with `sglang_sala_cp` (baseline) — check if accuracy is good
+2. Deploy same model with `sglang_sala_kernel_fuse` — check if `<unk>` reappears
+3. If confirmed, bisect the fused kernel changes to find the offending operator
+
+```bash
+# Baseline (working):
+pip uninstall fused_kernel_extension
+uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
+
+# Fused (suspected broken with quantized models):
+uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_kernel_fuse
+pip install --no-build-isolation -e /opt/oldMoney-Project/vendor_kernel_fuse
 ```
 [Sample 146] Task: cwe
 Gold: ['truck', 'choice', 'rain', 'hapless', 'carrier', 'endothelium', 'formulate', 'bestseller', 'accident', 'snowsuit'], Extracted: None, Score: 0
