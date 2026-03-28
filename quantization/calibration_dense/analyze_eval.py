@@ -1,82 +1,155 @@
 #!/usr/bin/env python3
 """
-Analyze SOAR eval predictions — per-task breakdown, failure modes, score distribution.
+Analyze SOAR eval predictions with tokenizer — per-task breakdown, failure modes,
+response content analysis, score distribution.
 
 Usage:
-    python analyze_eval.py --predictions /opt/oldMoney-Project/SOAR-Toolkit/outputs/YYYYMMDD_HHMMSS/predictions.jsonl
-    python analyze_eval.py --predictions /opt/oldMoney-Project/SOAR-Toolkit/outputs/20260328_161149/predictions.jsonl
+    python analyze_eval.py \
+        --predictions /opt/oldMoney-Project/SOAR-Toolkit/outputs/20260328_161149/predictions.jsonl \
+        --tokenizer-path /opt/model
 """
 
 import json
+import re
 import argparse
-from collections import defaultdict
+from collections import defaultdict, Counter
 
 
-def analyze(predictions_path):
+def analyze(predictions_path, tokenizer_path):
+    # Load tokenizer
+    tokenizer = None
+    try:
+        from transformers import AutoTokenizer
+        tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, trust_remote_code=True)
+        print(f"[INFO] Loaded tokenizer from {tokenizer_path}")
+    except Exception as e:
+        print(f"[WARN] Tokenizer unavailable ({e}), skipping token-level analysis")
+
     samples = []
     with open(predictions_path, "r", encoding="utf-8") as f:
         for line in f:
             samples.append(json.loads(line.strip()))
 
     total = len(samples)
-    print(f"{'=' * 80}")
+    print(f"\n{'=' * 90}")
     print(f"  EVAL ANALYSIS: {predictions_path}")
     print(f"  Total samples: {total}")
-    print(f"{'=' * 80}")
+    print(f"{'=' * 90}")
+
+    # ---- Tokenize predictions for deeper analysis ----
+    for s in samples:
+        prediction = s.get("prediction", "")
+        question = s.get("question", "")
+
+        # Token counts from eval tool
+        s["_in_tok"] = s.get("prompt_tokens", 0)
+        s["_out_tok"] = s.get("completion_tokens", 0)
+
+        # Content analysis
+        s["_has_think_open"] = "<think>" in prediction
+        s["_has_think_close"] = "</think>" in prediction
+        s["_pred_len"] = len(prediction)
+        s["_is_empty"] = len(prediction.strip()) < 10
+        s["_is_null"] = prediction is None or prediction == ""
+
+        # Check for <unk> / token-0 collapse
+        if tokenizer:
+            pred_tokens = tokenizer.encode(prediction)
+            s["_pred_tokens"] = len(pred_tokens)
+            s["_unk_count"] = pred_tokens.count(0)
+            s["_unk_ratio"] = s["_unk_count"] / max(len(pred_tokens), 1)
+        else:
+            s["_pred_tokens"] = s["_out_tok"]
+            s["_unk_count"] = 0
+            s["_unk_ratio"] = 0.0
+
+        # Check for repetition loops
+        if len(prediction) > 500:
+            last_500 = prediction[-500:]
+            chunks = [last_500[i:i+50] for i in range(0, len(last_500)-50, 50)]
+            chunk_counts = Counter(chunks)
+            s["_max_repeat"] = max(chunk_counts.values()) if chunk_counts else 0
+        else:
+            s["_max_repeat"] = 0
+
+    # ---- Classify failure mode per sample ----
+    for s in samples:
+        score = s.get("score", 0)
+        if score >= 0.99:
+            s["_failure_mode"] = "correct"
+        elif s["_is_null"] or s["_is_empty"]:
+            s["_failure_mode"] = "empty_response"
+        elif s["_unk_ratio"] > 0.5:
+            s["_failure_mode"] = "token0_collapse"
+        elif s["_out_tok"] >= 60000 and score < 0.5:
+            s["_failure_mode"] = "max_tokens_exhaust"
+        elif s["_max_repeat"] >= 3:
+            s["_failure_mode"] = "repetition_loop"
+        elif s.get("extracted") is None:
+            s["_failure_mode"] = "extraction_failed"
+        elif score > 0:
+            s["_failure_mode"] = "partial_correct"
+        else:
+            s["_failure_mode"] = "wrong_answer"
 
     # ---- Per-task breakdown ----
     tasks = defaultdict(lambda: {
-        "scores": [], "none_count": 0, "total": 0,
-        "in_tokens": [], "out_tokens": [],
-        "collapse_count": 0,  # Out >= 60000 (likely token-0 collapse)
-        "correct": 0,
+        "scores": [], "total": 0,
+        "in_tokens": [], "out_tokens": [], "pred_tokens": [],
+        "failure_modes": Counter(),
     })
 
     for s in samples:
         task = s.get("task", "unknown")
-        score = s.get("score", 0)
-        extracted = s.get("extracted", None)
-        in_tok = s.get("prompt_tokens", s.get("in_tokens", 0))
-        out_tok = s.get("completion_tokens", s.get("out_tokens", 0))
-
-        tasks[task]["scores"].append(score)
+        tasks[task]["scores"].append(s.get("score", 0))
         tasks[task]["total"] += 1
-        tasks[task]["in_tokens"].append(in_tok)
-        tasks[task]["out_tokens"].append(out_tok)
+        tasks[task]["in_tokens"].append(s["_in_tok"])
+        tasks[task]["out_tokens"].append(s["_out_tok"])
+        tasks[task]["pred_tokens"].append(s["_pred_tokens"])
+        tasks[task]["failure_modes"][s["_failure_mode"]] += 1
 
-        if extracted is None or extracted == "None":
-            tasks[task]["none_count"] += 1
-        if score >= 0.99:
-            tasks[task]["correct"] += 1
-        if out_tok >= 60000:
-            tasks[task]["collapse_count"] += 1
-
-    print(f"\n{'Task':<8} {'Avg%':>6} {'Correct':>8} {'None':>6} {'Collapse':>9} {'Total':>6}  {'AvgIn':>8} {'AvgOut':>8}")
-    print("-" * 80)
+    task_order = ["mcq", "niah", "qa", "fwe", "cwe"]
+    header = f"{'Task':<6} {'Score':>6} {'Perfect':>8} {'None':>6} {'Collapse':>9} {'AvgIn':>8} {'AvgOut':>8} {'AvgPred':>8}"
+    print(f"\n{header}")
+    print("-" * 90)
 
     all_scores = []
-    task_order = ["mcq", "niah", "qa", "fwe", "cwe"]
     for task in task_order:
         if task not in tasks:
             continue
         t = tasks[task]
         avg = sum(t["scores"]) / len(t["scores"]) * 100
+        perfect = sum(1 for sc in t["scores"] if sc >= 0.99)
+        none_c = t["failure_modes"].get("extraction_failed", 0) + t["failure_modes"].get("empty_response", 0) + t["failure_modes"].get("token0_collapse", 0)
+        collapse = t["failure_modes"].get("token0_collapse", 0) + t["failure_modes"].get("max_tokens_exhaust", 0)
         avg_in = sum(t["in_tokens"]) // max(len(t["in_tokens"]), 1)
         avg_out = sum(t["out_tokens"]) // max(len(t["out_tokens"]), 1)
-        print(f"{task:<8} {avg:>5.1f}% {t['correct']:>6}/{t['total']:<2} {t['none_count']:>6} {t['collapse_count']:>9} {t['total']:>6}  {avg_in:>8,} {avg_out:>8,}")
+        avg_pred = sum(t["pred_tokens"]) // max(len(t["pred_tokens"]), 1)
+        print(f"{task:<6} {avg:>5.1f}% {perfect:>5}/{t['total']:<3} {none_c:>6} {collapse:>9} {avg_in:>8,} {avg_out:>8,} {avg_pred:>8,}")
         all_scores.extend(t["scores"])
 
-    # Any unknown tasks
-    for task in sorted(tasks.keys()):
-        if task not in task_order:
-            t = tasks[task]
-            avg = sum(t["scores"]) / len(t["scores"]) * 100
-            print(f"{task:<8} {avg:>5.1f}% {t['correct']:>6}/{t['total']:<2} {t['none_count']:>6} {t['collapse_count']:>9} {t['total']:>6}")
-            all_scores.extend(t["scores"])
-
     overall = sum(all_scores) / len(all_scores) * 100
-    print("-" * 80)
-    print(f"{'TOTAL':<8} {overall:>5.1f}%")
+    print("-" * 90)
+    print(f"{'TOTAL':<6} {overall:>5.1f}%")
+
+    # ---- Failure mode summary ----
+    print(f"\n  Failure mode breakdown:")
+    all_modes = Counter()
+    for s in samples:
+        all_modes[s["_failure_mode"]] += 1
+    for mode, cnt in all_modes.most_common():
+        pct = cnt / total * 100
+        bar = "#" * (cnt // 2)
+        print(f"    {mode:<22} {cnt:>4} ({pct:>5.1f}%)  {bar}")
+
+    # ---- Per-task failure modes ----
+    print(f"\n  Per-task failure modes:")
+    for task in task_order:
+        if task not in tasks:
+            continue
+        t = tasks[task]
+        modes_str = ", ".join(f"{m}={c}" for m, c in t["failure_modes"].most_common())
+        print(f"    {task}: {modes_str}")
 
     # ---- Score distribution ----
     print(f"\n  Score distribution:")
@@ -93,46 +166,47 @@ def analyze(predictions_path):
         else:
             buckets["0.0 (zero)"] += 1
     for b, c in buckets.items():
-        bar = "#" * (c * 2)
+        bar = "#" * (c)
         print(f"    {b:<16} {c:>4}  {bar}")
 
-    # ---- Failure analysis ----
-    print(f"\n  Failure modes:")
-    collapse_samples = [s for s in samples if s.get("completion_tokens", s.get("out_tokens", 0)) >= 60000]
-    none_samples = [s for s in samples if s.get("extracted", None) is None or s.get("extracted") == "None"]
-    zero_samples = [s for s in samples if s.get("score", 0) < 0.001]
+    # ---- Token-0 / unk analysis ----
+    if tokenizer:
+        unk_samples = [s for s in samples if s["_unk_count"] > 10]
+        print(f"\n  Token-0 (<unk>) analysis:")
+        print(f"    Samples with >10 <unk> tokens: {len(unk_samples)}")
+        if unk_samples:
+            print(f"    {'Idx':>4} {'Task':<6} {'Score':>6} {'UNK':>6} {'Ratio':>7} {'OutTok':>8}")
+            for s in sorted(unk_samples, key=lambda x: x["_unk_count"], reverse=True)[:15]:
+                idx = samples.index(s)
+                print(f"    {idx:>4} {s.get('task','?'):<6} {s.get('score',0):>5.2f} {s['_unk_count']:>6} {s['_unk_ratio']:>6.1%} {s['_out_tok']:>8,}")
 
-    print(f"    Token collapse (Out>=60k):  {len(collapse_samples)}")
-    print(f"    Extracted=None:             {len(none_samples)}")
-    print(f"    Score=0:                    {len(zero_samples)}")
-
-    # ---- Worst samples ----
+    # ---- Bottom 10 samples ----
     print(f"\n  Bottom 10 samples (lowest scores):")
     sorted_samples = sorted(enumerate(samples), key=lambda x: x[1].get("score", 0))
     for idx, s in sorted_samples[:10]:
         task = s.get("task", "?")
         score = s.get("score", 0)
-        in_tok = s.get("prompt_tokens", s.get("in_tokens", 0))
-        out_tok = s.get("completion_tokens", s.get("out_tokens", 0))
-        extracted = str(s.get("extracted", "None"))[:50]
-        print(f"    [{idx:>3}] {task:<5} score={score:.2f} in={in_tok:>7,} out={out_tok:>6,} extracted={extracted}")
+        mode = s["_failure_mode"]
+        extracted = str(s.get("extracted", "None"))[:40]
+        print(f"    [{idx:>3}] {task:<5} score={score:.2f} mode={mode:<20} extracted={extracted}")
 
-    # ---- Best samples per task ----
-    print(f"\n  Per-task score summary:")
-    for task in task_order:
-        if task not in tasks:
-            continue
-        t = tasks[task]
-        scores = sorted(t["scores"])
-        perfect = sum(1 for s in scores if s >= 0.99)
-        zero = sum(1 for s in scores if s < 0.001)
-        print(f"    {task}: {perfect} perfect, {zero} zero, median={scores[len(scores)//2]:.2f}")
+    # ---- Top 10 samples ----
+    print(f"\n  Top 10 samples (highest scores, non-perfect):")
+    non_perfect = [(i, s) for i, s in enumerate(samples) if s.get("score", 0) < 0.99 and s.get("score", 0) > 0]
+    non_perfect.sort(key=lambda x: x[1].get("score", 0), reverse=True)
+    for idx, s in non_perfect[:10]:
+        task = s.get("task", "?")
+        score = s.get("score", 0)
+        extracted = str(s.get("extracted", "None"))[:40]
+        gold = str(s.get("gold", ""))[:40]
+        print(f"    [{idx:>3}] {task:<5} score={score:.2f} extracted={extracted}")
 
-    print(f"\n{'=' * 80}")
+    print(f"\n{'=' * 90}")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--predictions", required=True, help="Path to predictions.jsonl")
+    parser.add_argument("--tokenizer-path", default="/opt/model", help="Path to tokenizer")
     args = parser.parse_args()
-    analyze(args.predictions)
+    analyze(args.predictions, args.tokenizer_path)
