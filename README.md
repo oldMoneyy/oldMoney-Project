@@ -207,12 +207,12 @@ python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31333 \
 cd /opt/oldMoney-Project/SOAR-Toolkit
 nohup python3 eval_model.py \
   --api_base http://127.0.0.1:31333 \
-  --model_path /tmp/model_nvfp4_smoothed/ \
+  --model_path /opt/model_nvfp4_dense_flashinfer \
   --data_path eval_dataset/perf_public_set.jsonl \
   --concurrency 64 \
   --num_samples 150 \
   --verbose \
-  > /opt/oldMoney-Project/logs/model_nvfp4_smoothed.log 2>&1 &
+  > /opt/oldMoney-Project/logs/model_nvfp4_dense_flashinfer.log 2>&1 &
 ```
 
 
@@ -436,11 +436,11 @@ nohup python3 -m sglang.launch_server \
 cd /opt
 fuser -k -9 31333/tcp
 nohup python3 -m sglang.launch_server \
-    --model /tmp/model_nvfp4_smoothed \
+    --model /opt/model_nvfp4_dense_flashinfer \
     --quantization modelopt \
     --trust-remote-code \
     --disable-radix-cache \
-    --attention-backend minicpm_flashinfer \
+    --attention-backend flashinfer \
     --chunked-prefill-size 32768 \
     --max-running-requests 64 \
     --port 31333 \

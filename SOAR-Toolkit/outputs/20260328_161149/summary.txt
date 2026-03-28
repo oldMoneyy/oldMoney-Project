@@ -1,0 +1,10 @@
+Model: /opt/model_nvfp4_dense_flashinfer
+Data: eval_dataset/perf_public_set.jsonl
+Original Accuracy: 77.93%
+Normalized Accuracy: 97.42%
+Num Samples: 150
+Total Duration: 1575.65 s
+Total Output Tokens: 1053467
+Average Input Tokens: 57627.8
+Average Output Tokens: 7023.1
+TPS: 668.59
