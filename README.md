@@ -75,9 +75,7 @@ export HF_HUB_ENABLE_HF_TRANSFER=1
 python download_minicpm_sala.py
 
 
-# Get the acc / throughput test toolkit:
-cd /opt
-git clone https://github.com/OpenBMB/SOAR-Toolkit.git
+# SOAR-Toolkit is included in the project repo at SOAR-Toolkit/
 
 
 # Get uv
@@ -206,7 +204,7 @@ python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31333 \
 ## Accuracy Test
 
 ```bash
-cd /opt/SOAR-Toolkit
+cd /opt/oldMoney-Project/SOAR-Toolkit
 nohup python3 eval_model.py \
   --api_base http://127.0.0.1:31333 \
   --model_path /tmp/model_nvfp4_smoothed/ \
