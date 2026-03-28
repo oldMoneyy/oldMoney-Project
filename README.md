@@ -506,10 +506,10 @@ bash /opt/oldMoney-Project/utils_prompt/export_files.sh
 
 
 
-# Analysis
+# Open Research Topics
 
 
-## NVFP4 Token-0 Collapse
+## 1. NVFP4 Token-0 Collapse
 
 NVFP4-quantized model generates `<unk>` (token ID 0) on highly repetitive inputs.
 The model produces a few valid tokens then degenerates into all-zero token IDs,
@@ -942,4 +942,22 @@ Detailed results saved to outputs/20260327_162030/predictions.jsonl
 ^Z[1]   Done                    nohup python3 eval_model.py --api_base http://127.0.0.1:31333 --model_path /tmp/model_nvfp4_smoothed/ --data_path eval_dataset/perf_public_set.jsonl --concurrency 64 --num_samples 150 --verbose > /opt/oldMoney-Project/logs/model_nvfp4_smoothed.log 2>&1
 
 [2]+  Stopped                 tail -f /opt/oldMoney-Project/logs/model_nvfp4_smoothed.log
-root@C.33628558:/opt/SOAR-Toolkit$ 
+root@C.33628558:/opt/SOAR-Toolkit$
+
+
+## 2. Dense Flashinfer NVFP4 Optimization
+
+Can NVFP4 (W4A4) with flashinfer dense attention match or beat GPTQ INT4 (W4A16) on the SOAR eval?
+
+**GPTQ INT4 advantages**: 16 uniform weight values (vs 15 non-uniform FP4), BF16 activations (vs FP4 dynamic quant), full Hessian error propagation (vs diagonal-only AWQ).
+
+**NVFP4 advantages**: Blackwell native FP4 tensor cores (potentially faster GEMM), smaller model (~6.4 GB vs ~7 GB).
+
+**Key question**: Does the NVFP4 speed gain on Blackwell outweigh the accuracy penalty in the SOAR scoring formula?
+
+Test plan:
+1. Quantize with dense flashinfer NVFP4 (AWQ_NVFP4_dense_flashinfer.py)
+2. Serve with `--attention-backend flashinfer` (no sparse routing)
+3. Run SOAR eval, compare accuracy vs GPTQ INT4 dense
+4. Benchmark throughput (S1, S8, Smax) for both
+5. Calculate competition score = f(accuracy, throughput)
