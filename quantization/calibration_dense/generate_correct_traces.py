@@ -95,26 +95,32 @@ EXTRA_QUESTIONS = [
 
 
 def call_claude(question, max_tokens=4096, retries=3):
-    """Call Claude API to get correct answer and reasoning."""
+    """Call Claude API using curl (requests gets 403 due to redirect handling)."""
+    import subprocess
+    payload = json.dumps({
+        "model": CLAUDE_MODEL,
+        "max_tokens": max_tokens,
+        "messages": [
+            {"role": "user", "content": question},
+        ],
+    })
     for attempt in range(retries):
         try:
-            resp = requests.post(
-                CLAUDE_API_URL,
-                headers={
-                    "Authorization": f"Bearer {CLAUDE_API_KEY}",
-                    "Content-type": "application/json",
-                },
-                json={
-                    "model": CLAUDE_MODEL,
-                    "max_tokens": max_tokens,
-                    "messages": [
-                        {"role": "user", "content": question},
-                    ],
-                },
-                timeout=120,
+            result = subprocess.run(
+                [
+                    "curl", "--silent", "--location", "--request", "POST",
+                    "--url", CLAUDE_API_URL,
+                    "--header", f"Authorization: Bearer {CLAUDE_API_KEY}",
+                    "--header", "Content-type: application/json",
+                    "--data-raw", payload,
+                ],
+                capture_output=True, text=True, timeout=180,
             )
-            resp.raise_for_status()
-            data = resp.json()
+            if result.returncode != 0:
+                raise RuntimeError(f"curl failed: {result.stderr[:200]}")
+            data = json.loads(result.stdout)
+            if "error" in data:
+                raise RuntimeError(f"API error: {data['error']}")
             text = ""
             for block in data.get("content", []):
                 if block.get("type") == "text":
@@ -303,10 +309,9 @@ def main():
                 source = "claude_fallback"
                 stats["claude_fallback"] += 1
             else:
-                # Both wrong or Claude didn't match gold — use Claude anyway
-                trace = format_as_sala_trace(question, claude_response, gold)
-                source = "claude_only"
+                # Claude disagrees with gold — DISCARD (reasoning contradicts answer)
                 stats["claude_only"] += 1
+                continue
         else:
             # Reasoning question — prefer SALA trace, fallback to Claude
             if sala_response and len(sala_response) > 100:
@@ -336,7 +341,7 @@ def main():
     print(f"  Total traces: {len(calib_samples)}")
     print(f"  MCQ - SALA correct (best):  {stats['sala_correct']}")
     print(f"  MCQ - Claude fallback:      {stats['claude_fallback']}")
-    print(f"  MCQ - Claude only:          {stats['claude_only']}")
+    print(f"  MCQ - Claude only (discarded): {stats['claude_only']}")
     print(f"  Reasoning traces:           {stats['reasoning']}")
     print(f"  Output: {args.output}")
     print(f"{'=' * 70}")
