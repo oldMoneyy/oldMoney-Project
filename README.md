@@ -376,41 +376,47 @@ tail -f /opt/oldMoney-Project/logs/AWQ_NVFP4_env.log
 ```bash
 uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
 
+source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
 export TRITON_PTXAS_PATH="$(which ptxas)"
-source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
-nohup python /opt/oldMoney-Project/quantization/AWQ_L_4_Mini_16.py \
- --input /opt/model \
- --output /opt/model_nvfp4_awq_v2 \
- --calib-data /opt/oldMoney-Project/quantization/calibration/optimal_64.jsonl \
- --max-samples 64 \
- --max-len 131072 \
- --mse-iters 200 \
- --mse-max-shrink 0.60 \
- --mse-error-norm 2.0 \
- > /opt/oldMoney-Project/logs/AWQ_L_4_Mini_16_train.log 2>&1 &
+                                                                                                                                       
+python /opt/oldMoney-Project/quantization/calibration_dense/AWQ_NVFP4_dense_all.py \
+  --input /opt/model \
+  --output /opt/model_nvfp4_dense_all_test \
+  --calib-data /opt/oldMoney-Project/quantization/calibration_dense/calib_dense_96.jsonl \
+  --max-samples 96 \
+  --max-len 131072 \
+  --mse-iters 120 \
+  --smooth-alpha 0.5
 
-source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
-python /opt/oldMoney-Project/quantization/AWQ_L_4_Mini_16.py \
- --input /opt/model \
- --output /opt/model_AWQ_L_4_Mini_16_calib_96 \
- --calib-data /opt/optimal_96.jsonl \
- --max-samples 96 \
- --max-len 131072 \
- --mse-iters 200 \
- --mse-max-shrink 0.60 \
- --mse-error-norm 2.0
+cd /opt
+export PYTORCH_ALLOC_CONF=expandable_segments:True
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+export TORCHINDUCTOR_COMPILE_THREADS=20
+export TORCH_COMPILE_THREADS=20
+fuser -k -9 31333/tcp
+nohup python3 -m sglang.launch_server \
+    --model /opt/model_nvfp4_dense_all_test \
+    --quantization modelopt \
+    --trust-remote-code \
+    --disable-radix-cache \
+    --attention-backend flashinfer \
+    --chunked-prefill-size 32768 \
+    --max-running-requests 64 \
+    --port 31333 \
+    --log-level info \
+    --mem-fraction-static 0.82 \
+    --enable-torch-compile \
+    > /opt/server.log 2>&1 &
 
-export TRITON_PTXAS_PATH="$(which ptxas)"
-source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
-nohup python /opt/oldMoney-Project/quantization/AWQ_L_4_Mini_16_smoothed.py \
-    --input /opt/model \
-    --output /opt/model_nvfp4_96_smoothed \
-    --calib-data /opt/oldMoney-Project/quantization/calibration/optimal_96.jsonl \
-    --max-samples 96 \
-    --max-len 131072 \
-    --smooth-alpha 0.5 \
-    --mse-iters 80 \
- > /opt/oldMoney-Project/logs/AWQ_L_4_Mini_16_smoothed.log 2>&1 &
+cd /opt/oldMoney-Project/SOAR-Toolkit
+nohup python3 eval_model.py \
+  --api_base http://127.0.0.1:31333 \
+  --model_path /opt/model_nvfp4_dense_all_test \
+  --data_path eval_dataset/perf_public_set.jsonl \
+  --concurrency 64 \
+  --num_samples 150 \
+  --verbose \
+  > /opt/oldMoney-Project/logs/model_nvfp4_dense_all_test.log 2>&1 &
 ```
 
 ## Deploy AWQ Models

@@ -2076,60 +2076,105 @@ class MiniCPMSparseBackend(AttentionBackend):
                 forward_batch.cache_seqlens_int32_stage1_cpu
             )
 
-            # Update flashinfer metadata for CUDA graph replay
-            # For sparse mode, use the wrapper-based pattern that preserves sparse_page_table
+            # # Update flashinfer metadata for CUDA graph replay
+            # # For sparse mode, use the wrapper-based pattern that preserves sparse_page_table
+            # if self.attention_kernel_type == "flashinfer":
+            #     sparse_bs = bs * 2
+            #     sparse_real_bs = real_bs * 2
+
+            #     # Get views of pre-allocated buffers
+            #     # kv_indptr is precomputed and static: [0, 1*K, 2*K, ..., sparse_bs*K]
+            #     kv_indptr_view = self.decode_cuda_graph_metadata[
+            #         "flashinfer_kv_indptr"
+            #     ][: sparse_bs + 1]
+            #     # kv_indices only needs num_sparse_topk_tokens per batch
+            #     kv_indices_view = self.decode_cuda_graph_metadata[
+            #         "flashinfer_kv_indices"
+            #     ][: sparse_bs * self.num_sparse_topk_tokens]
+            #     kv_last_page_len_view = self.decode_cuda_graph_metadata[
+            #         "flashinfer_kv_last_page_len"
+            #     ][:sparse_bs]
+            #     kv_last_page_len_view[sparse_real_bs:].fill_(0)
+
+            #     # Retrieve the wrapper stored during capture
+            #     wrapper = metadata.decode_wrapper
+
+            #     # dotv: added next two lines
+            #     is_fp8_kv = "fp8" in self.kv_cache_dtype_str.lower()
+            #     # replay_q_dtype = torch.float16 if is_fp8_kv else self.attention_kernel.q_data_type
+            #     replay_q_dtype = self.model_dtype
+
+            #     # Update wrapper's cached metadata using begin_forward
+            #     # This updates the wrapper internal state stored during capture
+            #     wrapper.begin_forward(
+            #         kv_indptr_view,
+            #         kv_indices_view,
+            #         kv_last_page_len_view,
+            #         self.attention_kernel.num_qo_heads
+            #         // 2,  # Query heads (for each head group)
+            #         self.attention_kernel.num_kv_heads
+            #         // 2,  # KV heads (for each head group)
+            #         self.head_dim,
+            #         self.page_size,
+            #         # q_data_type=self.attention_kernel.q_data_type,
+            #         q_data_type=replay_q_dtype,  # dotv
+            #         kv_data_type=self.attention_kernel.data_type,
+            #         non_blocking=True,
+            #     )
+
+            #     # Synchronize to ensure GPU operations complete before graph replay
+            #     # torch.cuda.synchronize()
+
+            #     # Store the views for reference (not used in forward, wrapper provides access)
+            #     metadata.flashinfer_kv_indptr = kv_indptr_view
+            #     metadata.flashinfer_kv_indices = kv_indices_view
+            #     metadata.flashinfer_kv_last_page_len = kv_last_page_len_view
             if self.attention_kernel_type == "flashinfer":
                 sparse_bs = bs * 2
                 sparse_real_bs = real_bs * 2
 
-                # Get views of pre-allocated buffers
-                # kv_indptr is precomputed and static: [0, 1*K, 2*K, ..., sparse_bs*K]
-                kv_indptr_view = self.decode_cuda_graph_metadata[
-                    "flashinfer_kv_indptr"
-                ][: sparse_bs + 1]
-                # kv_indices only needs num_sparse_topk_tokens per batch
-                kv_indices_view = self.decode_cuda_graph_metadata[
-                    "flashinfer_kv_indices"
-                ][: sparse_bs * self.num_sparse_topk_tokens]
-                kv_last_page_len_view = self.decode_cuda_graph_metadata[
-                    "flashinfer_kv_last_page_len"
-                ][:sparse_bs]
+                kv_indptr_view = self.decode_cuda_graph_metadata["flashinfer_kv_indptr"][: sparse_bs + 1]
+                kv_indices_view = self.decode_cuda_graph_metadata["flashinfer_kv_indices"][: sparse_bs * self.num_sparse_topk_tokens]
+                kv_last_page_len_view = self.decode_cuda_graph_metadata["flashinfer_kv_last_page_len"][:sparse_bs]
                 kv_last_page_len_view[sparse_real_bs:].fill_(0)
 
-                # Retrieve the wrapper stored during capture
                 wrapper = metadata.decode_wrapper
 
-                # dotv: added next two lines
                 is_fp8_kv = "fp8" in self.kv_cache_dtype_str.lower()
-                # replay_q_dtype = torch.float16 if is_fp8_kv else self.attention_kernel.q_data_type
                 replay_q_dtype = self.model_dtype
 
-                # Update wrapper's cached metadata using begin_forward
-                # This updates the wrapper internal state stored during capture
-                wrapper.begin_forward(
-                    kv_indptr_view,
-                    kv_indices_view,
-                    kv_last_page_len_view,
-                    self.attention_kernel.num_qo_heads
-                    // 2,  # Query heads (for each head group)
-                    self.attention_kernel.num_kv_heads
-                    // 2,  # KV heads (for each head group)
-                    self.head_dim,
-                    self.page_size,
-                    # q_data_type=self.attention_kernel.q_data_type,
-                    q_data_type=replay_q_dtype,  # dotv
-                    kv_data_type=self.attention_kernel.data_type,
-                    non_blocking=True,
-                )
+                # ==========================================
+                # FIX: Cache plan per (bs, real_bs) pair.
+                # The plan depends only on kv_indptr and kv_last_page_len,
+                # both of which are deterministic for a given (bs, real_bs).
+                # This eliminates the 71ms/call GPU sync from begin_forward.
+                # ==========================================
+                cache_key = (bs, real_bs)
+                if not hasattr(self, '_plan_cache'):
+                    self._plan_cache = {}
 
-                # Synchronize to ensure GPU operations complete before graph replay
-                # torch.cuda.synchronize()
+                if cache_key not in self._plan_cache:
+                    # First time seeing this (bs, real_bs) — must call begin_forward
+                    wrapper.begin_forward(
+                        kv_indptr_view,
+                        kv_indices_view,
+                        kv_last_page_len_view,
+                        self.attention_kernel.num_qo_heads // 2,
+                        self.attention_kernel.num_kv_heads // 2,
+                        self.head_dim,
+                        self.page_size,
+                        q_data_type=replay_q_dtype,
+                        kv_data_type=self.attention_kernel.data_type,
+                        non_blocking=True,
+                    )
+                    self._plan_cache[cache_key] = True
+                # else: skip begin_forward entirely — plan is identical
 
-                # Store the views for reference (not used in forward, wrapper provides access)
                 metadata.flashinfer_kv_indptr = kv_indptr_view
                 metadata.flashinfer_kv_indices = kv_indices_view
                 metadata.flashinfer_kv_last_page_len = kv_last_page_len_view
-
+                # dotv =========================================
+    
             self.decode_cuda_graph_metadata["compress_k1"][:forward_batch.batch_size * self.max_context_len // self.k1_kernel_stride, :, :].fill_(float('-inf')) 
             self.decode_cuda_graph_metadata["compress_k2"][:forward_batch.batch_size * self.max_context_len // self.k2_kernel_stride, :, :].fill_(float('-inf'))
             metadata.k1.cu_seqlens[: real_bs + 1].copy_(forward_batch.cu_seqlens_k1_cpu)
