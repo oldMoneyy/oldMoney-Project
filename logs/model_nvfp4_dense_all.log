@@ -1,0 +1,14 @@
+nohup: ignoring input
+Auto-detected model name: /opt/model_nvfp4_dense_all
+API Base: http://127.0.0.1:31333
+Model Name: /opt/model_nvfp4_dense_all
+Model Path: /opt/model_nvfp4_dense_all
+Data Path: eval_dataset/perf_public_set.jsonl
+Saving results to outputs/20260329_065254
+Testing with 150 samples.
+Initializing model client...
+Generating responses...
+2026-03-29 06:52:56,524 - SGLANG_INFERENCE - INFO - mid truncation: max_out_len=65536, max_seq_len=262144, max_prompt_len=128000
+2026-03-29 06:53:05,561 - SGLANG_INFERENCE - INFO - SGLang sampling kwargs: {'temperature': 0.0, 'max_tokens': 65536, 'stop': ['<|im_end|>', '</s>']}
+  Sending 150 requests to SGLang API (concurrency=64)...
+Generating:   0%|                                                                                                                                                    | 0/150 [00:00<?, ?it/s]
