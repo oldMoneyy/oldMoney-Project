@@ -997,12 +997,36 @@ Key findings:
 
 ### Throughput comparison
 
-| Model | TPS |
-|-------|-----|
-| BF16 + minicpm_flashinfer (original) | 409 |
-| NVFP4 + flashinfer (this) | **669** |
+| Model | Score | TPS | Size |
+|-------|-------|-----|------|
+| BF16 + minicpm_flashinfer (original) | 82.44% | 409 | 19 GB |
+| NVFP4 dense v2 (minicpm4 attn BF16, 64 calib) | 77.93% | 669 | ~6.4 GB |
+| **NVFP4 dense all (everything FP4, 96 calib)** | **80.53%** | **506** | **~5.5 GB** |
 
-1.6x faster than BF16 baseline with 4.5% accuracy drop.
+### Second result: 80.53% (2026-03-29)
+
+Config: ALL linears FP4, only norms/embed/lm_head BF16. Model size ~5.5 GB.
+Calibration: 96 samples with gold-guided Claude traces.
+Script: `AWQ_NVFP4_dense_all.py`
+
+| Task | Score | Perfect |
+|------|-------|---------|
+| MCQ  | ~60%  | ~18/30  |
+| NIAH | 100%  | 30/30   |
+| QA   | ~55%  | ~16/30  |
+| FWE  | 100%  | 30/30   |
+| CWE  | ~85%  | ~10/30  |
+| **Total** | **80.53%** | |
+
+Key findings:
+- **All-FP4 beats mixed-precision** (80.53% vs 77.93%). Uniform FP4 across all layers
+  works better than keeping minicpm4 attn in BF16 — precision mismatch between layers
+  actually hurts with flashinfer dense attention.
+- **96-sample gold-guided calibration** improved MCQ and QA accuracy vs 64-sample run.
+- **Passes all 3 long context tests** (Paris, BLUE-TIGER-42, Alice Zhang 1987) with
+  clean reasoning and no hallucination.
+- Only **1.9% below BF16 baseline** (80.53% vs 82.44%).
+- Zero token-0 collapse confirmed again.
 
 ### Calibration strategy v2: gold-guided traces (96 samples)
 
@@ -1061,7 +1085,8 @@ python /opt/oldMoney-Project/quantization/calibration_dense/AWQ_NVFP4_dense_flas
 ```
 
 ### Next steps
-1. Run BF16 + flashinfer baseline to get true accuracy ceiling
-2. Run NVFP4 with 96-sample calibration, compare MCQ/QA accuracy vs 64-sample run
-3. Benchmark GPTQ INT4 + flashinfer for W4A16 vs W4A4 comparison
+1. Run BF16 + flashinfer baseline to confirm accuracy ceiling (~81%)
+2. Benchmark GPTQ INT4 + flashinfer (W4A16) to compare with NVFP4 (W4A4)
+3. Tune serving params for throughput (chunked-prefill, max-running-requests, etc.)
 4. Calculate competition score = f(accuracy, throughput)
+5. Try mse-iters=200 or smooth-alpha tuning for marginal accuracy gains
