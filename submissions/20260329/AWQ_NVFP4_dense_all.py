@@ -827,6 +827,15 @@ def save_checkpoint(
 
 
 def quantize_model(args):
+    # Deterministic seeds — ensure reproducible quantization across runs
+    torch.manual_seed(42)
+    torch.cuda.manual_seed_all(42)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    # warn_only=True: FA2 doesn't support deterministic mode, so this avoids
+    # a hard crash while still making everything else deterministic
+    torch.use_deterministic_algorithms(True, warn_only=True)
+
     device = torch.device("cuda:0")
 
     from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig
