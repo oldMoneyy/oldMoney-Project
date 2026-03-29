@@ -416,37 +416,6 @@ nohup python /opt/oldMoney-Project/quantization/AWQ_L_4_Mini_16_smoothed.py \
 ## Deploy AWQ Models
 
 ```bash
-cd /opt
-fuser -k -9 31333/tcp
-nohup python3 -m sglang.launch_server \
-    --model /opt/model_nvfp4_awq_v2 \
-    --quantization modelopt \
-    --trust-remote-code \
-    --disable-radix-cache \
-    --attention-backend minicpm_flashinfer \
-    --chunked-prefill-size 32768 \
-    --max-running-requests 64 \
-    --max-mamba-cache-size 64 \
-    --skip-server-warmup \
-    --port 31333 \
-    --dense-as-sparse \
-    --mem-fraction-static 0.82 \
-    > /opt/server.log 2>&1 &
-
-cd /opt
-fuser -k -9 31333/tcp
-nohup python3 -m sglang.launch_server \
-    --model /opt/model_nvfp4_dense_v2 \
-    --quantization modelopt \
-    --trust-remote-code \
-    --disable-radix-cache \
-    --attention-backend flashinfer \
-    --chunked-prefill-size 32768 \
-    --max-running-requests 64 \
-    --port 31333 \
-    --log-level info \
-    --mem-fraction-static 0.82 \
-    > /opt/server.log 2>&1 &
 
 cd /opt
 fuser -k -9 31333/tcp
