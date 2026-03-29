@@ -52,7 +52,7 @@ try:
     fp4_fused, sf_fused = silu_and_mul_scaled_nvfp4_experts_quantize(
         gate_up_3d,
         masked_m,
-        scale_inv,
+        scale_inv.unsqueeze(0),  # must be 1D [num_experts]
     )
 
     print(f"fp4_fused shape: {fp4_fused.shape}, dtype: {fp4_fused.dtype}")
@@ -100,7 +100,7 @@ try:
     out_3d = out_sep2.unsqueeze(0)  # [1, T, I]
     masked_m = torch.tensor([T], dtype=torch.int32, device=device)
 
-    fp4_grp, sf_grp = scaled_fp4_grouped_quantize(out_3d, masked_m, scale_inv)
+    fp4_grp, sf_grp = scaled_fp4_grouped_quantize(out_3d, masked_m, scale_inv.unsqueeze(0))
     print(f"fp4_grp shape: {fp4_grp.shape}, dtype: {fp4_grp.dtype}")
     print(f"sf_grp shape:  {sf_grp.shape}, dtype: {sf_grp.dtype}")
 
