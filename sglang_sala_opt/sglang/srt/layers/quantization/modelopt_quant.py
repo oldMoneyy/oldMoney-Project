@@ -1172,11 +1172,6 @@ class ModelOptFp4LinearMethod(LinearMethodBase):
 
             layer.weight_scale_interleaved = Parameter(scale, requires_grad=False)
             layer.weight = Parameter(weight, requires_grad=False)
-            # Pre-transpose for flashinfer (trtllm path)
-            layer.weight_T = Parameter(weight.data.T.contiguous(), requires_grad=False)
-            layer.weight_scale_interleaved_T = Parameter(
-                scale.data.T.contiguous(), requires_grad=False
-            )
             return
         # Pad and blockwise interleave weight_scale
         scales = layer.weight_scale
@@ -1203,13 +1198,6 @@ class ModelOptFp4LinearMethod(LinearMethodBase):
         )
         layer.weight_scale_interleaved = Parameter(padded_scales, requires_grad=False)
 
-        # Pre-transpose weights for flashinfer to avoid per-forward .T calls
-        if enable_flashinfer_fp4_gemm:
-            layer.weight_T = Parameter(layer.weight.data.T.contiguous(), requires_grad=False)
-            layer.weight_scale_interleaved_T = Parameter(
-                padded_scales.data.T.contiguous(), requires_grad=False
-            )
-
     def apply(
         self,
         layer: torch.nn.Module,
@@ -1224,8 +1212,10 @@ class ModelOptFp4LinearMethod(LinearMethodBase):
         x_fp4, x_scale_interleaved = fp4_quantize(x, layer.input_scale_inv)
 
         if enable_flashinfer_fp4_gemm:
-            w = layer.weight_T
-            w_scale_interleaved = layer.weight_scale_interleaved_T
+            # .T is O(1) view — must NOT be .contiguous() as mm_fp4
+            # expects column-major layout via the transposed view
+            w = layer.weight.T
+            w_scale_interleaved = layer.weight_scale_interleaved.T
         else:
             w = layer.weight
             w_scale_interleaved = layer.weight_scale_interleaved
