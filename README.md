@@ -379,23 +379,22 @@ uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
 source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
 export TRITON_PTXAS_PATH="$(which ptxas)"
                                                                                                                                        
-python /opt/oldMoney-Project/quantization/calibration_dense/AWQ_NVFP4_dense_all.py \
+nohup python /opt/oldMoney-Project/quantization/calibration_dense/AWQ_NVFP4_dense_all.py \
   --input /opt/model \
   --output /opt/model_nvfp4_dense_all_test \
   --calib-data /opt/oldMoney-Project/quantization/calibration_dense/calib_dense_96.jsonl \
   --max-samples 96 \
   --max-len 131072 \
   --mse-iters 120 \
-  --smooth-alpha 0.5
+  --smooth-alpha 0.5 \
+  > /opt/quantize_80_53.log 2>&1 &
 
 cd /opt
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
-export TORCHINDUCTOR_COMPILE_THREADS=20
-export TORCH_COMPILE_THREADS=20
 fuser -k -9 31333/tcp
 nohup python3 -m sglang.launch_server \
-    --model /opt/model_nvfp4_dense_all_test \
+    --model /opt/model_nvfp4_dense_all \
     --quantization modelopt \
     --trust-remote-code \
     --disable-radix-cache \
@@ -405,8 +404,9 @@ nohup python3 -m sglang.launch_server \
     --port 31333 \
     --log-level info \
     --mem-fraction-static 0.82 \
-    --enable-torch-compile \
     > /opt/server.log 2>&1 &
+
+python /opt/oldMoney-Project/bench/long_context_test_case.py
 
 cd /opt/oldMoney-Project/SOAR-Toolkit
 nohup python3 eval_model.py \
