@@ -100,8 +100,9 @@ Result: Broke 3-week championship streak, unlocked "special bounty prize"
 KEY TAKEAWAYS FOR oldMoney
 ==========================
 
-1. BOTH winners use real quantization with minicpm_flashinfer (sparse attention).
-   NOT flashinfer (dense). Quantization + sparse attention IS viable.
+1. SlightwindSec (曹议) confirmed using flashinfer (dense attention), NOT
+   minicpm_flashinfer (sparse). Dense attention + NVFP4 is the winning path.
+   智算一队's backend is unknown but likely also dense.
 
 2. Quantization approaches that work:
    - NVFP4 (曹议): native Blackwell acceleration, dual-scale mechanism

@@ -966,11 +966,11 @@ Key findings:
 
 ### Throughput comparison
 
-| Model | Score | TPS | Size |
-|-------|-------|-----|------|
-| BF16 + minicpm_flashinfer (original) | 82.44% | 409 | 19 GB |
-| NVFP4 dense v2 (minicpm4 attn BF16, 64 calib) | 77.93% | 669 | ~6.4 GB |
-| **NVFP4 dense all (everything FP4, 96 calib)** | **80.53%** | **506** | **~5.5 GB** |
+| Model | Score | Total TPS | Output TPS | Duration(s) | Size |
+|-------|-------|-----------|------------|-------------|------|
+| NVFP4 dense all + flashinfer attn (sglang_sala_cp) | TBD | 6641 | 634 | 647 | ~5.5 GB |
+| NVFP4 dense all + flashinfer + torch-compile (sglang_sala_cp) | TBD | 6832 | 652 | 629 | ~5.5 GB |
+| NVFP4 dense all + flashinfer + kv-fp8 (sglang_sala_opt) | TBD | 7224 | 689 | 595 | ~5.5 GB |
 
 ### Second result: 80.53% (2026-03-29)
 
