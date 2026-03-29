@@ -422,7 +422,7 @@ export PYTORCH_ALLOC_CONF=expandable_segments:True
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 export TORCHINDUCTOR_COMPILE_THREADS=20
 export TORCH_COMPILE_THREADS=20
-export TORCHINDUCTOR_CACHE_DIR=/opt/.inductor_cache
+export TORCHINDUCTOR_CACHE_DIR=/opt/.torch_compile_0329
 export TORCHINDUCTOR_FX_GRAPH_CACHE=1
 fuser -k -9 31333/tcp
 nohup python3 -m sglang.launch_server \
@@ -437,6 +437,9 @@ nohup python3 -m sglang.launch_server \
     --log-level info \
     --mem-fraction-static 0.82 \
     --enable-torch-compile \
+    --torch-compile-max-bs 64 \
+    --enable-mixed-chunk \
+    --num-continuous-decode-steps 2 \
     > /opt/server.log 2>&1 &
 ```
 

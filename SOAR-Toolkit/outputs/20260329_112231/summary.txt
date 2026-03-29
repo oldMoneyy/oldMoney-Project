@@ -1,0 +1,10 @@
+Model: /opt/model_nvfp4_dense_all
+Data: eval_dataset/perf_public_set.jsonl
+Original Accuracy: 68.09%
+Normalized Accuracy: 85.11%
+Num Samples: 150
+Total Duration: 1790.07 s
+Total Output Tokens: 725860
+Average Input Tokens: 57627.8
+Average Output Tokens: 4839.1
+TPS: 405.49
