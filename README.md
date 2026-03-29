@@ -418,6 +418,12 @@ nohup python /opt/oldMoney-Project/quantization/AWQ_L_4_Mini_16_smoothed.py \
 ```bash
 
 cd /opt
+export PYTORCH_ALLOC_CONF=expandable_segments:True
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+export TORCHINDUCTOR_COMPILE_THREADS=20
+export TORCH_COMPILE_THREADS=20
+export TORCHINDUCTOR_CACHE_DIR=/opt/.inductor_cache
+export TORCHINDUCTOR_FX_GRAPH_CACHE=1
 fuser -k -9 31333/tcp
 nohup python3 -m sglang.launch_server \
     --model /opt/model_nvfp4_dense_all \
@@ -430,6 +436,7 @@ nohup python3 -m sglang.launch_server \
     --port 31333 \
     --log-level info \
     --mem-fraction-static 0.82 \
+    --enable-torch-compile \
     > /opt/server.log 2>&1 &
 ```
 
