@@ -212,7 +212,7 @@ nohup python3 eval_model.py \
   --concurrency 64 \
   --num_samples 150 \
   --verbose \
-  > /opt/oldMoney-Project/logs/model_nvfp4_dense_all.log 2>&1 &
+  > /opt/oldMoney-Project/logs/model_nvfp4_dense_all_kvfp8.log 2>&1 &
 ```
 
 
@@ -436,6 +436,7 @@ nohup python3 -m sglang.launch_server \
     --port 31333 \
     --log-level info \
     --mem-fraction-static 0.82 \
+    --kv-cache-dtype fp8_e5m2 \
     --enable-torch-compile \
     --torch-compile-max-bs 64 \
     --enable-mixed-chunk \

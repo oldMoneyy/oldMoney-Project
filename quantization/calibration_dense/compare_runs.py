@@ -7,11 +7,11 @@ Compare multiple SOAR eval runs from the same model to identify:
 4. Actionable breakdown: which questions to focus calibration on
 
 Usage (on remote server):
-    python /opt/oldMoney-Project/quantization/calibration_dense/compare_runs.py \
-        --runs /opt/oldMoney-Project/SOAR-Toolkit/outputs/20260329_065254 \
-             /opt/oldMoney-Project/SOAR-Toolkit/outputs/20260329_112231 \
-             /opt/oldMoney-Project/SOAR-Toolkit/outputs/20260329_124344 \
-        --tokenizer-path /opt/model_nvfp4_dense_all
+python /opt/oldMoney-Project/quantization/calibration_dense/compare_runs.py \
+    --runs /opt/oldMoney-Project/SOAR-Toolkit/outputs/20260329_065254 \
+         /opt/oldMoney-Project/SOAR-Toolkit/outputs/20260329_112231 \
+         /opt/oldMoney-Project/SOAR-Toolkit/outputs/20260329_124344 \
+    --tokenizer-path /opt/model_nvfp4_dense_all
 """
 
 import json
