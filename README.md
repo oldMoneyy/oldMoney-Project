@@ -970,7 +970,11 @@ Key findings:
 |-------|-------|-----------|------------|-------------|------|
 | NVFP4 dense all + flashinfer attn (sglang_sala_cp) | TBD | 6641 | 634 | 647 | ~5.5 GB |
 | NVFP4 dense all + flashinfer + torch-compile (sglang_sala_cp) | TBD | 6832 | 652 | 629 | ~5.5 GB |
-| NVFP4 dense all + flashinfer + kv-fp8 (sglang_sala_opt) | TBD | 7224 | 689 | 595 | ~5.5 GB |
+| ~~NVFP4 dense all + flashinfer + kv-fp8 (sglang_sala_opt)~~ | ~~TBD~~ | ~~7224~~ | ~~689~~ | ~~595~~ | ~~~5.5 GB~~ |
+
+**WARNING: `--kv-cache-dtype fp8_e4m3` corrupts model output** — generates random words.
+Even after removing the flag, the corruption persists until full server restart.
+Do NOT use KV cache FP8 with this NVFP4 model.
 
 ### Second result: 80.53% (2026-03-29)
 
