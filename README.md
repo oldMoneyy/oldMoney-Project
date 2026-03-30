@@ -210,7 +210,7 @@ nohup python3 eval_model.py \
   --concurrency 64 \
   --num_samples 150 \
   --verbose \
-  > /opt/oldMoney-Project/logs/eval_model_gptq_int4_dense_smooth.log 2>&1 &
+  > /opt/oldMoney-Project/logs/eval_model_gptq_int4_dense_smooth_minicpmflashinfer.log 2>&1 &
 ```
 
 
@@ -272,7 +272,8 @@ tail -f /opt/oldMoney-Project/logs/model_gptq_int4_minicpm_flashinfer_sparse.log
 
 Dense:
 ```bash
-uv pip install --no-deps -e /opt/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python
+# uv pip install --no-deps -e /opt/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python
+uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_opt
 fuser -k -9 31333/tcp
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
@@ -288,10 +289,10 @@ nohup python3 -m sglang.launch_server \
     --chunked-prefill-size 32768 \
     --mem-fraction-static 0.82 \
     --max-mamba-cache-size 64 \
-    --fuse-topk \
     --log-level info \
-    --enable-mixed-chunk \
     > /opt/server.log 2>&1 &
+
+python /opt/oldMoney-Project/bench/long_context_test_case.py
 ```
 
 
