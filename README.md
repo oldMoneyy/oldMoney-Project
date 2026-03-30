@@ -270,6 +270,37 @@ tail -f /opt/oldMoney-Project/logs/model_gptq_int4_minicpm_flashinfer_sparse.log
 
 ## Deploy GPTQ Models
 
+
+Dense:
+```bash
+uv pip install --no-deps -e opt/oldMoney-Project/sglang_sala_opt
+fuser -k -9 31333/tcp
+export PYTORCH_ALLOC_CONF=expandable_segments:True
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+export TORCHINDUCTOR_COMPILE_THREADS=20
+export TORCH_COMPILE_THREADS=20
+export TORCHINDUCTOR_CACHE_DIR=/tmp/.torch_compile_0330
+export TORCHINDUCTOR_FX_GRAPH_CACHE=1
+python3 -m sglang.launch_server \
+    --model-path /opt/model_gptq_int4_minicpm_flashinfer_sparse \
+    --port 31333 \
+    --quantization gptq_marlin \
+    --dtype bfloat16 \
+    --disable-radix-cache \
+    --kv-cache-dtype fp8_e5m2 \
+    --max-running-requests 64 \
+    --attention-backend flashinfer \
+    --chunked-prefill-size 32768 \
+    --mem-fraction-static 0.82 \
+    --max-mamba-cache-size 64 \
+    --fuse-topk \
+    --log-level info \
+    --num-continuous-decode-steps 2 \
+    --enable-mixed-chunk \
+    --enable-torch-compile
+```
+
+
 Sparse:
 ```bash
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
@@ -292,29 +323,7 @@ python3 -m sglang.launch_server \
     --enable-torch-compile
 ```
 
-Dense:
-```bash
-uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_kernel_fuse
-fuser -k -9 31333/tcp
-export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
-python3 -m sglang.launch_server \
-    --model-path /opt/model_gptq_int4_minicpm_flashinfer_sparse \
-    --port 31333 \
-    --quantization gptq_marlin \
-    --dtype float16 \
-    --disable-radix-cache \
-    --kv-cache-dtype fp8_e5m2 \
-    --max-running-requests 64 \
-    --attention-backend flashinfer \
-    --chunked-prefill-size 32768 \
-    --mem-fraction-static 0.82 \
-    --max-mamba-cache-size 64 \
-    --fuse-topk \
-    --log-level info \
-    --num-continuous-decode-steps 2 \
-    --enable-mixed-chunk \
-    --enable-torch-compile
-```
+
 
 ## GPTQ Findings
 

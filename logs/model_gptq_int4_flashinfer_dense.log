@@ -142,3 +142,35 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
     self_attn.z_proj MSE=1.021360e-05 RelErr=0.1548
     self_attn.z_proj [4096x4096] W4 quantized in 0.9s
   Updating hidden states for next layer...
+  Layer 2 done in 306.7s
+
+======================================================================
+[LAYER 3/31] type=lightning-attn  bits=4
+======================================================================
+  Linears to quantize: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (96 samples)...
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=1.101564e-05 RelErr=0.1433
+    mlp.down_proj [4096x16384] W4 quantized in 4.7s
+    mlp.gate_proj MSE=1.095669e-05 RelErr=0.1391
+    mlp.gate_proj [16384x4096] W4 quantized in 0.9s
+    mlp.up_proj MSE=9.685884e-06 RelErr=0.1394
+    mlp.up_proj [16384x4096] W4 quantized in 0.9s
+    self_attn.k_proj MSE=1.165861e-05 RelErr=0.1554
+    self_attn.k_proj [4096x4096] W4 quantized in 0.9s
+    self_attn.o_proj MSE=9.886395e-06 RelErr=0.1342
+    self_attn.o_proj [4096x4096] W4 quantized in 0.9s
+    self_attn.q_proj MSE=1.126101e-05 RelErr=0.1525
+    self_attn.q_proj [4096x4096] W4 quantized in 0.9s
+    self_attn.v_proj MSE=1.211829e-05 RelErr=0.1461
+    self_attn.v_proj [4096x4096] W4 quantized in 0.9s
+    self_attn.z_proj MSE=1.000220e-05 RelErr=0.1437
+    self_attn.z_proj [4096x4096] W4 quantized in 0.9s
+  Updating hidden states for next layer...
+  Layer 3 done in 304.9s
+
+======================================================================
+[LAYER 4/31] type=lightning-attn  bits=4
+======================================================================
+  Linears to quantize: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (96 samples)...
