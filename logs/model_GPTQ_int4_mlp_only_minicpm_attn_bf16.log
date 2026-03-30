@@ -1,0 +1,1013 @@
+nohup: ignoring input
+[INFO] Using Deterministic Seed: 42
+======================================================================
+GPTQ Quantizer: MiniCPM Attn BF16 + MLP/Lightning INT4
+======================================================================
+  Input:           /opt/model
+  Output:          /opt/model_GPTQ_int4_mlp_only_minicpm_attn_bf16
+  Bits (MLP/LA):   4
+  Symmetric:       True
+  Smooth alpha:    0.5
+  Group size:      128
+  Damping:         0.01
+  Calib data:      /opt/oldMoney-Project/quantization/calibration_dense/calib_dense_96.jsonl
+  Max samples:     96
+  Max length:      131072
+  Quant lm_head:   False
+
+  Layer    Type                 Attn       MLP       
+  ------------------------------------------------
+  0        minicpm4             BF16       W4        
+  1        lightning-attn       W4         W4        
+  2        lightning-attn       W4         W4        
+  3        lightning-attn       W4         W4        
+  4        lightning-attn       W4         W4        
+  5        lightning-attn       W4         W4        
+  6        lightning-attn       W4         W4        
+  7        lightning-attn       W4         W4        
+  8        lightning-attn       W4         W4        
+  9        minicpm4             BF16       W4        
+  10       lightning-attn       W4         W4        
+  11       lightning-attn       W4         W4        
+  12       lightning-attn       W4         W4        
+  13       lightning-attn       W4         W4        
+  14       lightning-attn       W4         W4        
+  15       lightning-attn       W4         W4        
+  16       minicpm4             BF16       W4        
+  17       minicpm4             BF16       W4        
+  18       lightning-attn       W4         W4        
+  19       lightning-attn       W4         W4        
+  20       lightning-attn       W4         W4        
+  21       lightning-attn       W4         W4        
+  22       minicpm4             BF16       W4        
+  23       lightning-attn       W4         W4        
+  24       lightning-attn       W4         W4        
+  25       lightning-attn       W4         W4        
+  26       lightning-attn       W4         W4        
+  27       lightning-attn       W4         W4        
+  28       lightning-attn       W4         W4        
+  29       minicpm4             BF16       W4        
+  30       minicpm4             BF16       W4        
+  31       minicpm4             BF16       W4        
+
+  Summary: 8 layers with BF16-attn | 24 layers fully INT4
+======================================================================
+[INFO] Using device: cuda:0
+[INFO] Loading tokenizer from /opt/model...
+[INFO] Loaded 96 calibration samples, 4,009,987 tokens (max_len=131072)
+[INFO] Loading model from /opt/model (CPU)...
+Skipping import of cpp extensions due to incompatible torch version 2.8.0+cu128 for torchao version 0.16.0             Please see https://github.com/pytorch/ao/issues/2919 for more info
+Current Python version 3.10 is below the recommended 3.11 version. It is recommended to upgrade to Python 3.11 or higher for the best experience.
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loading checkpoint shards:   0%|                                                                                                                  | 0/4 [00:00<?, ?it/s]Loading checkpoint shards: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:00<00:00, 90.48it/s]
+[INFO] Model has 32 layers
+[INFO] Phase 1: Computing initial hidden states (embedding)...
+/opt/oldMoney-Project/quantization/GPTQ_int4_mlp_only_minicpm_attn_bf16.py:241: FutureWarning: `torch.distributed.reduce_op` is deprecated, please use `torch.distributed.ReduceOp` instead
+  if isinstance(obj, functools._lru_cache_wrapper):
+
+======================================================================
+[LAYER 0/31] type=minicpm4
+======================================================================
+  All linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  -> Quantize (INT4): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  -> Skip (BF16):     ['self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  Collecting Hessians (96 samples)...
+  Applying SmoothQuant channel equalization (alpha=0.5)...
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.1233 max=6.5991 std=0.1224
+  Smoothed [up_proj] -> [down_proj] | s: min=0.3237 max=2.3198 std=0.2431
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=2.355016e-05 RelErr=0.2198
+    mlp.down_proj [4096x16384] W4 quantized in 3.7s
+    mlp.gate_proj MSE=8.984000e-06 RelErr=0.1803
+    mlp.gate_proj [16384x4096] W4 quantized in 0.8s
+    mlp.up_proj MSE=1.230766e-05 RelErr=0.1648
+    mlp.up_proj [16384x4096] W4 quantized in 0.8s
+  Updating hidden states for next layer...
+  Layer 0 done in 89.0s (3 INT4, 5 BF16)
+
+======================================================================
+[LAYER 1/31] type=lightning-attn
+======================================================================
+  All linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Quantize (INT4): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Skip (BF16):     []
+  Collecting Hessians (96 samples)...
+/opt/oldMoney-Project/quantization/GPTQ_int4_mlp_only_minicpm_attn_bf16.py:241: FutureWarning: `torch.distributed.reduce_op` is deprecated, please use `torch.distributed.ReduceOp` instead
+  if isinstance(obj, functools._lru_cache_wrapper):
+  Applying SmoothQuant channel equalization (alpha=0.5)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj'] | s: min=0.0473 max=3.8493 std=0.2025
+  Smoothed [o_norm] -> [o_proj] | s: min=0.1398 max=5.6455 std=0.3405
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.1295 max=5.2830 std=0.1050
+  Smoothed [up_proj] -> [down_proj] | s: min=0.3217 max=2.8457 std=0.1877
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=1.767411e-05 RelErr=0.1817
+    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.gate_proj MSE=1.145040e-05 RelErr=0.1723
+    mlp.gate_proj [16384x4096] W4 quantized in 0.8s
+    mlp.up_proj MSE=1.117874e-05 RelErr=0.1552
+    mlp.up_proj [16384x4096] W4 quantized in 0.8s
+    self_attn.k_proj MSE=1.575697e-05 RelErr=0.2419
+    self_attn.k_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.o_proj MSE=1.393081e-05 RelErr=0.1704
+    self_attn.o_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.q_proj MSE=1.442426e-05 RelErr=0.2308
+    self_attn.q_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.v_proj MSE=1.720990e-05 RelErr=0.2111
+    self_attn.v_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.z_proj MSE=1.497294e-05 RelErr=0.2006
+    self_attn.z_proj [4096x4096] W4 quantized in 0.8s
+  Updating hidden states for next layer...
+  Layer 1 done in 99.7s (8 INT4, 0 BF16)
+
+======================================================================
+[LAYER 2/31] type=lightning-attn
+======================================================================
+  All linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Quantize (INT4): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Skip (BF16):     []
+  Collecting Hessians (96 samples)...
+  Applying SmoothQuant channel equalization (alpha=0.5)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj'] | s: min=0.0983 max=3.7557 std=0.1671
+  Smoothed [o_norm] -> [o_proj] | s: min=0.2886 max=1.7534 std=0.2560
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.0327 max=3.8271 std=0.0984
+  Smoothed [up_proj] -> [down_proj] | s: min=0.3454 max=3.5749 std=0.2576
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=1.760652e-05 RelErr=0.1731
+    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.gate_proj MSE=1.260421e-05 RelErr=0.1615
+    mlp.gate_proj [16384x4096] W4 quantized in 0.8s
+    mlp.up_proj MSE=1.254868e-05 RelErr=0.1472
+    mlp.up_proj [16384x4096] W4 quantized in 0.9s
+    self_attn.k_proj MSE=1.632407e-05 RelErr=0.2031
+    self_attn.k_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.o_proj MSE=1.245034e-05 RelErr=0.1480
+    self_attn.o_proj [4096x4096] W4 quantized in 0.9s
+    self_attn.q_proj MSE=1.554639e-05 RelErr=0.1980
+    self_attn.q_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.v_proj MSE=1.502740e-05 RelErr=0.1691
+    self_attn.v_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.z_proj MSE=1.371151e-05 RelErr=0.1754
+    self_attn.z_proj [4096x4096] W4 quantized in 0.8s
+  Updating hidden states for next layer...
+  Layer 2 done in 100.5s (8 INT4, 0 BF16)
+
+======================================================================
+[LAYER 3/31] type=lightning-attn
+======================================================================
+  All linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Quantize (INT4): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Skip (BF16):     []
+  Collecting Hessians (96 samples)...
+  Applying SmoothQuant channel equalization (alpha=0.5)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj'] | s: min=0.0461 max=3.4797 std=0.1098
+  Smoothed [o_norm] -> [o_proj] | s: min=0.2548 max=1.9935 std=0.2188
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.0642 max=2.6691 std=0.0939
+  Smoothed [up_proj] -> [down_proj] | s: min=0.3681 max=3.2571 std=0.1872
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=1.232755e-05 RelErr=0.1489
+    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.gate_proj MSE=1.248249e-05 RelErr=0.1472
+    mlp.gate_proj [16384x4096] W4 quantized in 0.8s
+    mlp.up_proj MSE=1.117028e-05 RelErr=0.1410
+    mlp.up_proj [16384x4096] W4 quantized in 0.8s
+    self_attn.k_proj MSE=1.416676e-05 RelErr=0.1692
+    self_attn.k_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.o_proj MSE=1.143382e-05 RelErr=0.1398
+    self_attn.o_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.q_proj MSE=1.299906e-05 RelErr=0.1624
+    self_attn.q_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.v_proj MSE=1.363276e-05 RelErr=0.1538
+    self_attn.v_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.z_proj MSE=1.171983e-05 RelErr=0.1542
+    self_attn.z_proj [4096x4096] W4 quantized in 0.8s
+  Updating hidden states for next layer...
+  Layer 3 done in 99.8s (8 INT4, 0 BF16)
+
+======================================================================
+[LAYER 4/31] type=lightning-attn
+======================================================================
+  All linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Quantize (INT4): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Skip (BF16):     []
+  Collecting Hessians (96 samples)...
+  Applying SmoothQuant channel equalization (alpha=0.5)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj'] | s: min=0.0325 max=3.3388 std=0.1220
+  Smoothed [o_norm] -> [o_proj] | s: min=0.3028 max=2.3455 std=0.2475
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.1092 max=2.5621 std=0.0947
+  Smoothed [up_proj] -> [down_proj] | s: min=0.3199 max=2.4251 std=0.1652
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=1.161347e-05 RelErr=0.1440
+    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.gate_proj MSE=1.175379e-05 RelErr=0.1424
+    mlp.gate_proj [16384x4096] W4 quantized in 0.8s
+    mlp.up_proj MSE=1.077780e-05 RelErr=0.1371
+    mlp.up_proj [16384x4096] W4 quantized in 0.8s
+    self_attn.k_proj MSE=1.217927e-05 RelErr=0.1679
+    self_attn.k_proj [4096x4096] W4 quantized in 0.9s
+    self_attn.o_proj MSE=1.198727e-05 RelErr=0.1434
+    self_attn.o_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.q_proj MSE=1.152090e-05 RelErr=0.1641
+    self_attn.q_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.v_proj MSE=1.169147e-05 RelErr=0.1449
+    self_attn.v_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.z_proj MSE=1.042307e-05 RelErr=0.1464
+    self_attn.z_proj [4096x4096] W4 quantized in 0.8s
+  Updating hidden states for next layer...
+  Layer 4 done in 101.4s (8 INT4, 0 BF16)
+
+======================================================================
+[LAYER 5/31] type=lightning-attn
+======================================================================
+  All linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Quantize (INT4): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Skip (BF16):     []
+  Collecting Hessians (96 samples)...
+  Applying SmoothQuant channel equalization (alpha=0.5)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj'] | s: min=0.1421 max=3.9033 std=0.1081
+  Smoothed [o_norm] -> [o_proj] | s: min=0.1058 max=1.7371 std=0.2183
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.0217 max=2.8231 std=0.0944
+  Smoothed [up_proj] -> [down_proj] | s: min=0.3136 max=2.0671 std=0.1300
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=9.989661e-06 RelErr=0.1348
+    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.gate_proj MSE=1.113508e-05 RelErr=0.1374
+    mlp.gate_proj [16384x4096] W4 quantized in 0.9s
+    mlp.up_proj MSE=1.032451e-05 RelErr=0.1346
+    mlp.up_proj [16384x4096] W4 quantized in 0.8s
+    self_attn.k_proj MSE=1.277471e-05 RelErr=0.1617
+    self_attn.k_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.o_proj MSE=1.125370e-05 RelErr=0.1375
+    self_attn.o_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.q_proj MSE=1.136466e-05 RelErr=0.1516
+    self_attn.q_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.v_proj MSE=1.230251e-05 RelErr=0.1448
+    self_attn.v_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.z_proj MSE=1.053446e-05 RelErr=0.1456
+    self_attn.z_proj [4096x4096] W4 quantized in 0.8s
+  Updating hidden states for next layer...
+  Layer 5 done in 101.0s (8 INT4, 0 BF16)
+
+======================================================================
+[LAYER 6/31] type=lightning-attn
+======================================================================
+  All linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Quantize (INT4): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Skip (BF16):     []
+  Collecting Hessians (96 samples)...
+  Applying SmoothQuant channel equalization (alpha=0.5)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj'] | s: min=0.0899 max=2.6708 std=0.0870
+  Smoothed [o_norm] -> [o_proj] | s: min=0.2976 max=1.7323 std=0.1937
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.1006 max=1.8939 std=0.0844
+  Smoothed [up_proj] -> [down_proj] | s: min=0.3630 max=1.9463 std=0.1427
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=1.061235e-05 RelErr=0.1388
+    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.gate_proj MSE=1.071911e-05 RelErr=0.1354
+    mlp.gate_proj [16384x4096] W4 quantized in 0.8s
+    mlp.up_proj MSE=1.007860e-05 RelErr=0.1330
+    mlp.up_proj [16384x4096] W4 quantized in 0.8s
+    self_attn.k_proj MSE=1.497538e-05 RelErr=0.1684
+    self_attn.k_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.o_proj MSE=1.073556e-05 RelErr=0.1358
+    self_attn.o_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.q_proj MSE=1.151287e-05 RelErr=0.1515
+    self_attn.q_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.v_proj MSE=1.158015e-05 RelErr=0.1387
+    self_attn.v_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.z_proj MSE=9.511667e-06 RelErr=0.1401
+    self_attn.z_proj [4096x4096] W4 quantized in 0.8s
+  Updating hidden states for next layer...
+  Layer 6 done in 101.1s (8 INT4, 0 BF16)
+
+======================================================================
+[LAYER 7/31] type=lightning-attn
+======================================================================
+  All linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Quantize (INT4): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Skip (BF16):     []
+  Collecting Hessians (96 samples)...
+  Applying SmoothQuant channel equalization (alpha=0.5)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj'] | s: min=0.1651 max=3.2345 std=0.1044
+  Smoothed [o_norm] -> [o_proj] | s: min=0.3332 max=2.0099 std=0.2024
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.0523 max=2.0319 std=0.0980
+  Smoothed [up_proj] -> [down_proj] | s: min=0.3132 max=2.2529 std=0.1644
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=1.159857e-05 RelErr=0.1434
+    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.gate_proj MSE=1.089758e-05 RelErr=0.1366
+    mlp.gate_proj [16384x4096] W4 quantized in 0.8s
+    mlp.up_proj MSE=1.078742e-05 RelErr=0.1349
+    mlp.up_proj [16384x4096] W4 quantized in 0.8s
+    self_attn.k_proj MSE=1.476781e-05 RelErr=0.1670
+    self_attn.k_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.o_proj MSE=1.110674e-05 RelErr=0.1372
+    self_attn.o_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.q_proj MSE=1.132092e-05 RelErr=0.1494
+    self_attn.q_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.v_proj MSE=1.180228e-05 RelErr=0.1397
+    self_attn.v_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.z_proj MSE=9.521482e-06 RelErr=0.1399
+    self_attn.z_proj [4096x4096] W4 quantized in 0.8s
+  Updating hidden states for next layer...
+  Layer 7 done in 101.6s (8 INT4, 0 BF16)
+
+======================================================================
+[LAYER 8/31] type=lightning-attn
+======================================================================
+  All linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Quantize (INT4): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Skip (BF16):     []
+  Collecting Hessians (96 samples)...
+  Applying SmoothQuant channel equalization (alpha=0.5)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj'] | s: min=0.1347 max=3.8748 std=0.0966
+  Smoothed [o_norm] -> [o_proj] | s: min=0.2267 max=1.7752 std=0.1935
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.0944 max=1.9404 std=0.1008
+  Smoothed [up_proj] -> [down_proj] | s: min=0.3391 max=2.2824 std=0.1656
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=1.118227e-05 RelErr=0.1416
+    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.gate_proj MSE=1.151642e-05 RelErr=0.1376
+    mlp.gate_proj [16384x4096] W4 quantized in 0.8s
+    mlp.up_proj MSE=1.115783e-05 RelErr=0.1360
+    mlp.up_proj [16384x4096] W4 quantized in 0.8s
+    self_attn.k_proj MSE=1.784844e-05 RelErr=0.1777
+    self_attn.k_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.o_proj MSE=1.107809e-05 RelErr=0.1357
+    self_attn.o_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.q_proj MSE=1.250632e-05 RelErr=0.1534
+    self_attn.q_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.v_proj MSE=1.213148e-05 RelErr=0.1398
+    self_attn.v_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.z_proj MSE=9.761199e-06 RelErr=0.1400
+    self_attn.z_proj [4096x4096] W4 quantized in 0.8s
+  Updating hidden states for next layer...
+  Layer 8 done in 100.2s (8 INT4, 0 BF16)
+
+======================================================================
+[LAYER 9/31] type=minicpm4
+======================================================================
+  All linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  -> Quantize (INT4): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  -> Skip (BF16):     ['self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  Collecting Hessians (96 samples)...
+  Applying SmoothQuant channel equalization (alpha=0.5)...
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.0831 max=1.9003 std=0.1021
+  Smoothed [up_proj] -> [down_proj] | s: min=0.3174 max=2.4016 std=0.1476
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=1.121132e-05 RelErr=0.1410
+    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.gate_proj MSE=1.111324e-05 RelErr=0.1368
+    mlp.gate_proj [16384x4096] W4 quantized in 0.8s
+    mlp.up_proj MSE=1.107542e-05 RelErr=0.1358
+    mlp.up_proj [16384x4096] W4 quantized in 0.8s
+  Updating hidden states for next layer...
+  Layer 9 done in 92.2s (3 INT4, 5 BF16)
+
+======================================================================
+[LAYER 10/31] type=lightning-attn
+======================================================================
+  All linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Quantize (INT4): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Skip (BF16):     []
+  Collecting Hessians (96 samples)...
+  Applying SmoothQuant channel equalization (alpha=0.5)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj'] | s: min=0.1729 max=2.6189 std=0.0922
+  Smoothed [o_norm] -> [o_proj] | s: min=0.2099 max=2.2160 std=0.2257
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.0643 max=1.8415 std=0.0882
+  Smoothed [up_proj] -> [down_proj] | s: min=0.3593 max=2.1840 std=0.1411
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=1.102754e-05 RelErr=0.1393
+    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.gate_proj MSE=1.081058e-05 RelErr=0.1359
+    mlp.gate_proj [16384x4096] W4 quantized in 0.8s
+    mlp.up_proj MSE=1.098190e-05 RelErr=0.1349
+    mlp.up_proj [16384x4096] W4 quantized in 0.8s
+    self_attn.k_proj MSE=1.629462e-05 RelErr=0.1672
+    self_attn.k_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.o_proj MSE=1.156666e-05 RelErr=0.1394
+    self_attn.o_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.q_proj MSE=1.174889e-05 RelErr=0.1476
+    self_attn.q_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.v_proj MSE=1.217915e-05 RelErr=0.1425
+    self_attn.v_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.z_proj MSE=9.915770e-06 RelErr=0.1407
+    self_attn.z_proj [4096x4096] W4 quantized in 0.8s
+  Updating hidden states for next layer...
+  Layer 10 done in 100.2s (8 INT4, 0 BF16)
+
+======================================================================
+[LAYER 11/31] type=lightning-attn
+======================================================================
+  All linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Quantize (INT4): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Skip (BF16):     []
+  Collecting Hessians (96 samples)...
+  Applying SmoothQuant channel equalization (alpha=0.5)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj'] | s: min=0.0412 max=1.7830 std=0.0916
+  Smoothed [o_norm] -> [o_proj] | s: min=0.2234 max=1.9798 std=0.1982
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.0227 max=2.0668 std=0.0948
+  Smoothed [up_proj] -> [down_proj] | s: min=0.3405 max=2.1314 std=0.1543
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=1.191487e-05 RelErr=0.1433
+    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.gate_proj MSE=1.101859e-05 RelErr=0.1376
+    mlp.gate_proj [16384x4096] W4 quantized in 0.8s
+    mlp.up_proj MSE=1.164034e-05 RelErr=0.1364
+    mlp.up_proj [16384x4096] W4 quantized in 0.8s
+    self_attn.k_proj MSE=1.516829e-05 RelErr=0.1652
+    self_attn.k_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.o_proj MSE=1.111399e-05 RelErr=0.1363
+    self_attn.o_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.q_proj MSE=1.161979e-05 RelErr=0.1471
+    self_attn.q_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.v_proj MSE=1.213608e-05 RelErr=0.1407
+    self_attn.v_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.z_proj MSE=9.380106e-06 RelErr=0.1377
+    self_attn.z_proj [4096x4096] W4 quantized in 0.8s
+  Updating hidden states for next layer...
+  Layer 11 done in 100.4s (8 INT4, 0 BF16)
+
+======================================================================
+[LAYER 12/31] type=lightning-attn
+======================================================================
+  All linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Quantize (INT4): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Skip (BF16):     []
+  Collecting Hessians (96 samples)...
+  Applying SmoothQuant channel equalization (alpha=0.5)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj'] | s: min=0.1950 max=3.2621 std=0.1144
+  Smoothed [o_norm] -> [o_proj] | s: min=0.3302 max=2.8539 std=0.2112
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.0501 max=2.5297 std=0.1032
+  Smoothed [up_proj] -> [down_proj] | s: min=0.2912 max=1.8772 std=0.1343
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=1.125093e-05 RelErr=0.1384
+    mlp.down_proj [4096x16384] W4 quantized in 3.8s
+    mlp.gate_proj MSE=1.097059e-05 RelErr=0.1383
+    mlp.gate_proj [16384x4096] W4 quantized in 0.8s
+    mlp.up_proj MSE=1.161137e-05 RelErr=0.1362
+    mlp.up_proj [16384x4096] W4 quantized in 0.8s
+    self_attn.k_proj MSE=1.447967e-05 RelErr=0.1636
+    self_attn.k_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.o_proj MSE=1.174991e-05 RelErr=0.1391
+    self_attn.o_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.q_proj MSE=1.248060e-05 RelErr=0.1513
+    self_attn.q_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.v_proj MSE=1.348127e-05 RelErr=0.1497
+    self_attn.v_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.z_proj MSE=1.050964e-05 RelErr=0.1425
+    self_attn.z_proj [4096x4096] W4 quantized in 0.8s
+  Updating hidden states for next layer...
+  Layer 12 done in 100.7s (8 INT4, 0 BF16)
+
+======================================================================
+[LAYER 13/31] type=lightning-attn
+======================================================================
+  All linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Quantize (INT4): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Skip (BF16):     []
+  Collecting Hessians (96 samples)...
+  Applying SmoothQuant channel equalization (alpha=0.5)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj'] | s: min=0.1102 max=2.0855 std=0.1077
+  Smoothed [o_norm] -> [o_proj] | s: min=0.3110 max=2.4621 std=0.1529
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.1554 max=2.6665 std=0.1036
+  Smoothed [up_proj] -> [down_proj] | s: min=0.3416 max=1.8038 std=0.1271
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=1.120270e-05 RelErr=0.1379
+    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.gate_proj MSE=1.090022e-05 RelErr=0.1388
+    mlp.gate_proj [16384x4096] W4 quantized in 0.8s
+    mlp.up_proj MSE=1.154508e-05 RelErr=0.1354
+    mlp.up_proj [16384x4096] W4 quantized in 0.8s
+    self_attn.k_proj MSE=1.816889e-05 RelErr=0.1721
+    self_attn.k_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.o_proj MSE=1.016364e-05 RelErr=0.1325
+    self_attn.o_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.q_proj MSE=1.243567e-05 RelErr=0.1467
+    self_attn.q_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.v_proj MSE=1.220520e-05 RelErr=0.1413
+    self_attn.v_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.z_proj MSE=9.756901e-06 RelErr=0.1408
+    self_attn.z_proj [4096x4096] W4 quantized in 0.8s
+  Updating hidden states for next layer...
+  Layer 13 done in 100.1s (8 INT4, 0 BF16)
+
+======================================================================
+[LAYER 14/31] type=lightning-attn
+======================================================================
+  All linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Quantize (INT4): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Skip (BF16):     []
+  Collecting Hessians (96 samples)...
+  Applying SmoothQuant channel equalization (alpha=0.5)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj'] | s: min=0.1362 max=2.4760 std=0.1140
+  Smoothed [o_norm] -> [o_proj] | s: min=0.3231 max=1.7916 std=0.1744
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.2369 max=2.3037 std=0.1056
+  Smoothed [up_proj] -> [down_proj] | s: min=0.3458 max=2.0882 std=0.1348
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=1.169104e-05 RelErr=0.1392
+    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.gate_proj MSE=1.056258e-05 RelErr=0.1383
+    mlp.gate_proj [16384x4096] W4 quantized in 0.8s
+    mlp.up_proj MSE=1.194052e-05 RelErr=0.1357
+    mlp.up_proj [16384x4096] W4 quantized in 0.8s
+    self_attn.k_proj MSE=1.662761e-05 RelErr=0.1701
+    self_attn.k_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.o_proj MSE=1.062924e-05 RelErr=0.1347
+    self_attn.o_proj [4096x4096] W4 quantized in 0.9s
+    self_attn.q_proj MSE=1.278613e-05 RelErr=0.1516
+    self_attn.q_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.v_proj MSE=1.239938e-05 RelErr=0.1410
+    self_attn.v_proj [4096x4096] W4 quantized in 0.9s
+    self_attn.z_proj MSE=9.398201e-06 RelErr=0.1383
+    self_attn.z_proj [4096x4096] W4 quantized in 0.8s
+  Updating hidden states for next layer...
+  Layer 14 done in 100.3s (8 INT4, 0 BF16)
+
+======================================================================
+[LAYER 15/31] type=lightning-attn
+======================================================================
+  All linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Quantize (INT4): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Skip (BF16):     []
+  Collecting Hessians (96 samples)...
+  Applying SmoothQuant channel equalization (alpha=0.5)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj'] | s: min=0.5962 max=2.6149 std=0.1091
+  Smoothed [o_norm] -> [o_proj] | s: min=0.1160 max=1.8105 std=0.1794
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.0866 max=2.5963 std=0.1025
+  Smoothed [up_proj] -> [down_proj] | s: min=0.3873 max=2.1308 std=0.1399
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=1.112474e-05 RelErr=0.1378
+    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.gate_proj MSE=1.099658e-05 RelErr=0.1378
+    mlp.gate_proj [16384x4096] W4 quantized in 0.8s
+    mlp.up_proj MSE=1.159393e-05 RelErr=0.1354
+    mlp.up_proj [16384x4096] W4 quantized in 0.8s
+    self_attn.k_proj MSE=1.887785e-05 RelErr=0.1732
+    self_attn.k_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.o_proj MSE=1.095281e-05 RelErr=0.1348
+    self_attn.o_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.q_proj MSE=1.326468e-05 RelErr=0.1506
+    self_attn.q_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.v_proj MSE=1.255892e-05 RelErr=0.1409
+    self_attn.v_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.z_proj MSE=9.507765e-06 RelErr=0.1387
+    self_attn.z_proj [4096x4096] W4 quantized in 0.8s
+  Updating hidden states for next layer...
+  Layer 15 done in 100.0s (8 INT4, 0 BF16)
+
+======================================================================
+[LAYER 16/31] type=minicpm4
+======================================================================
+  All linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  -> Quantize (INT4): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  -> Skip (BF16):     ['self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  Collecting Hessians (96 samples)...
+  Applying SmoothQuant channel equalization (alpha=0.5)...
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.1356 max=2.0616 std=0.1088
+  Smoothed [up_proj] -> [down_proj] | s: min=0.3772 max=2.2650 std=0.1342
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=1.080497e-05 RelErr=0.1370
+    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.gate_proj MSE=1.134933e-05 RelErr=0.1381
+    mlp.gate_proj [16384x4096] W4 quantized in 0.8s
+    mlp.up_proj MSE=1.140776e-05 RelErr=0.1355
+    mlp.up_proj [16384x4096] W4 quantized in 0.8s
+  Updating hidden states for next layer...
+  Layer 16 done in 92.7s (3 INT4, 5 BF16)
+
+======================================================================
+[LAYER 17/31] type=minicpm4
+======================================================================
+  All linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  -> Quantize (INT4): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  -> Skip (BF16):     ['self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  Collecting Hessians (96 samples)...
+  Applying SmoothQuant channel equalization (alpha=0.5)...
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.1493 max=2.7302 std=0.1092
+  Smoothed [up_proj] -> [down_proj] | s: min=0.4049 max=2.4354 std=0.1355
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=1.102047e-05 RelErr=0.1398
+    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.gate_proj MSE=1.236942e-05 RelErr=0.1406
+    mlp.gate_proj [16384x4096] W4 quantized in 0.8s
+    mlp.up_proj MSE=1.092269e-05 RelErr=0.1351
+    mlp.up_proj [16384x4096] W4 quantized in 0.8s
+  Updating hidden states for next layer...
+  Layer 17 done in 92.4s (3 INT4, 5 BF16)
+
+======================================================================
+[LAYER 18/31] type=lightning-attn
+======================================================================
+  All linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Quantize (INT4): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Skip (BF16):     []
+  Collecting Hessians (96 samples)...
+  Applying SmoothQuant channel equalization (alpha=0.5)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj'] | s: min=0.0332 max=2.4773 std=0.1230
+  Smoothed [o_norm] -> [o_proj] | s: min=0.4276 max=2.4878 std=0.1543
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.1719 max=2.5205 std=0.1213
+  Smoothed [up_proj] -> [down_proj] | s: min=0.4065 max=2.4440 std=0.1231
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=1.051773e-05 RelErr=0.1355
+    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.gate_proj MSE=1.180728e-05 RelErr=0.1391
+    mlp.gate_proj [16384x4096] W4 quantized in 0.8s
+    mlp.up_proj MSE=1.141531e-05 RelErr=0.1359
+    mlp.up_proj [16384x4096] W4 quantized in 0.8s
+    self_attn.k_proj MSE=1.955374e-05 RelErr=0.1766
+    self_attn.k_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.o_proj MSE=1.053539e-05 RelErr=0.1332
+    self_attn.o_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.q_proj MSE=1.317106e-05 RelErr=0.1514
+    self_attn.q_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.v_proj MSE=1.310600e-05 RelErr=0.1440
+    self_attn.v_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.z_proj MSE=1.018869e-05 RelErr=0.1396
+    self_attn.z_proj [4096x4096] W4 quantized in 0.8s
+  Updating hidden states for next layer...
+  Layer 18 done in 100.6s (8 INT4, 0 BF16)
+
+======================================================================
+[LAYER 19/31] type=lightning-attn
+======================================================================
+  All linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Quantize (INT4): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Skip (BF16):     []
+  Collecting Hessians (96 samples)...
+  Applying SmoothQuant channel equalization (alpha=0.5)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj'] | s: min=0.2008 max=1.9828 std=0.1057
+  Smoothed [o_norm] -> [o_proj] | s: min=0.4702 max=2.2246 std=0.1557
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.1750 max=2.0504 std=0.1214
+  Smoothed [up_proj] -> [down_proj] | s: min=0.3734 max=2.3388 std=0.1262
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=1.088528e-05 RelErr=0.1359
+    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.gate_proj MSE=1.132309e-05 RelErr=0.1386
+    mlp.gate_proj [16384x4096] W4 quantized in 0.8s
+    mlp.up_proj MSE=1.201350e-05 RelErr=0.1364
+    mlp.up_proj [16384x4096] W4 quantized in 0.8s
+    self_attn.k_proj MSE=1.723170e-05 RelErr=0.1702
+    self_attn.k_proj [4096x4096] W4 quantized in 0.9s
+    self_attn.o_proj MSE=1.068300e-05 RelErr=0.1352
+    self_attn.o_proj [4096x4096] W4 quantized in 0.9s
+    self_attn.q_proj MSE=1.249324e-05 RelErr=0.1487
+    self_attn.q_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.v_proj MSE=1.288128e-05 RelErr=0.1443
+    self_attn.v_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.z_proj MSE=1.005601e-05 RelErr=0.1385
+    self_attn.z_proj [4096x4096] W4 quantized in 0.8s
+  Updating hidden states for next layer...
+  Layer 19 done in 101.3s (8 INT4, 0 BF16)
+
+======================================================================
+[LAYER 20/31] type=lightning-attn
+======================================================================
+  All linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Quantize (INT4): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Skip (BF16):     []
+  Collecting Hessians (96 samples)...
+  Applying SmoothQuant channel equalization (alpha=0.5)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj'] | s: min=0.0728 max=3.8379 std=0.1096
+  Smoothed [o_norm] -> [o_proj] | s: min=0.3849 max=2.4300 std=0.1308
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.1474 max=2.0869 std=0.1159
+  Smoothed [up_proj] -> [down_proj] | s: min=0.3883 max=2.6206 std=0.1429
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=1.134699e-05 RelErr=0.1380
+    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.gate_proj MSE=1.128801e-05 RelErr=0.1403
+    mlp.gate_proj [16384x4096] W4 quantized in 0.8s
+    mlp.up_proj MSE=1.246527e-05 RelErr=0.1370
+    mlp.up_proj [16384x4096] W4 quantized in 0.8s
+    self_attn.k_proj MSE=2.004984e-05 RelErr=0.1768
+    self_attn.k_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.o_proj MSE=9.995102e-06 RelErr=0.1306
+    self_attn.o_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.q_proj MSE=1.350287e-05 RelErr=0.1519
+    self_attn.q_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.v_proj MSE=1.236707e-05 RelErr=0.1421
+    self_attn.v_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.z_proj MSE=1.043856e-05 RelErr=0.1407
+    self_attn.z_proj [4096x4096] W4 quantized in 0.8s
+  Updating hidden states for next layer...
+  Layer 20 done in 101.7s (8 INT4, 0 BF16)
+
+======================================================================
+[LAYER 21/31] type=lightning-attn
+======================================================================
+  All linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Quantize (INT4): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Skip (BF16):     []
+  Collecting Hessians (96 samples)...
+  Applying SmoothQuant channel equalization (alpha=0.5)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj'] | s: min=0.1522 max=3.0771 std=0.1197
+  Smoothed [o_norm] -> [o_proj] | s: min=0.3996 max=2.4547 std=0.1861
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.0934 max=1.9839 std=0.1039
+  Smoothed [up_proj] -> [down_proj] | s: min=0.3911 max=3.1105 std=0.1604
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=1.155343e-05 RelErr=0.1387
+    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.gate_proj MSE=1.103193e-05 RelErr=0.1394
+    mlp.gate_proj [16384x4096] W4 quantized in 0.8s
+    mlp.up_proj MSE=1.259036e-05 RelErr=0.1369
+    mlp.up_proj [16384x4096] W4 quantized in 0.8s
+    self_attn.k_proj MSE=1.742236e-05 RelErr=0.1720
+    self_attn.k_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.o_proj MSE=1.151858e-05 RelErr=0.1397
+    self_attn.o_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.q_proj MSE=1.409837e-05 RelErr=0.1567
+    self_attn.q_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.v_proj MSE=1.371279e-05 RelErr=0.1496
+    self_attn.v_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.z_proj MSE=1.051314e-05 RelErr=0.1411
+    self_attn.z_proj [4096x4096] W4 quantized in 0.8s
+  Updating hidden states for next layer...
+  Layer 21 done in 100.2s (8 INT4, 0 BF16)
+
+======================================================================
+[LAYER 22/31] type=minicpm4
+======================================================================
+  All linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  -> Quantize (INT4): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  -> Skip (BF16):     ['self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  Collecting Hessians (96 samples)...
+  Applying SmoothQuant channel equalization (alpha=0.5)...
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.2184 max=2.1332 std=0.1004
+  Smoothed [up_proj] -> [down_proj] | s: min=0.3334 max=3.5649 std=0.1574
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=1.165651e-05 RelErr=0.1396
+    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.gate_proj MSE=1.109134e-05 RelErr=0.1406
+    mlp.gate_proj [16384x4096] W4 quantized in 0.8s
+    mlp.up_proj MSE=1.254701e-05 RelErr=0.1371
+    mlp.up_proj [16384x4096] W4 quantized in 0.9s
+  Updating hidden states for next layer...
+  Layer 22 done in 91.6s (3 INT4, 5 BF16)
+
+======================================================================
+[LAYER 23/31] type=lightning-attn
+======================================================================
+  All linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Quantize (INT4): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Skip (BF16):     []
+  Collecting Hessians (96 samples)...
+  Applying SmoothQuant channel equalization (alpha=0.5)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj'] | s: min=0.1893 max=2.8037 std=0.1042
+  Smoothed [o_norm] -> [o_proj] | s: min=0.4175 max=2.6638 std=0.1516
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.2245 max=2.2093 std=0.0967
+  Smoothed [up_proj] -> [down_proj] | s: min=0.3764 max=2.9518 std=0.1645
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=1.199753e-05 RelErr=0.1411
+    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.gate_proj MSE=1.109085e-05 RelErr=0.1405
+    mlp.gate_proj [16384x4096] W4 quantized in 0.8s
+    mlp.up_proj MSE=1.256181e-05 RelErr=0.1363
+    mlp.up_proj [16384x4096] W4 quantized in 0.8s
+    self_attn.k_proj MSE=1.945567e-05 RelErr=0.1701
+    self_attn.k_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.o_proj MSE=1.041799e-05 RelErr=0.1341
+    self_attn.o_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.q_proj MSE=1.366451e-05 RelErr=0.1509
+    self_attn.q_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.v_proj MSE=1.201328e-05 RelErr=0.1411
+    self_attn.v_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.z_proj MSE=1.032697e-05 RelErr=0.1409
+    self_attn.z_proj [4096x4096] W4 quantized in 0.8s
+  Updating hidden states for next layer...
+  Layer 23 done in 100.6s (8 INT4, 0 BF16)
+
+======================================================================
+[LAYER 24/31] type=lightning-attn
+======================================================================
+  All linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Quantize (INT4): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Skip (BF16):     []
+  Collecting Hessians (96 samples)...
+  Applying SmoothQuant channel equalization (alpha=0.5)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj'] | s: min=0.4275 max=3.0546 std=0.1181
+  Smoothed [o_norm] -> [o_proj] | s: min=0.4522 max=2.2514 std=0.1640
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.0851 max=2.2823 std=0.0923
+  Smoothed [up_proj] -> [down_proj] | s: min=0.4009 max=2.9796 std=0.1744
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=1.284507e-05 RelErr=0.1451
+    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.gate_proj MSE=1.131730e-05 RelErr=0.1426
+    mlp.gate_proj [16384x4096] W4 quantized in 0.8s
+    mlp.up_proj MSE=1.290660e-05 RelErr=0.1370
+    mlp.up_proj [16384x4096] W4 quantized in 0.8s
+    self_attn.k_proj MSE=1.974231e-05 RelErr=0.1716
+    self_attn.k_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.o_proj MSE=1.059283e-05 RelErr=0.1345
+    self_attn.o_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.q_proj MSE=1.378890e-05 RelErr=0.1518
+    self_attn.q_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.v_proj MSE=1.252641e-05 RelErr=0.1440
+    self_attn.v_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.z_proj MSE=1.055460e-05 RelErr=0.1421
+    self_attn.z_proj [4096x4096] W4 quantized in 0.8s
+  Updating hidden states for next layer...
+  Layer 24 done in 99.3s (8 INT4, 0 BF16)
+
+======================================================================
+[LAYER 25/31] type=lightning-attn
+======================================================================
+  All linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Quantize (INT4): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Skip (BF16):     []
+  Collecting Hessians (96 samples)...
+  Applying SmoothQuant channel equalization (alpha=0.5)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj'] | s: min=0.1657 max=3.7235 std=0.1214
+  Smoothed [o_norm] -> [o_proj] | s: min=0.3785 max=2.7655 std=0.1540
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.1825 max=2.7492 std=0.1084
+  Smoothed [up_proj] -> [down_proj] | s: min=0.3154 max=3.4777 std=0.2107
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=1.548029e-05 RelErr=0.1560
+    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.gate_proj MSE=1.223910e-05 RelErr=0.1483
+    mlp.gate_proj [16384x4096] W4 quantized in 0.9s
+    mlp.up_proj MSE=1.428963e-05 RelErr=0.1402
+    mlp.up_proj [16384x4096] W4 quantized in 0.8s
+    self_attn.k_proj MSE=2.043644e-05 RelErr=0.1769
+    self_attn.k_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.o_proj MSE=1.130105e-05 RelErr=0.1379
+    self_attn.o_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.q_proj MSE=1.458184e-05 RelErr=0.1554
+    self_attn.q_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.v_proj MSE=1.272162e-05 RelErr=0.1439
+    self_attn.v_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.z_proj MSE=1.081994e-05 RelErr=0.1429
+    self_attn.z_proj [4096x4096] W4 quantized in 0.8s
+  Updating hidden states for next layer...
+  Layer 25 done in 99.5s (8 INT4, 0 BF16)
+
+======================================================================
+[LAYER 26/31] type=lightning-attn
+======================================================================
+  All linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Quantize (INT4): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Skip (BF16):     []
+  Collecting Hessians (96 samples)...
+  Applying SmoothQuant channel equalization (alpha=0.5)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj'] | s: min=0.2258 max=2.7963 std=0.1636
+  Smoothed [o_norm] -> [o_proj] | s: min=0.3061 max=2.0277 std=0.1877
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.2631 max=2.3793 std=0.1093
+  Smoothed [up_proj] -> [down_proj] | s: min=0.3484 max=3.6403 std=0.2055
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=1.437404e-05 RelErr=0.1488
+    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.gate_proj MSE=1.179298e-05 RelErr=0.1447
+    mlp.gate_proj [16384x4096] W4 quantized in 0.8s
+    mlp.up_proj MSE=1.379131e-05 RelErr=0.1382
+    mlp.up_proj [16384x4096] W4 quantized in 0.8s
+    self_attn.k_proj MSE=2.802172e-05 RelErr=0.1937
+    self_attn.k_proj [4096x4096] W4 quantized in 0.9s
+    self_attn.o_proj MSE=1.104351e-05 RelErr=0.1332
+    self_attn.o_proj [4096x4096] W4 quantized in 0.9s
+    self_attn.q_proj MSE=1.603206e-05 RelErr=0.1598
+    self_attn.q_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.v_proj MSE=2.146636e-05 RelErr=0.1873
+    self_attn.v_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.z_proj MSE=1.190635e-05 RelErr=0.1459
+    self_attn.z_proj [4096x4096] W4 quantized in 0.8s
+  Updating hidden states for next layer...
+  Layer 26 done in 99.2s (8 INT4, 0 BF16)
+
+======================================================================
+[LAYER 27/31] type=lightning-attn
+======================================================================
+  All linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Quantize (INT4): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Skip (BF16):     []
+  Collecting Hessians (96 samples)...
+  Applying SmoothQuant channel equalization (alpha=0.5)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj'] | s: min=0.1898 max=3.2010 std=0.1132
+  Smoothed [o_norm] -> [o_proj] | s: min=0.2362 max=2.5365 std=0.1986
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.0884 max=2.5151 std=0.1087
+  Smoothed [up_proj] -> [down_proj] | s: min=0.4084 max=2.7549 std=0.1948
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=1.408549e-05 RelErr=0.1466
+    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.gate_proj MSE=1.157706e-05 RelErr=0.1440
+    mlp.gate_proj [16384x4096] W4 quantized in 0.8s
+    mlp.up_proj MSE=1.383187e-05 RelErr=0.1381
+    mlp.up_proj [16384x4096] W4 quantized in 0.8s
+    self_attn.k_proj MSE=1.699357e-05 RelErr=0.1672
+    self_attn.k_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.o_proj MSE=1.201081e-05 RelErr=0.1410
+    self_attn.o_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.q_proj MSE=1.475960e-05 RelErr=0.1581
+    self_attn.q_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.v_proj MSE=1.271838e-05 RelErr=0.1445
+    self_attn.v_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.z_proj MSE=1.115454e-05 RelErr=0.1432
+    self_attn.z_proj [4096x4096] W4 quantized in 0.8s
+  Updating hidden states for next layer...
+  Layer 27 done in 100.1s (8 INT4, 0 BF16)
+
+======================================================================
+[LAYER 28/31] type=lightning-attn
+======================================================================
+  All linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Quantize (INT4): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  -> Skip (BF16):     []
+  Collecting Hessians (96 samples)...
+  Applying SmoothQuant channel equalization (alpha=0.5)...
+  Smoothed [input_layernorm] -> ['self_attn.k_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj'] | s: min=0.5967 max=3.1196 std=0.1568
+  Smoothed [o_norm] -> [o_proj] | s: min=0.1686 max=3.0523 std=0.1962
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.0330 max=2.2914 std=0.1123
+  Smoothed [up_proj] -> [down_proj] | s: min=0.3228 max=2.8270 std=0.1850
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=1.375405e-05 RelErr=0.1439
+    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.gate_proj MSE=1.136886e-05 RelErr=0.1431
+    mlp.gate_proj [16384x4096] W4 quantized in 0.8s
+    mlp.up_proj MSE=1.398907e-05 RelErr=0.1383
+    mlp.up_proj [16384x4096] W4 quantized in 0.8s
+    self_attn.k_proj MSE=2.820605e-05 RelErr=0.2012
+    self_attn.k_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.o_proj MSE=1.262734e-05 RelErr=0.1456
+    self_attn.o_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.q_proj MSE=1.648366e-05 RelErr=0.1632
+    self_attn.q_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.v_proj MSE=1.854278e-05 RelErr=0.1786
+    self_attn.v_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.z_proj MSE=1.232733e-05 RelErr=0.1479
+    self_attn.z_proj [4096x4096] W4 quantized in 0.8s
+  Updating hidden states for next layer...
+  Layer 28 done in 99.4s (8 INT4, 0 BF16)
+
+======================================================================
+[LAYER 29/31] type=minicpm4
+======================================================================
+  All linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  -> Quantize (INT4): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  -> Skip (BF16):     ['self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  Collecting Hessians (96 samples)...
+  Applying SmoothQuant channel equalization (alpha=0.5)...
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.1267 max=2.3664 std=0.1090
+  Smoothed [up_proj] -> [down_proj] | s: min=0.3113 max=2.8707 std=0.1942
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=1.395709e-05 RelErr=0.1438
+    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.gate_proj MSE=1.093799e-05 RelErr=0.1415
+    mlp.gate_proj [16384x4096] W4 quantized in 0.8s
+    mlp.up_proj MSE=1.402956e-05 RelErr=0.1373
+    mlp.up_proj [16384x4096] W4 quantized in 0.8s
+  Updating hidden states for next layer...
+  Layer 29 done in 92.5s (3 INT4, 5 BF16)
+
+======================================================================
+[LAYER 30/31] type=minicpm4
+======================================================================
+  All linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  -> Quantize (INT4): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  -> Skip (BF16):     ['self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  Collecting Hessians (96 samples)...
+  Applying SmoothQuant channel equalization (alpha=0.5)...
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.1472 max=2.6264 std=0.1204
+  Smoothed [up_proj] -> [down_proj] | s: min=0.2912 max=3.9883 std=0.2261
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=1.412244e-05 RelErr=0.1472
+    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.gate_proj MSE=1.090628e-05 RelErr=0.1415
+    mlp.gate_proj [16384x4096] W4 quantized in 0.9s
+    mlp.up_proj MSE=1.449636e-05 RelErr=0.1374
+    mlp.up_proj [16384x4096] W4 quantized in 0.8s
+  Updating hidden states for next layer...
+  Layer 30 done in 91.9s (3 INT4, 5 BF16)
+
+======================================================================
+[LAYER 31/31] type=minicpm4
+======================================================================
+  All linears: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  -> Quantize (INT4): ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj']
+  -> Skip (BF16):     ['self_attn.k_proj', 'self_attn.o_gate', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']
+  Collecting Hessians (96 samples)...
+  Applying SmoothQuant channel equalization (alpha=0.5)...
+  Smoothed [post_attn_layernorm] -> ['mlp.gate_proj', 'mlp.up_proj'] | s: min=0.0395 max=2.7160 std=0.1377
+  Smoothed [up_proj] -> [down_proj] | s: min=0.1141 max=3.6524 std=0.3302
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=1.413787e-05 RelErr=0.1577
+    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.gate_proj MSE=1.085000e-05 RelErr=0.1402
+    mlp.gate_proj [16384x4096] W4 quantized in 0.8s
+    mlp.up_proj MSE=1.812720e-05 RelErr=0.1405
+    mlp.up_proj [16384x4096] W4 quantized in 0.8s
+  Updating hidden states for next layer...
+  Layer 31 done in 92.8s (3 INT4, 5 BF16)
+
+======================================================================
+[INFO] Phase 3: Processing final norm + lm_head...
+======================================================================
+
+======================================================================
+[INFO] Phase 4: Saving quantized model to /opt/model_GPTQ_int4_mlp_only_minicpm_attn_bf16
+======================================================================
+  Total model size: 6.00 GB
+  Saved model-00001-of-00002.safetensors
+  Saved model-00002-of-00002.safetensors
+  Saved weights in safetensors format
+  All files saved to /opt/model_GPTQ_int4_mlp_only_minicpm_attn_bf16
+
+[INFO] Quantization complete!
+
+[INFO] Total time: 3182.4s (53.0m)

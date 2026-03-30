@@ -452,10 +452,11 @@ class MiniCPMDecoderLayer(nn.Module):
             if is_excluded(f"{layer_prefix}.mlp"):
                 mlp_quant_config = None
 
-            # Legacy GPTQ override (forces uniform config)
-            if hasattr(quant_config, "get_name") and quant_config.get_name().startswith("gptq"):
-                attn_quant_config = quant_config
-                mlp_quant_config = quant_config
+            # Legacy GPTQ override removed. It unconditionally un-excluded GPTQ modules 
+            # and prevented dynamic routing logic for Late-Layer protection setups.
+            # if hasattr(quant_config, "get_name") and quant_config.get_name().startswith("gptq"):
+            #     attn_quant_config = quant_config
+            #     mlp_quant_config = quant_config
         # ------------------------------------------------------------------------
 
         if self.mixer_type == "minicpm4":
@@ -738,6 +739,11 @@ class MiniCPMForCausalLM(nn.Module):
                 # Skip loading extra bias for GPTQ models.
                 if name.endswith(".bias") and name not in params_dict:
                     continue
+                
+                # Prevent missing key crashes from unmapped/dummy tensors in mixed configurations
+                if name not in params_dict:
+                    continue
+
                 param = params_dict[name]
 
                 # ====================================================================
@@ -770,6 +776,10 @@ class MiniCPMForCausalLM(nn.Module):
                     if weight_name not in name:
                         continue
                     name = name.replace(weight_name, param_name)
+                    
+                    if name not in params_dict:
+                        continue
+
                     param = params_dict[name]
                     weight_loader = param.weight_loader
                     weight_loader(
@@ -780,6 +790,11 @@ class MiniCPMForCausalLM(nn.Module):
                     # Skip loading extra bias for GPTQ models.
                     if name.endswith(".bias") and name not in params_dict:
                         continue
+                    
+                    # Prevent missing key crashes from unmapped/dummy tensors
+                    if name not in params_dict:
+                        continue
+
                     param = params_dict[name]
                     weight_loader = getattr(
                         param, "weight_loader", default_weight_loader

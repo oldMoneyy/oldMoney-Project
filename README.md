@@ -248,6 +248,25 @@ nohup python3 /opt/oldMoney-Project/quantization/GPTQ_int4_flashinfer_dense_smoo
 tail -f /opt/oldMoney-Project/logs/model_gptq_int4_dense_smooth.log
 ```
 
+Build a quantized model for minicpm_flashinfer:
+```bash
+source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
+export TRITON_PTXAS_PATH="$(which ptxas)"
+export LD_LIBRARY_PATH=/opt/oldMoney-Project/quantization/venv/lib/python3.10/site-packages/torch/lib:$LD_LIBRARY_PATH
+nohup python3 /opt/oldMoney-Project/quantization/GPTQ_int4_mlp_only_minicpm_attn_bf16.py \
+    --input /opt/model \
+    --output /opt/model_GPTQ_int4_mlp_only_minicpm_attn_bf16 \
+    --bits 4 \
+    --group-size 128 \
+    --calib-data /opt/oldMoney-Project/quantization/calibration_dense/calib_dense_96.jsonl \
+    --max-samples 96 \
+    --max-len 131072 \
+    --smooth-alpha 0.5 \
+    > /opt/oldMoney-Project/logs/model_GPTQ_int4_mlp_only_minicpm_attn_bf16.log 2>&1 &
+
+tail -f /opt/oldMoney-Project/logs/model_GPTQ_int4_mlp_only_minicpm_attn_bf16.log
+```
+
 Original sparse quantization:
 ```bash
 source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
@@ -273,20 +292,20 @@ tail -f /opt/oldMoney-Project/logs/model_gptq_int4_minicpm_flashinfer_sparse.log
 Dense:
 ```bash
 # uv pip install --no-deps -e /opt/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python
-uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_opt
-# uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_opt_v2
+uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
+# uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_opt
 fuser -k -9 31333/tcp
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 nohup python3 -m sglang.launch_server \
-    --model-path /opt/model_gptq_int4_dense_smooth \
+    --model-path /opt/model_GPTQ_int4_mlp_only_minicpm_attn_bf16 \
     --port 31333 \
     --quantization gptq_marlin \
     --kv-cache-dtype fp8_e5m2 \
     --dtype bfloat16 \
     --disable-radix-cache \
     --max-running-requests 64 \
-    --attention-backend flashinfer \
+    --attention-backend minicpm_flashinfer \
     --chunked-prefill-size 32768 \
     --mem-fraction-static 0.82 \
     --max-mamba-cache-size 64 \
