@@ -210,7 +210,7 @@ nohup python3 eval_model.py \
   --concurrency 64 \
   --num_samples 150 \
   --verbose \
-  > /opt/oldMoney-Project/logs/eval_model_gptq_int4_dense_smooth_minicpmflashinfer.log 2>&1 &
+  > /opt/oldMoney-Project/logs/eval_model_gptq_int4_dense_smooth_opt.log 2>&1 &
 ```
 
 
@@ -274,6 +274,7 @@ Dense:
 ```bash
 # uv pip install --no-deps -e /opt/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python
 uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_opt
+# uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_opt_v2
 fuser -k -9 31333/tcp
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
