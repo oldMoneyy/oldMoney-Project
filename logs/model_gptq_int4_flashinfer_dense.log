@@ -433,3 +433,28 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
     mlp.up_proj [16384x4096] W4 quantized in 0.9s
     self_attn.k_proj MSE=1.339621e-05 RelErr=0.1547
     self_attn.k_proj [4096x4096] W4 quantized in 0.9s
+    self_attn.o_proj MSE=9.813877e-06 RelErr=0.1316
+    self_attn.o_proj [4096x4096] W4 quantized in 0.9s
+    self_attn.q_proj MSE=1.181977e-05 RelErr=0.1469
+    self_attn.q_proj [4096x4096] W4 quantized in 0.9s
+    self_attn.v_proj MSE=1.182576e-05 RelErr=0.1391
+    self_attn.v_proj [4096x4096] W4 quantized in 1.0s
+    self_attn.z_proj MSE=8.997287e-06 RelErr=0.1361
+    self_attn.z_proj [4096x4096] W4 quantized in 0.9s
+  Updating hidden states for next layer...
+  Layer 14 done in 293.2s
+
+======================================================================
+[LAYER 15/31] type=lightning-attn  bits=4
+======================================================================
+  Linears to quantize: ['mlp.down_proj', 'mlp.gate_proj', 'mlp.up_proj', 'self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj', 'self_attn.z_proj']
+  Collecting Hessians (96 samples)...
+  Running GPTQ quantization (bits=4, group_size=128)...
+    mlp.down_proj MSE=1.020253e-05 RelErr=0.1328
+    mlp.down_proj [4096x16384] W4 quantized in 4.9s
+    mlp.gate_proj MSE=1.033367e-05 RelErr=0.1345
+    mlp.gate_proj [16384x4096] W4 quantized in 0.9s
+    mlp.up_proj MSE=1.058998e-05 RelErr=0.1349
+    mlp.up_proj [16384x4096] W4 quantized in 0.9s
+    self_attn.k_proj MSE=1.448650e-05 RelErr=0.1541
+    self_attn.k_proj [4096x4096] W4 quantized in 0.9s
