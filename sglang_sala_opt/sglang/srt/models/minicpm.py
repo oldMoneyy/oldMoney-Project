@@ -20,7 +20,6 @@ import math
 from typing import Any, Dict, Iterable, Optional, Tuple
 
 import torch
-import torch.nn.functional as F
 from torch import nn
 
 from sglang.srt.distributed import get_tensor_model_parallel_world_size
@@ -32,7 +31,7 @@ from sglang.srt.layers.attention.minicpm_sparse_utils import (
     SparseMetadata,
     SparseMetadataBuilder,
 )
-from sglang.srt.layers.fused_kernels import fused_scale_add_rmsnorm
+from sglang.srt.layers.fused_kernels import fused_scale_add_rmsnorm, fused_sigmoid_mul, fused_qk_rmsnorm, fused_rmsnorm_sigmoid_mul
 from sglang.srt.layers.layernorm import RMSNorm
 from sglang.srt.layers.linear import (
     ColumnParallelLinear,
@@ -184,6 +183,11 @@ class MiniCPMAttention(nn.Module):
         forward_batch: ForwardBatch,
     ) -> torch.Tensor:
         qkv, _ = self.qkv_proj(hidden_states)
+
+        # Pre-compute output gate while hidden_states is still hot in L2 cache
+        if self.use_output_gate:
+            o_gate_output, _ = self.o_gate(hidden_states)
+
         q, k, v = qkv.split([self.q_size, self.kv_size, self.kv_size], dim=-1)
 
         if self.attn_use_rope:
@@ -193,8 +197,7 @@ class MiniCPMAttention(nn.Module):
         attn_output = self.attn(q, k, v, forward_batch)
 
         if self.use_output_gate:
-            o_gate_output, _ = self.o_gate(hidden_states)
-            attn_output = attn_output * F.sigmoid(o_gate_output)
+            fused_sigmoid_mul(attn_output, o_gate_output)
 
         output, _ = self.o_proj(attn_output)
         return output
@@ -317,11 +320,17 @@ class MiniCPMLightningMixer(nn.Module):
         forward_batch: ForwardBatch,
     ) -> torch.Tensor:
         qkv, _ = self.qkv_proj(hidden_states)
+
+        # Pre-compute gate while hidden_states is still hot in L2 cache
+        if self.use_output_gate:
+            z, _ = self.z_proj(hidden_states)
+
         q, k, v = qkv.split([self.q_size, self.kv_size, self.kv_size], dim=-1)
 
         if self.qk_norm:
-            q = self.q_norm(q.reshape(-1, self.head_dim))
-            k = self.k_norm(k.reshape(-1, self.head_dim))
+            q = q.reshape(-1, self.head_dim)
+            k = k.reshape(-1, self.head_dim)
+            fused_qk_rmsnorm(q, k, self.q_norm.weight.data, self.k_norm.weight.data, self.q_norm.variance_epsilon)
 
         if self.use_rope:
             q = q.reshape(-1, self.num_heads * self.head_dim)
@@ -367,12 +376,13 @@ class MiniCPMLightningMixer(nn.Module):
 
         o = o.reshape(-1, self.num_heads * self.head_dim)
 
-        if self.use_output_norm:
+        # Fused: rmsnorm + sigmoid gate in single kernel (saves 1 memory round-trip)
+        if self.use_output_gate and self.use_output_norm:
+            fused_rmsnorm_sigmoid_mul(o, z, self.o_norm.weight.data, self.o_norm.variance_epsilon)
+        elif self.use_output_norm:
             o = self.o_norm(o)
-
-        if self.use_output_gate:
-            z, _ = self.z_proj(hidden_states)
-            o = o * F.sigmoid(z)
+        elif self.use_output_gate:
+            fused_sigmoid_mul(o, z)
 
         y, _ = self.o_proj(o)
         return y
@@ -624,7 +634,8 @@ class MiniCPMModel(nn.Module):
         input_embeds: torch.Tensor = None,
     ) -> torch.Tensor:
         if input_embeds is None:
-            hidden_states = self.embed_tokens(input_ids) * self.config.scale_emb
+            hidden_states = self.embed_tokens(input_ids)
+            hidden_states.mul_(self.config.scale_emb)
         else:
             hidden_states = input_embeds
         residual = None
@@ -686,7 +697,7 @@ class MiniCPMForCausalLM(nn.Module):
         if input_embeds is not None:
             input_embeds = input_embeds * self.config.scale_emb
         hidden_states = self.model(input_ids, positions, forward_batch, input_embeds)
-        hidden_states = hidden_states / self.scale_width
+        hidden_states.div_(self.scale_width)
         if self.config.tie_word_embeddings:
             lm_head = self.model.embed_tokens
         else:
