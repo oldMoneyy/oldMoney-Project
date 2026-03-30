@@ -210,7 +210,7 @@ nohup python3 eval_model.py \
   --concurrency 64 \
   --num_samples 150 \
   --verbose \
-  > /opt/oldMoney-Project/logs/eval_model_gptq_int4_dense_smooth_opt.log 2>&1 &
+  > /opt/oldMoney-Project/logs/eval_model_gptq_int4_dense_smooth_opt_withropebf16.log 2>&1 &
 ```
 
 
