@@ -224,21 +224,8 @@ nohup python3 eval_model.py \
 
 First time setup:
 ```bash
-bash /opt/oldMoney-Project/quantization/GPTQ_INT4_env.sh
-tail -f /opt/oldMoney-Project/logs/GPTQ_INT4_env.log
-```
-
-Activate:
-```bash
-source /opt/oldMoney-Project/quantization/venv/bin/activate
-export LD_LIBRARY_PATH=/opt/oldMoney-Project/quantization/venv/lib/python3.10/site-packages/torch/lib:$LD_LIBRARY_PATH
-```
-
-
-## Calibration Data
-
-```bash
-python3 /opt/oldMoney-Project/quantization/generate_ultimate_64.py
+bash /opt/oldMoney-Project/quantization/AWQ_NVFP4_env.sh
+tail -f /opt/oldMoney-Project/logs/AWQ_NVFP4_env.log
 ```
 
 
@@ -246,15 +233,16 @@ python3 /opt/oldMoney-Project/quantization/generate_ultimate_64.py
 
 Pure dense quantization:
 ```bash
-source /opt/oldMoney-Project/quantization/venv/bin/activate
+source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
+export TRITON_PTXAS_PATH="$(which ptxas)"
 export LD_LIBRARY_PATH=/opt/oldMoney-Project/quantization/venv/lib/python3.10/site-packages/torch/lib:$LD_LIBRARY_PATH
 nohup python3 /opt/oldMoney-Project/quantization/GPTQ_int4_flashinfer_dense_gpu.py \
     --input /opt/model \
     --output /opt/model_gptq_int4_flashinfer_dense \
     --bits 4 \
     --group-size 128 \
-    --calib-data /opt/oldMoney-Project/quantization/ultimate_64_token_balanced.jsonl \
-    --max-samples 64 \
+    --calib-data /opt/oldMoney-Project/quantization/calibration_dense/calib_dense_96.jsonl \
+    --max-samples 96 \
     --max-len 131072 \
     > /opt/oldMoney-Project/logs/model_gptq_int4_flashinfer_dense.log 2>&1 &
 
@@ -263,32 +251,16 @@ tail -f /opt/oldMoney-Project/logs/model_gptq_int4_flashinfer_dense.log
 
 Original sparse quantization:
 ```bash
-source /opt/oldMoney-Project/quantization/venv/bin/activate
+source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
+export TRITON_PTXAS_PATH="$(which ptxas)"
 export LD_LIBRARY_PATH=/opt/oldMoney-Project/quantization/venv/lib/python3.10/site-packages/torch/lib:$LD_LIBRARY_PATH
 nohup python3 /opt/oldMoney-Project/quantization/GPTQ_int4_minicpm_flashinfer_sparse_gpu.py \
     --input /opt/model \
     --output /opt/model_gptq_int4_minicpm_flashinfer_sparse \
     --bits 4 \
     --group-size 128 \
-    --calib-data /opt/oldMoney-Project/quantization/ultimate_64_token_balanced.jsonl \
-    --max-samples 64 \
-    --max-len 131072 \
-    > /opt/oldMoney-Project/logs/model_gptq_int4_minicpm_flashinfer_sparse.log 2>&1 &
-
-tail -f /opt/oldMoney-Project/logs/model_gptq_int4_minicpm_flashinfer_sparse.log
-```
-
-Smoothing sparse quantization:
-```bash
-source /opt/oldMoney-Project/quantization/venv/bin/activate
-export LD_LIBRARY_PATH=/opt/oldMoney-Project/quantization/venv/lib/python3.10/site-packages/torch/lib:$LD_LIBRARY_PATH
-nohup python3 /opt/oldMoney-Project/quantization/GPTQ_int4_minicpm_flashinfer_sparse_smoothing_gpu.py \
-    --input /opt/model \
-    --output /opt/model_gptq_int4_minicpm_flashinfer_sparse \
-    --bits 4 \
-    --group-size 128 \
-    --calib-data /opt/oldMoney-Project/quantization/calibration/optimal_64.jsonl \
-    --max-samples 64 \
+    --calib-data /opt/oldMoney-Project/quantization/calibration_dense/calib_dense_96.jsonl \
+    --max-samples 96 \
     --max-len 131072 \
     > /opt/oldMoney-Project/logs/model_gptq_int4_minicpm_flashinfer_sparse.log 2>&1 &
 
@@ -333,9 +305,9 @@ python3 -m sglang.launch_server \
     --disable-radix-cache \
     --kv-cache-dtype fp8_e5m2 \
     --max-running-requests 64 \
-    --attention-backend minicpm_flashinfer \
+    --attention-backend flashinfer \
     --chunked-prefill-size 32768 \
-    --mem-fraction-static 0.8 \
+    --mem-fraction-static 0.82 \
     --max-mamba-cache-size 64 \
     --fuse-topk \
     --log-level info \
