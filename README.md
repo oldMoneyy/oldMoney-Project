@@ -1055,3 +1055,51 @@ python /opt/oldMoney-Project/quantization/calibration_dense/AWQ_NVFP4_dense_flas
 3. Tune serving params for throughput (chunked-prefill, max-running-requests, etc.)
 4. Calculate competition score = f(accuracy, throughput)
 5. Try mse-iters=200 or smooth-alpha tuning for marginal accuracy gains
+
+
+### GPTQ INT4 Dense + Flashinfer Result: 78.69% (2026-03-30)
+
+Config: GPTQ W4A16, group_size=128, dense calibration (96 samples, max_len=131072).
+Serving: `--attention-backend flashinfer`, `--quantization gptq_marlin`, `--dtype bfloat16`,
+`--kv-cache-dtype fp8_e5m2`, `sglang_sala_opt` (fused Triton kernels).
+Script: `quantization/GPTQ_int4_flashinfer_dense_gpu.py`
+
+| Task | Score | Notes |
+|------|-------|-------|
+| MCQ  | ~56%  | Reasoning errors (model-inherent, not quant damage) |
+| NIAH | ~100% | Perfect |
+| QA   | ~50%  | Format mismatch with gold answers |
+| FWE  | ~100% | Perfect |
+| CWE  | ~85%  | Partial credit (0.7-1.0 range) |
+| **Total** | **78.69%** | |
+
+Performance:
+- Duration: 2065.54s
+- Output TPS: 670.30
+- Total input tokens: 8,644,166
+- Total output tokens: 1,384,522
+- Average tokens/sample: In=57,628, Out=9,230
+
+### Comparison: NVFP4 vs GPTQ INT4
+
+| Metric | NVFP4 All-FP4 (v2) | GPTQ INT4 Dense | Winner |
+|--------|---------------------|-----------------|--------|
+| Accuracy | 80.53% | 78.69% | NVFP4 (+1.84pp) |
+| Output TPS | ~652 | 670 | GPTQ (+3%) |
+| Duration | ~629s* | 2066s | — (different eval configs) |
+| Model size | ~5.5 GB | ~7 GB | NVFP4 (-1.5 GB) |
+| Weight format | FP4 E2M1 + FP8 scales | INT4 + BF16 dequant | — |
+| Compute kernel | Blackwell FP4 tensor core | Marlin W4A16 GEMM | — |
+| Token-0 collapse | None | None | Tie |
+
+*Duration comparison not apples-to-apples (different serving configs, torch-compile, etc.)
+
+Key observations:
+- **NVFP4 wins on accuracy** by 1.84 percentage points despite lower precision format.
+  Gold-guided calibration (Claude traces) likely explains this advantage.
+- **GPTQ wins on throughput** marginally. Marlin kernel is highly optimized.
+- **Both eliminate token-0 collapse** with flashinfer dense attention.
+- **Both fail on the same tasks** (MCQ reasoning, QA format mismatch) — these are
+  model-inherent limitations, not quantization damage.
+- The 97% relative accuracy threshold = 80 * 0.97 = 77.6. GPTQ at 78.69% is **barely
+  above threshold** (1.09pp margin). NVFP4 at 80.53% has a safer margin (2.93pp).
