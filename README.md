@@ -88,11 +88,9 @@ apt install psmisc lsof -y
 Install SGLang (pick one):
 ```bash
 # Optimized version:
-uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_kernel_fuse
-pip install --no-build-isolation -e /opt/oldMoney-Project/vendor_kernel_fuse
+uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_opt
 
 # Baseline version:
-pip uninstall fused_kernel_extension
 uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
 ```
 
@@ -207,12 +205,12 @@ python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31333 \
 cd /opt/oldMoney-Project/SOAR-Toolkit
 nohup python3 eval_model.py \
   --api_base http://127.0.0.1:31333 \
-  --model_path /opt/model_gptq_int4_flashinfer_dense \
+  --model_path /opt/model_gptq_int4_dense_smooth \
   --data_path eval_dataset/perf_public_set.jsonl \
   --concurrency 64 \
   --num_samples 150 \
   --verbose \
-  > /opt/oldMoney-Project/logs/model_gptq_int4_dense.log 2>&1 &
+  > /opt/oldMoney-Project/logs/eval_model_gptq_int4_dense_smooth.log 2>&1 &
 ```
 
 
@@ -236,17 +234,18 @@ Pure dense quantization:
 source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
 export TRITON_PTXAS_PATH="$(which ptxas)"
 export LD_LIBRARY_PATH=/opt/oldMoney-Project/quantization/venv/lib/python3.10/site-packages/torch/lib:$LD_LIBRARY_PATH
-nohup python3 /opt/oldMoney-Project/quantization/GPTQ_int4_flashinfer_dense_gpu.py \
+nohup python3 /opt/oldMoney-Project/quantization/GPTQ_int4_flashinfer_dense_smoothing_gpu.py \
     --input /opt/model \
-    --output /opt/model_gptq_int4_flashinfer_dense \
+    --output /opt/model_gptq_int4_dense_smooth \
     --bits 4 \
     --group-size 128 \
     --calib-data /opt/oldMoney-Project/quantization/calibration_dense/calib_dense_96.jsonl \
     --max-samples 96 \
     --max-len 131072 \
-    > /opt/oldMoney-Project/logs/model_gptq_int4_flashinfer_dense.log 2>&1 &
+    --smooth-alpha 0.5 \
+    > /opt/oldMoney-Project/logs/model_gptq_int4_dense_smooth.log 2>&1 &
 
-tail -f /opt/oldMoney-Project/logs/model_gptq_int4_flashinfer_dense.log
+tail -f /opt/oldMoney-Project/logs/model_gptq_int4_dense_smooth.log
 ```
 
 Original sparse quantization:
@@ -278,9 +277,10 @@ fuser -k -9 31333/tcp
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 nohup python3 -m sglang.launch_server \
-    --model-path /opt/model_gptq_int4_flashinfer_dense \
+    --model-path /opt/model_gptq_int4_dense_smooth \
     --port 31333 \
     --quantization gptq_marlin \
+    --kv-cache-dtype fp8_e5m2 \
     --dtype bfloat16 \
     --disable-radix-cache \
     --max-running-requests 64 \
