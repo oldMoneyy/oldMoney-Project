@@ -277,10 +277,6 @@ uv pip install --no-deps -e opt/oldMoney-Project/sglang_sala_opt
 fuser -k -9 31333/tcp
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
-export TORCHINDUCTOR_COMPILE_THREADS=20
-export TORCH_COMPILE_THREADS=20
-export TORCHINDUCTOR_CACHE_DIR=/tmp/.torch_compile_0330
-export TORCHINDUCTOR_FX_GRAPH_CACHE=1
 python3 -m sglang.launch_server \
     --model-path /opt/model_gptq_int4_minicpm_flashinfer_sparse \
     --port 31333 \
@@ -295,9 +291,7 @@ python3 -m sglang.launch_server \
     --max-mamba-cache-size 64 \
     --fuse-topk \
     --log-level info \
-    --num-continuous-decode-steps 2 \
-    --enable-mixed-chunk \
-    --enable-torch-compile
+    --enable-mixed-chunk
 ```
 
 
