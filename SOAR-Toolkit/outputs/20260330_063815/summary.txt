@@ -1,0 +1,10 @@
+Model: /opt/model_gptq_int4_flashinfer_dense
+Data: eval_dataset/perf_public_set.jsonl
+Original Accuracy: 78.69%
+Normalized Accuracy: 98.36%
+Num Samples: 150
+Total Duration: 2065.54 s
+Total Output Tokens: 1384522
+Average Input Tokens: 57627.8
+Average Output Tokens: 9230.1
+TPS: 670.30

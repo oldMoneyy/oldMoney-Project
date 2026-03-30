@@ -207,12 +207,12 @@ python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31333 \
 cd /opt/oldMoney-Project/SOAR-Toolkit
 nohup python3 eval_model.py \
   --api_base http://127.0.0.1:31333 \
-  --model_path /opt/model_nvfp4_dense_all \
+  --model_path /opt/model_gptq_int4_flashinfer_dense \
   --data_path eval_dataset/perf_public_set.jsonl \
   --concurrency 64 \
   --num_samples 150 \
   --verbose \
-  > /opt/oldMoney-Project/logs/model_nvfp4_dense_all_kvfp8.log 2>&1 &
+  > /opt/oldMoney-Project/logs/model_gptq_int4_dense.log 2>&1 &
 ```
 
 
@@ -273,17 +273,16 @@ tail -f /opt/oldMoney-Project/logs/model_gptq_int4_minicpm_flashinfer_sparse.log
 
 Dense:
 ```bash
-uv pip install --no-deps -e opt/oldMoney-Project/sglang_sala_opt
+uv pip install --no-deps -e /opt/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python
 fuser -k -9 31333/tcp
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
-python3 -m sglang.launch_server \
-    --model-path /opt/model_gptq_int4_minicpm_flashinfer_sparse \
+nohup python3 -m sglang.launch_server \
+    --model-path /opt/model_gptq_int4_flashinfer_dense \
     --port 31333 \
     --quantization gptq_marlin \
     --dtype bfloat16 \
     --disable-radix-cache \
-    --kv-cache-dtype fp8_e5m2 \
     --max-running-requests 64 \
     --attention-backend flashinfer \
     --chunked-prefill-size 32768 \
@@ -291,7 +290,8 @@ python3 -m sglang.launch_server \
     --max-mamba-cache-size 64 \
     --fuse-topk \
     --log-level info \
-    --enable-mixed-chunk
+    --enable-mixed-chunk \
+    > /opt/server.log 2>&1 &
 ```
 
 
