@@ -16,6 +16,7 @@
 # ==============================================================================
 """Inference-only MiniCPM model compatible with HuggingFace weights."""
 
+import copy
 import math
 from typing import Any, Dict, Iterable, Optional, Tuple
 
@@ -796,4 +797,379 @@ class MiniCPMForCausalLM(nn.Module):
 class MiniCPMSALAForCausalLM(MiniCPMForCausalLM):
     pass
 
-EntryClass = [MiniCPMForCausalLM, MiniCPMSALAForCausalLM]
+
+# ==============================================================================
+# EAGLE (v1) — Simple MLP draft head (kept for backward compatibility)
+# ==============================================================================
+
+class MiniCPMEagleModel(nn.Module):
+    def __init__(self, config, quant_config=None, prefix=""):
+        super().__init__()
+        self.config = config
+        self.embed_tokens = VocabParallelEmbedding(
+            config.vocab_size, config.hidden_size,
+            org_num_embeddings=config.vocab_size,
+            prefix=add_prefix("embed_tokens", prefix),
+        )
+        self.fc1 = nn.Linear(config.hidden_size * 2, config.hidden_size)
+        self.act = nn.SiLU()
+        self.fc2 = nn.Linear(config.hidden_size, config.hidden_size)
+
+    def forward(self, input_ids, positions, forward_batch, input_embeds=None):
+        if input_embeds is None:
+            hidden_states = self.embed_tokens(input_ids) * self.config.scale_emb
+        else:
+            hidden_states = input_embeds
+        x = torch.cat((hidden_states, forward_batch.spec_info.hidden_states), dim=-1)
+        x = self.fc1(x)
+        x = self.act(x)
+        hidden_states = self.fc2(x) * (
+            self.config.scale_depth / math.sqrt(self.config.num_hidden_layers)
+        )
+        return hidden_states
+
+
+class MiniCPMSALAEagleForCausalLM(MiniCPMForCausalLM):
+    def __init__(self, config, quant_config=None, prefix=""):
+        super().__init__(config, quant_config, prefix)
+        self.model = MiniCPMEagleModel(
+            config, quant_config, prefix=add_prefix("model", prefix)
+        )
+        if not self.config.tie_word_embeddings:
+            self.lm_head = ParallelLMHead(
+                config.vocab_size, config.hidden_size,
+                org_num_embeddings=config.vocab_size,
+                prefix=add_prefix("lm_head", prefix),
+            )
+        else:
+            self.lm_head = self.model.embed_tokens
+        self.scale_width = self.config.hidden_size / self.config.dim_model_base
+        self.logits_processor = LogitsProcessor(config)
+        self.capture_aux_hidden_states = False
+
+    def load_weights(self, weights: Iterable[Tuple[str, torch.Tensor]]):
+        super().load_weights(weights)
+
+    def set_embed_and_head(self, embed, head):
+        self.model.embed_tokens = embed
+        if self.config.tie_word_embeddings:
+            self.lm_head = embed
+        else:
+            self.lm_head = head
+
+
+# ==============================================================================
+# EAGLE3 — Transformer-based draft head (following llama_eagle3.py pattern)
+# ==============================================================================
+
+class MiniCPMDecoderLayerEagle3(MiniCPMDecoderLayer):
+    """EAGLE3 decoder layer: takes concatenated [embed, hidden] as QKV input.
+
+    Key differences from standard MiniCPMDecoderLayer:
+    - QKV projection input is 2*hidden_size (embed + hidden concatenated)
+    - Has hidden_norm for the hidden state branch
+    - Forward signature includes separate embeds and hidden_states
+    - Uses standard minicpm4 attention (RadixAttention with KV cache)
+      NOT lightning attention
+    """
+
+    def __init__(
+        self,
+        config,
+        layer_id: int = 0,
+        quant_config: Optional[QuantizationConfig] = None,
+        prefix: str = "",
+    ) -> None:
+        # Force minicpm4 type (standard attention) regardless of config.mixer_types
+        orig_mixer_types = getattr(config, "mixer_types", None)
+        config.mixer_types = ["minicpm4"]
+
+        super().__init__(config, layer_id=layer_id, quant_config=quant_config, prefix=prefix)
+
+        # Restore original mixer_types
+        config.mixer_types = orig_mixer_types
+
+        # Override QKV to accept 2*hidden_size input (concatenated embed + hidden)
+        self.self_attn.qkv_proj = QKVParallelLinear(
+            2 * config.hidden_size,
+            self.self_attn.head_dim,
+            self.self_attn.total_num_heads,
+            self.self_attn.total_num_kv_heads,
+            bias=False,
+            quant_config=quant_config,
+            prefix=add_prefix("self_attn.qkv_proj", prefix),
+        )
+
+        # Add hidden_norm for the hidden state branch
+        self.hidden_norm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+
+    def forward(
+        self,
+        positions: torch.Tensor,
+        embeds: torch.Tensor,
+        hidden_states: torch.Tensor,
+        forward_batch: ForwardBatch,
+        residual: Optional[torch.Tensor],
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        # Start with hidden_states as the residual stream
+        residual = hidden_states
+
+        # Normalize both branches
+        embeds_normed = self.input_layernorm(embeds)
+        hidden_normed = self.hidden_norm(hidden_states)
+
+        # Concatenate for QKV: [embed, hidden] -> 2*hidden_size
+        combined = torch.cat([embeds_normed, hidden_normed], dim=-1)
+
+        # Self Attention (standard minicpm4 with RadixAttention + KV cache)
+        attn_out = self.self_attn(
+            positions=positions,
+            hidden_states=combined,
+            forward_batch=forward_batch,
+        )
+
+        # MiniCPM residual: residual + output * (scale_depth / sqrt(N))
+        hidden_states = residual + attn_out * (
+            self.config.scale_depth / math.sqrt(self.config.num_hidden_layers)
+        )
+
+        # MLP
+        residual = hidden_states
+        hidden_states = self.post_attention_layernorm(hidden_states)
+        hidden_states = self.mlp(hidden_states)
+        hidden_states = residual + hidden_states * (
+            self.config.scale_depth / math.sqrt(self.config.num_hidden_layers)
+        )
+
+        return hidden_states, residual
+
+
+class MiniCPMModelEagle3(nn.Module):
+    """EAGLE3 model for MiniCPM-SALA.
+
+    Architecture (following llama_eagle3.py):
+    - embed_tokens: shared from target model
+    - fc: projects concatenated target hidden states to hidden_size
+    - midlayer: single MiniCPM decoder layer with [embed, hidden] QKV input
+    - norm: final RMSNorm
+    """
+
+    def __init__(
+        self,
+        config,
+        quant_config: Optional[QuantizationConfig] = None,
+        prefix: str = "",
+    ) -> None:
+        super().__init__()
+        self.config = config
+
+        self.vocab_size = config.vocab_size
+        self.embed_tokens = VocabParallelEmbedding(
+            config.vocab_size,
+            config.hidden_size,
+            prefix=add_prefix("embed_tokens", prefix),
+        )
+
+        # Determine input hidden size from target model
+        if hasattr(config, "target_hidden_size"):
+            self.hidden_size_in = config.target_hidden_size
+        else:
+            self.hidden_size_in = config.hidden_size
+
+        # fc projects concatenated target hidden states to draft hidden_size
+        # For EAGLE3 with 3 captured layers: input = 3 * target_hidden_size
+        self.fc = torch.nn.Linear(
+            self.hidden_size_in * 3,
+            config.hidden_size,
+            bias=getattr(config, "bias", False),
+        )
+
+        # Single decoder layer with standard attention (not lightning)
+        self.midlayer = MiniCPMDecoderLayerEagle3(
+            config, layer_id=0, quant_config=quant_config,
+            prefix=add_prefix("midlayer", prefix),
+        )
+
+        self.norm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+
+    def forward(
+        self,
+        input_ids: torch.Tensor,
+        positions: torch.Tensor,
+        forward_batch: ForwardBatch,
+        input_embeds: torch.Tensor = None,
+        pp_proxy_tensors=None,
+    ) -> torch.Tensor:
+        if input_embeds is None:
+            embeds = self.embed_tokens(input_ids) * self.config.scale_emb
+        else:
+            embeds = input_embeds
+
+        # Get hidden states from target model (via spec_info)
+        hidden_states = forward_batch.spec_info.hidden_states
+
+        # Project if dimensions don't match (EAGLE3: 3*hidden -> hidden)
+        if hidden_states.shape[-1] != embeds.shape[-1]:
+            hidden_states = self.fc(hidden_states)
+
+        # Handle idle batch
+        if hidden_states.shape[0] == 0:
+            return hidden_states, [hidden_states]
+
+        # Run through the single decoder layer
+        residual = None
+        hidden_states, residual = self.midlayer(
+            positions,
+            embeds,
+            hidden_states,
+            forward_batch,
+            residual,
+        )
+
+        # Apply final norm
+        hidden_states_to_logits = self.norm(hidden_states)
+
+        # Return both logits input and auxiliary hidden state for next draft step
+        return hidden_states_to_logits, [hidden_states]
+
+
+class MiniCPMSALAEagle3ForCausalLM(MiniCPMForCausalLM):
+    """EAGLE3 CausalLM for MiniCPM-SALA.
+
+    Follows the exact pattern of LlamaForCausalLMEagle3:
+    - Single transformer decoder layer as draft head
+    - Takes concatenated target hidden states as input
+    - Uses standard attention (RadixAttention)
+    - Shares embed_tokens and lm_head from target model
+    """
+
+    def __init__(
+        self,
+        config,
+        quant_config: Optional[QuantizationConfig] = None,
+        prefix: str = "",
+    ) -> None:
+        nn.Module.__init__(self)
+        self.config = config
+        self.quant_config = quant_config
+
+        if self.config.num_hidden_layers != 1:
+            raise ValueError("EAGLE3 currently only supports 1 layer")
+
+        self.model = MiniCPMModelEagle3(
+            config, quant_config=quant_config,
+            prefix=add_prefix("model", prefix),
+        )
+
+        # Handle lm_head
+        self.load_lm_head_from_target = False
+        if self.config.tie_word_embeddings:
+            self.lm_head = self.model.embed_tokens
+        else:
+            draft_vocab_size = getattr(config, "draft_vocab_size", None)
+            if draft_vocab_size is None:
+                self.load_lm_head_from_target = True
+                draft_vocab_size = config.vocab_size
+                config.draft_vocab_size = draft_vocab_size
+            self.lm_head = ParallelLMHead(
+                draft_vocab_size,
+                config.hidden_size,
+                quant_config=quant_config,
+                prefix=add_prefix("lm_head", prefix),
+            )
+
+        config_ = copy.deepcopy(config)
+        config_.vocab_size = getattr(config_, "draft_vocab_size", config_.vocab_size)
+        self.logits_processor = LogitsProcessor(config_)
+
+        self.scale_width = self.config.hidden_size / self.config.dim_model_base
+        self.capture_aux_hidden_states = True
+        self.hot_token_id = None
+        self.num_experts = 0
+
+    def set_embed_and_head(self, embed, head):
+        """Set shared embed_tokens and lm_head from target model."""
+        self.model.embed_tokens = embed
+        if self.config.tie_word_embeddings:
+            self.lm_head = embed
+        else:
+            self.lm_head = head
+
+    def set_embed(self, embed):
+        """Set shared embed_tokens from target model (EAGLE3 has its own lm_head)."""
+        self.model.embed_tokens = embed
+
+    def get_hot_token_id(self):
+        return self.hot_token_id
+
+    @torch.no_grad()
+    def forward(
+        self,
+        input_ids: torch.Tensor,
+        positions: torch.Tensor,
+        forward_batch: ForwardBatch,
+        input_embeds: torch.Tensor = None,
+    ) -> torch.Tensor:
+        if input_embeds is not None:
+            input_embeds = input_embeds * self.config.scale_emb
+
+        model_output = self.model(input_ids, positions, forward_batch, input_embeds)
+
+        if isinstance(model_output, tuple):
+            hidden_states_to_logits, aux_hidden_states = model_output
+        else:
+            hidden_states_to_logits = model_output
+            aux_hidden_states = None
+
+        # Apply MiniCPM scale_width before logits
+        hidden_states_to_logits = hidden_states_to_logits / self.scale_width
+
+        return self.logits_processor(
+            input_ids, hidden_states_to_logits, self.lm_head, forward_batch
+        )
+
+    def load_weights(self, weights: Iterable[Tuple[str, torch.Tensor]]) -> None:
+        params_dict = dict(self.named_parameters())
+        stacked_params_mapping = [
+            (".qkv_proj", ".q_proj", "q"),
+            (".qkv_proj", ".k_proj", "k"),
+            (".qkv_proj", ".v_proj", "v"),
+            (".gate_up_proj", ".gate_proj", 0),
+            (".gate_up_proj", ".up_proj", 1),
+        ]
+
+        for name, loaded_weight in weights:
+            if "d2t" in name:
+                self.hot_token_id = loaded_weight + torch.arange(loaded_weight.shape[0])
+                continue
+            if "t2d" in name:
+                continue
+
+            for param_name, weight_name, shard_id in stacked_params_mapping:
+                if weight_name not in name:
+                    continue
+                name = name.replace(weight_name, param_name)
+                param_name_full = f"model.{name}" if name not in params_dict else name
+                if param_name_full in params_dict:
+                    param = params_dict[param_name_full]
+                    weight_loader = getattr(
+                        param, "weight_loader", default_weight_loader
+                    )
+                    weight_loader(param, loaded_weight, shard_id)
+                break
+            else:
+                param_name_full = name if name in params_dict else f"model.{name}"
+                if param_name_full in params_dict:
+                    param = params_dict[param_name_full]
+                    weight_loader = getattr(
+                        param, "weight_loader", default_weight_loader
+                    )
+                    weight_loader(param, loaded_weight)
+
+
+EntryClass = [
+    MiniCPMForCausalLM,
+    MiniCPMSALAForCausalLM,
+    MiniCPMSALAEagleForCausalLM,
+    MiniCPMSALAEagle3ForCausalLM,
+]
