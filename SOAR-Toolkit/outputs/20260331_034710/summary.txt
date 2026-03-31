@@ -1,0 +1,10 @@
+Model: /opt/model_GPTQ_int4_lightning_only_minicpm4_bf16
+Data: eval_dataset/perf_public_set.jsonl
+Original Accuracy: 73.87%
+Normalized Accuracy: 92.33%
+Num Samples: 150
+Total Duration: 1941.15 s
+Total Output Tokens: 1563281
+Average Input Tokens: 57627.8
+Average Output Tokens: 10421.9
+TPS: 805.34

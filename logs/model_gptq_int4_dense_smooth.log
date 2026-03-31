@@ -59,10 +59,10 @@ GPTQ Quantizer for MiniCPM-SALA (Dense + SmoothQuant)
 [INFO] Loading tokenizer from /opt/model...
 [INFO] Loaded 96 calibration samples, 4,009,987 tokens (max_len=131072)
 [INFO] Loading model from /opt/model (CPU)...
-Skipping import of cpp extensions due to incompatible torch version 2.8.0+cu128 for torchao version 0.16.0             Please see https://github.com/pytorch/ao/issues/2919 for more info
+Skipping import of cpp extensions due to incompatible torch version. Please upgrade to torch >= 2.11.0 (found 2.8.0+cu128).
 Current Python version 3.10 is below the recommended 3.11 version. It is recommended to upgrade to Python 3.11 or higher for the best experience.
 `torch_dtype` is deprecated! Use `dtype` instead!
-Loading checkpoint shards:   0%|                                                                                                                  | 0/4 [00:00<?, ?it/s]Loading checkpoint shards: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:00<00:00, 89.91it/s]
+Loading checkpoint shards:   0%|                                                                                                    | 0/4 [00:00<?, ?it/s]Loading checkpoint shards: 100%|████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:00<00:00, 72.97it/s]
 [INFO] Model has 32 layers
 [INFO] Phase 1: Computing initial hidden states (embedding)...
 /opt/oldMoney-Project/quantization/GPTQ_int4_flashinfer_dense_smoothing_gpu.py:289: FutureWarning: `torch.distributed.reduce_op` is deprecated, please use `torch.distributed.ReduceOp` instead
@@ -79,23 +79,23 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
   Smoothed [up_proj] -> [down_proj] | s: min=0.3237 max=2.3198 std=0.2431
   Running GPTQ quantization (bits=4, group_size=128)...
     mlp.down_proj MSE=2.355016e-05 RelErr=0.2198
-    mlp.down_proj [4096x16384] W4 quantized in 3.8s
+    mlp.down_proj [4096x16384] W4 quantized in 3.9s
     mlp.gate_proj MSE=8.984000e-06 RelErr=0.1803
     mlp.gate_proj [16384x4096] W4 quantized in 0.9s
     mlp.up_proj MSE=1.230766e-05 RelErr=0.1648
-    mlp.up_proj [16384x4096] W4 quantized in 0.8s
+    mlp.up_proj [16384x4096] W4 quantized in 0.9s
     self_attn.k_proj MSE=5.538242e-06 RelErr=0.2264
-    self_attn.k_proj [256x4096] W4 quantized in 0.8s
+    self_attn.k_proj [256x4096] W4 quantized in 0.9s
     self_attn.o_gate MSE=1.455345e-05 RelErr=0.1860
     self_attn.o_gate [4096x4096] W4 quantized in 0.9s
     self_attn.o_proj MSE=1.429582e-05 RelErr=0.1941
-    self_attn.o_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.o_proj [4096x4096] W4 quantized in 0.9s
     self_attn.q_proj MSE=6.128568e-06 RelErr=0.1723
     self_attn.q_proj [4096x4096] W4 quantized in 0.9s
     self_attn.v_proj MSE=1.374381e-05 RelErr=0.2340
     self_attn.v_proj [256x4096] W4 quantized in 0.9s
   Updating hidden states for next layer...
-  Layer 0 done in 105.6s
+  Layer 0 done in 95.1s
 
 ======================================================================
 [LAYER 1/31] type=lightning-attn  bits=4
@@ -127,7 +127,7 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
     self_attn.z_proj MSE=1.499480e-05 RelErr=0.2007
     self_attn.z_proj [4096x4096] W4 quantized in 0.9s
   Updating hidden states for next layer...
-  Layer 1 done in 100.5s
+  Layer 1 done in 91.3s
 
 ======================================================================
 [LAYER 2/31] type=lightning-attn  bits=4
@@ -155,9 +155,9 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
     self_attn.v_proj MSE=1.503404e-05 RelErr=0.1692
     self_attn.v_proj [4096x4096] W4 quantized in 0.9s
     self_attn.z_proj MSE=1.371699e-05 RelErr=0.1755
-    self_attn.z_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.z_proj [4096x4096] W4 quantized in 0.9s
   Updating hidden states for next layer...
-  Layer 2 done in 100.7s
+  Layer 2 done in 91.2s
 
 ======================================================================
 [LAYER 3/31] type=lightning-attn  bits=4
@@ -187,7 +187,7 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
     self_attn.z_proj MSE=1.171879e-05 RelErr=0.1542
     self_attn.z_proj [4096x4096] W4 quantized in 0.9s
   Updating hidden states for next layer...
-  Layer 3 done in 101.0s
+  Layer 3 done in 90.8s
 
 ======================================================================
 [LAYER 4/31] type=lightning-attn  bits=4
@@ -201,7 +201,7 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
   Smoothed [up_proj] -> [down_proj] | s: min=0.3194 max=2.4207 std=0.1652
   Running GPTQ quantization (bits=4, group_size=128)...
     mlp.down_proj MSE=1.161169e-05 RelErr=0.1440
-    mlp.down_proj [4096x16384] W4 quantized in 3.7s
+    mlp.down_proj [4096x16384] W4 quantized in 3.6s
     mlp.gate_proj MSE=1.175276e-05 RelErr=0.1424
     mlp.gate_proj [16384x4096] W4 quantized in 0.9s
     mlp.up_proj MSE=1.077709e-05 RelErr=0.1371
@@ -209,15 +209,15 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
     self_attn.k_proj MSE=1.218338e-05 RelErr=0.1679
     self_attn.k_proj [4096x4096] W4 quantized in 0.9s
     self_attn.o_proj MSE=1.198873e-05 RelErr=0.1434
-    self_attn.o_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.o_proj [4096x4096] W4 quantized in 0.9s
     self_attn.q_proj MSE=1.151962e-05 RelErr=0.1641
     self_attn.q_proj [4096x4096] W4 quantized in 0.9s
     self_attn.v_proj MSE=1.169743e-05 RelErr=0.1450
-    self_attn.v_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.v_proj [4096x4096] W4 quantized in 0.9s
     self_attn.z_proj MSE=1.041950e-05 RelErr=0.1464
     self_attn.z_proj [4096x4096] W4 quantized in 0.9s
   Updating hidden states for next layer...
-  Layer 4 done in 100.8s
+  Layer 4 done in 90.7s
 
 ======================================================================
 [LAYER 5/31] type=lightning-attn  bits=4
@@ -231,7 +231,7 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
   Smoothed [up_proj] -> [down_proj] | s: min=0.3144 max=2.0648 std=0.1300
   Running GPTQ quantization (bits=4, group_size=128)...
     mlp.down_proj MSE=9.989839e-06 RelErr=0.1348
-    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.down_proj [4096x16384] W4 quantized in 3.7s
     mlp.gate_proj MSE=1.113541e-05 RelErr=0.1374
     mlp.gate_proj [16384x4096] W4 quantized in 0.9s
     mlp.up_proj MSE=1.032355e-05 RelErr=0.1346
@@ -243,11 +243,11 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
     self_attn.q_proj MSE=1.136428e-05 RelErr=0.1516
     self_attn.q_proj [4096x4096] W4 quantized in 0.9s
     self_attn.v_proj MSE=1.230124e-05 RelErr=0.1448
-    self_attn.v_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.v_proj [4096x4096] W4 quantized in 0.9s
     self_attn.z_proj MSE=1.053040e-05 RelErr=0.1456
     self_attn.z_proj [4096x4096] W4 quantized in 0.9s
   Updating hidden states for next layer...
-  Layer 5 done in 100.7s
+  Layer 5 done in 91.6s
 
 ======================================================================
 [LAYER 6/31] type=lightning-attn  bits=4
@@ -263,21 +263,21 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
     mlp.down_proj MSE=1.061278e-05 RelErr=0.1388
     mlp.down_proj [4096x16384] W4 quantized in 3.7s
     mlp.gate_proj MSE=1.072403e-05 RelErr=0.1355
-    mlp.gate_proj [16384x4096] W4 quantized in 0.8s
+    mlp.gate_proj [16384x4096] W4 quantized in 0.9s
     mlp.up_proj MSE=1.007432e-05 RelErr=0.1330
     mlp.up_proj [16384x4096] W4 quantized in 0.9s
     self_attn.k_proj MSE=1.497453e-05 RelErr=0.1684
-    self_attn.k_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.k_proj [4096x4096] W4 quantized in 0.9s
     self_attn.o_proj MSE=1.073584e-05 RelErr=0.1358
-    self_attn.o_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.o_proj [4096x4096] W4 quantized in 0.9s
     self_attn.q_proj MSE=1.150883e-05 RelErr=0.1515
-    self_attn.q_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.q_proj [4096x4096] W4 quantized in 0.9s
     self_attn.v_proj MSE=1.157441e-05 RelErr=0.1387
     self_attn.v_proj [4096x4096] W4 quantized in 0.9s
     self_attn.z_proj MSE=9.508158e-06 RelErr=0.1400
     self_attn.z_proj [4096x4096] W4 quantized in 0.9s
   Updating hidden states for next layer...
-  Layer 6 done in 100.0s
+  Layer 6 done in 90.5s
 
 ======================================================================
 [LAYER 7/31] type=lightning-attn  bits=4
@@ -291,23 +291,23 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
   Smoothed [up_proj] -> [down_proj] | s: min=0.3132 max=2.2543 std=0.1644
   Running GPTQ quantization (bits=4, group_size=128)...
     mlp.down_proj MSE=1.159493e-05 RelErr=0.1434
-    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.down_proj [4096x16384] W4 quantized in 3.7s
     mlp.gate_proj MSE=1.089620e-05 RelErr=0.1366
     mlp.gate_proj [16384x4096] W4 quantized in 0.9s
     mlp.up_proj MSE=1.078453e-05 RelErr=0.1348
     mlp.up_proj [16384x4096] W4 quantized in 0.9s
     self_attn.k_proj MSE=1.478455e-05 RelErr=0.1670
-    self_attn.k_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.k_proj [4096x4096] W4 quantized in 0.9s
     self_attn.o_proj MSE=1.110117e-05 RelErr=0.1372
     self_attn.o_proj [4096x4096] W4 quantized in 0.9s
     self_attn.q_proj MSE=1.132075e-05 RelErr=0.1494
     self_attn.q_proj [4096x4096] W4 quantized in 0.9s
     self_attn.v_proj MSE=1.179903e-05 RelErr=0.1396
-    self_attn.v_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.v_proj [4096x4096] W4 quantized in 0.9s
     self_attn.z_proj MSE=9.514770e-06 RelErr=0.1399
-    self_attn.z_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.z_proj [4096x4096] W4 quantized in 0.9s
   Updating hidden states for next layer...
-  Layer 7 done in 100.1s
+  Layer 7 done in 91.0s
 
 ======================================================================
 [LAYER 8/31] type=lightning-attn  bits=4
@@ -329,15 +329,15 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
     self_attn.k_proj MSE=1.783695e-05 RelErr=0.1776
     self_attn.k_proj [4096x4096] W4 quantized in 0.9s
     self_attn.o_proj MSE=1.107294e-05 RelErr=0.1357
-    self_attn.o_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.o_proj [4096x4096] W4 quantized in 0.9s
     self_attn.q_proj MSE=1.250204e-05 RelErr=0.1534
     self_attn.q_proj [4096x4096] W4 quantized in 0.9s
     self_attn.v_proj MSE=1.213197e-05 RelErr=0.1398
-    self_attn.v_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.v_proj [4096x4096] W4 quantized in 0.9s
     self_attn.z_proj MSE=9.758330e-06 RelErr=0.1400
     self_attn.z_proj [4096x4096] W4 quantized in 0.9s
   Updating hidden states for next layer...
-  Layer 8 done in 99.7s
+  Layer 8 done in 90.0s
 
 ======================================================================
 [LAYER 9/31] type=minicpm4  bits=4
@@ -362,11 +362,11 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
     self_attn.o_proj MSE=1.148947e-05 RelErr=0.1435
     self_attn.o_proj [4096x4096] W4 quantized in 0.9s
     self_attn.q_proj MSE=1.603109e-05 RelErr=0.1603
-    self_attn.q_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.q_proj [4096x4096] W4 quantized in 0.9s
     self_attn.v_proj MSE=1.335427e-05 RelErr=0.1476
-    self_attn.v_proj [256x4096] W4 quantized in 0.8s
+    self_attn.v_proj [256x4096] W4 quantized in 0.9s
   Updating hidden states for next layer...
-  Layer 9 done in 109.1s
+  Layer 9 done in 98.1s
 
 ======================================================================
 [LAYER 10/31] type=lightning-attn  bits=4
@@ -380,7 +380,7 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
   Smoothed [up_proj] -> [down_proj] | s: min=0.3592 max=2.1777 std=0.1409
   Running GPTQ quantization (bits=4, group_size=128)...
     mlp.down_proj MSE=1.102376e-05 RelErr=0.1393
-    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.down_proj [4096x16384] W4 quantized in 3.7s
     mlp.gate_proj MSE=1.080429e-05 RelErr=0.1358
     mlp.gate_proj [16384x4096] W4 quantized in 0.9s
     mlp.up_proj MSE=1.097406e-05 RelErr=0.1349
@@ -388,15 +388,15 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
     self_attn.k_proj MSE=1.628436e-05 RelErr=0.1672
     self_attn.k_proj [4096x4096] W4 quantized in 0.9s
     self_attn.o_proj MSE=1.156804e-05 RelErr=0.1394
-    self_attn.o_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.o_proj [4096x4096] W4 quantized in 0.9s
     self_attn.q_proj MSE=1.174286e-05 RelErr=0.1476
     self_attn.q_proj [4096x4096] W4 quantized in 0.9s
     self_attn.v_proj MSE=1.217792e-05 RelErr=0.1425
-    self_attn.v_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.v_proj [4096x4096] W4 quantized in 0.9s
     self_attn.z_proj MSE=9.914551e-06 RelErr=0.1407
-    self_attn.z_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.z_proj [4096x4096] W4 quantized in 0.9s
   Updating hidden states for next layer...
-  Layer 10 done in 100.5s
+  Layer 10 done in 91.0s
 
 ======================================================================
 [LAYER 11/31] type=lightning-attn  bits=4
@@ -410,7 +410,7 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
   Smoothed [up_proj] -> [down_proj] | s: min=0.3414 max=2.1200 std=0.1540
   Running GPTQ quantization (bits=4, group_size=128)...
     mlp.down_proj MSE=1.191206e-05 RelErr=0.1432
-    mlp.down_proj [4096x16384] W4 quantized in 3.7s
+    mlp.down_proj [4096x16384] W4 quantized in 3.6s
     mlp.gate_proj MSE=1.101921e-05 RelErr=0.1376
     mlp.gate_proj [16384x4096] W4 quantized in 0.9s
     mlp.up_proj MSE=1.163413e-05 RelErr=0.1363
@@ -424,9 +424,9 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
     self_attn.v_proj MSE=1.213217e-05 RelErr=0.1407
     self_attn.v_proj [4096x4096] W4 quantized in 0.9s
     self_attn.z_proj MSE=9.378520e-06 RelErr=0.1377
-    self_attn.z_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.z_proj [4096x4096] W4 quantized in 0.9s
   Updating hidden states for next layer...
-  Layer 11 done in 100.2s
+  Layer 11 done in 90.2s
 
 ======================================================================
 [LAYER 12/31] type=lightning-attn  bits=4
@@ -442,21 +442,21 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
     mlp.down_proj MSE=1.124862e-05 RelErr=0.1384
     mlp.down_proj [4096x16384] W4 quantized in 3.7s
     mlp.gate_proj MSE=1.097202e-05 RelErr=0.1383
-    mlp.gate_proj [16384x4096] W4 quantized in 0.8s
+    mlp.gate_proj [16384x4096] W4 quantized in 0.9s
     mlp.up_proj MSE=1.160996e-05 RelErr=0.1362
     mlp.up_proj [16384x4096] W4 quantized in 0.9s
     self_attn.k_proj MSE=1.450498e-05 RelErr=0.1637
-    self_attn.k_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.k_proj [4096x4096] W4 quantized in 0.9s
     self_attn.o_proj MSE=1.174906e-05 RelErr=0.1391
-    self_attn.o_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.o_proj [4096x4096] W4 quantized in 0.9s
     self_attn.q_proj MSE=1.247893e-05 RelErr=0.1512
-    self_attn.q_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.q_proj [4096x4096] W4 quantized in 0.9s
     self_attn.v_proj MSE=1.348542e-05 RelErr=0.1497
     self_attn.v_proj [4096x4096] W4 quantized in 0.9s
     self_attn.z_proj MSE=1.050508e-05 RelErr=0.1424
-    self_attn.z_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.z_proj [4096x4096] W4 quantized in 0.9s
   Updating hidden states for next layer...
-  Layer 12 done in 100.8s
+  Layer 12 done in 91.0s
 
 ======================================================================
 [LAYER 13/31] type=lightning-attn  bits=4
@@ -470,15 +470,15 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
   Smoothed [up_proj] -> [down_proj] | s: min=0.3413 max=1.7985 std=0.1270
   Running GPTQ quantization (bits=4, group_size=128)...
     mlp.down_proj MSE=1.120585e-05 RelErr=0.1379
-    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.down_proj [4096x16384] W4 quantized in 3.7s
     mlp.gate_proj MSE=1.090263e-05 RelErr=0.1388
     mlp.gate_proj [16384x4096] W4 quantized in 0.9s
     mlp.up_proj MSE=1.154400e-05 RelErr=0.1354
     mlp.up_proj [16384x4096] W4 quantized in 0.9s
     self_attn.k_proj MSE=1.821016e-05 RelErr=0.1723
-    self_attn.k_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.k_proj [4096x4096] W4 quantized in 0.9s
     self_attn.o_proj MSE=1.016713e-05 RelErr=0.1325
-    self_attn.o_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.o_proj [4096x4096] W4 quantized in 0.9s
     self_attn.q_proj MSE=1.244037e-05 RelErr=0.1468
     self_attn.q_proj [4096x4096] W4 quantized in 0.9s
     self_attn.v_proj MSE=1.221461e-05 RelErr=0.1413
@@ -486,7 +486,7 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
     self_attn.z_proj MSE=9.768896e-06 RelErr=0.1409
     self_attn.z_proj [4096x4096] W4 quantized in 0.9s
   Updating hidden states for next layer...
-  Layer 13 done in 100.1s
+  Layer 13 done in 90.4s
 
 ======================================================================
 [LAYER 14/31] type=lightning-attn  bits=4
@@ -500,23 +500,23 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
   Smoothed [up_proj] -> [down_proj] | s: min=0.3460 max=2.0939 std=0.1348
   Running GPTQ quantization (bits=4, group_size=128)...
     mlp.down_proj MSE=1.169891e-05 RelErr=0.1393
-    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.down_proj [4096x16384] W4 quantized in 3.7s
     mlp.gate_proj MSE=1.057240e-05 RelErr=0.1383
     mlp.gate_proj [16384x4096] W4 quantized in 0.9s
     mlp.up_proj MSE=1.194000e-05 RelErr=0.1357
-    mlp.up_proj [16384x4096] W4 quantized in 0.8s
+    mlp.up_proj [16384x4096] W4 quantized in 0.9s
     self_attn.k_proj MSE=1.663135e-05 RelErr=0.1701
     self_attn.k_proj [4096x4096] W4 quantized in 0.9s
     self_attn.o_proj MSE=1.063075e-05 RelErr=0.1347
-    self_attn.o_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.o_proj [4096x4096] W4 quantized in 0.9s
     self_attn.q_proj MSE=1.280082e-05 RelErr=0.1517
-    self_attn.q_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.q_proj [4096x4096] W4 quantized in 0.9s
     self_attn.v_proj MSE=1.240189e-05 RelErr=0.1410
-    self_attn.v_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.v_proj [4096x4096] W4 quantized in 0.9s
     self_attn.z_proj MSE=9.403345e-06 RelErr=0.1383
     self_attn.z_proj [4096x4096] W4 quantized in 0.9s
   Updating hidden states for next layer...
-  Layer 14 done in 100.4s
+  Layer 14 done in 90.8s
 
 ======================================================================
 [LAYER 15/31] type=lightning-attn  bits=4
@@ -530,23 +530,23 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
   Smoothed [up_proj] -> [down_proj] | s: min=0.3887 max=2.1089 std=0.1400
   Running GPTQ quantization (bits=4, group_size=128)...
     mlp.down_proj MSE=1.112682e-05 RelErr=0.1378
-    mlp.down_proj [4096x16384] W4 quantized in 3.7s
+    mlp.down_proj [4096x16384] W4 quantized in 3.6s
     mlp.gate_proj MSE=1.100488e-05 RelErr=0.1378
     mlp.gate_proj [16384x4096] W4 quantized in 0.9s
     mlp.up_proj MSE=1.159779e-05 RelErr=0.1354
     mlp.up_proj [16384x4096] W4 quantized in 0.9s
     self_attn.k_proj MSE=1.891446e-05 RelErr=0.1734
-    self_attn.k_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.k_proj [4096x4096] W4 quantized in 0.9s
     self_attn.o_proj MSE=1.095977e-05 RelErr=0.1348
     self_attn.o_proj [4096x4096] W4 quantized in 0.9s
     self_attn.q_proj MSE=1.327383e-05 RelErr=0.1506
     self_attn.q_proj [4096x4096] W4 quantized in 0.9s
     self_attn.v_proj MSE=1.256340e-05 RelErr=0.1409
-    self_attn.v_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.v_proj [4096x4096] W4 quantized in 0.9s
     self_attn.z_proj MSE=9.509698e-06 RelErr=0.1387
-    self_attn.z_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.z_proj [4096x4096] W4 quantized in 0.9s
   Updating hidden states for next layer...
-  Layer 15 done in 100.0s
+  Layer 15 done in 90.6s
 
 ======================================================================
 [LAYER 16/31] type=minicpm4  bits=4
@@ -565,17 +565,17 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
     mlp.up_proj MSE=1.140983e-05 RelErr=0.1356
     mlp.up_proj [16384x4096] W4 quantized in 0.9s
     self_attn.k_proj MSE=2.865909e-05 RelErr=0.1840
-    self_attn.k_proj [256x4096] W4 quantized in 0.8s
+    self_attn.k_proj [256x4096] W4 quantized in 0.9s
     self_attn.o_gate MSE=8.555598e-06 RelErr=0.1423
-    self_attn.o_gate [4096x4096] W4 quantized in 0.8s
+    self_attn.o_gate [4096x4096] W4 quantized in 0.9s
     self_attn.o_proj MSE=1.096199e-05 RelErr=0.1385
     self_attn.o_proj [4096x4096] W4 quantized in 0.9s
     self_attn.q_proj MSE=1.384148e-05 RelErr=0.1432
     self_attn.q_proj [4096x4096] W4 quantized in 0.9s
     self_attn.v_proj MSE=1.327655e-05 RelErr=0.1474
-    self_attn.v_proj [256x4096] W4 quantized in 0.8s
+    self_attn.v_proj [256x4096] W4 quantized in 0.9s
   Updating hidden states for next layer...
-  Layer 16 done in 109.0s
+  Layer 16 done in 97.4s
 
 ======================================================================
 [LAYER 17/31] type=minicpm4  bits=4
@@ -588,13 +588,13 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
   Smoothed [up_proj] -> [down_proj] | s: min=0.4043 max=2.4398 std=0.1353
   Running GPTQ quantization (bits=4, group_size=128)...
     mlp.down_proj MSE=1.101705e-05 RelErr=0.1398
-    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.down_proj [4096x16384] W4 quantized in 3.7s
     mlp.gate_proj MSE=1.237381e-05 RelErr=0.1407
     mlp.gate_proj [16384x4096] W4 quantized in 0.9s
     mlp.up_proj MSE=1.092433e-05 RelErr=0.1351
     mlp.up_proj [16384x4096] W4 quantized in 0.9s
     self_attn.k_proj MSE=2.737800e-05 RelErr=0.1941
-    self_attn.k_proj [256x4096] W4 quantized in 0.8s
+    self_attn.k_proj [256x4096] W4 quantized in 0.9s
     self_attn.o_gate MSE=8.906922e-06 RelErr=0.1434
     self_attn.o_gate [4096x4096] W4 quantized in 0.9s
     self_attn.o_proj MSE=1.148805e-05 RelErr=0.1374
@@ -602,9 +602,9 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
     self_attn.q_proj MSE=1.310592e-05 RelErr=0.1437
     self_attn.q_proj [4096x4096] W4 quantized in 0.9s
     self_attn.v_proj MSE=1.508641e-05 RelErr=0.1403
-    self_attn.v_proj [256x4096] W4 quantized in 0.8s
+    self_attn.v_proj [256x4096] W4 quantized in 0.9s
   Updating hidden states for next layer...
-  Layer 17 done in 108.6s
+  Layer 17 done in 97.4s
 
 ======================================================================
 [LAYER 18/31] type=lightning-attn  bits=4
@@ -626,7 +626,7 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
     self_attn.k_proj MSE=1.956606e-05 RelErr=0.1767
     self_attn.k_proj [4096x4096] W4 quantized in 0.9s
     self_attn.o_proj MSE=1.053370e-05 RelErr=0.1332
-    self_attn.o_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.o_proj [4096x4096] W4 quantized in 0.9s
     self_attn.q_proj MSE=1.317342e-05 RelErr=0.1515
     self_attn.q_proj [4096x4096] W4 quantized in 0.9s
     self_attn.v_proj MSE=1.310765e-05 RelErr=0.1440
@@ -634,7 +634,7 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
     self_attn.z_proj MSE=1.018560e-05 RelErr=0.1396
     self_attn.z_proj [4096x4096] W4 quantized in 0.9s
   Updating hidden states for next layer...
-  Layer 18 done in 100.4s
+  Layer 18 done in 90.8s
 
 ======================================================================
 [LAYER 19/31] type=lightning-attn  bits=4
@@ -648,23 +648,23 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
   Smoothed [up_proj] -> [down_proj] | s: min=0.3739 max=2.3431 std=0.1263
   Running GPTQ quantization (bits=4, group_size=128)...
     mlp.down_proj MSE=1.088961e-05 RelErr=0.1359
-    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.down_proj [4096x16384] W4 quantized in 3.8s
     mlp.gate_proj MSE=1.132337e-05 RelErr=0.1386
     mlp.gate_proj [16384x4096] W4 quantized in 0.9s
     mlp.up_proj MSE=1.201713e-05 RelErr=0.1364
-    mlp.up_proj [16384x4096] W4 quantized in 0.8s
+    mlp.up_proj [16384x4096] W4 quantized in 0.9s
     self_attn.k_proj MSE=1.727019e-05 RelErr=0.1704
-    self_attn.k_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.k_proj [4096x4096] W4 quantized in 0.9s
     self_attn.o_proj MSE=1.068427e-05 RelErr=0.1352
     self_attn.o_proj [4096x4096] W4 quantized in 0.9s
     self_attn.q_proj MSE=1.250138e-05 RelErr=0.1487
-    self_attn.q_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.q_proj [4096x4096] W4 quantized in 0.9s
     self_attn.v_proj MSE=1.286162e-05 RelErr=0.1442
-    self_attn.v_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.v_proj [4096x4096] W4 quantized in 0.9s
     self_attn.z_proj MSE=1.005847e-05 RelErr=0.1386
-    self_attn.z_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.z_proj [4096x4096] W4 quantized in 0.9s
   Updating hidden states for next layer...
-  Layer 19 done in 99.6s
+  Layer 19 done in 90.2s
 
 ======================================================================
 [LAYER 20/31] type=lightning-attn  bits=4
@@ -682,7 +682,7 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
     mlp.gate_proj MSE=1.129115e-05 RelErr=0.1403
     mlp.gate_proj [16384x4096] W4 quantized in 0.9s
     mlp.up_proj MSE=1.246754e-05 RelErr=0.1370
-    mlp.up_proj [16384x4096] W4 quantized in 0.8s
+    mlp.up_proj [16384x4096] W4 quantized in 0.9s
     self_attn.k_proj MSE=2.011838e-05 RelErr=0.1771
     self_attn.k_proj [4096x4096] W4 quantized in 0.8s
     self_attn.o_proj MSE=9.995096e-06 RelErr=0.1306
@@ -690,11 +690,11 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
     self_attn.q_proj MSE=1.350528e-05 RelErr=0.1519
     self_attn.q_proj [4096x4096] W4 quantized in 0.8s
     self_attn.v_proj MSE=1.236833e-05 RelErr=0.1421
-    self_attn.v_proj [4096x4096] W4 quantized in 0.9s
+    self_attn.v_proj [4096x4096] W4 quantized in 0.8s
     self_attn.z_proj MSE=1.043998e-05 RelErr=0.1407
     self_attn.z_proj [4096x4096] W4 quantized in 0.9s
   Updating hidden states for next layer...
-  Layer 20 done in 100.0s
+  Layer 20 done in 90.4s
 
 ======================================================================
 [LAYER 21/31] type=lightning-attn  bits=4
@@ -712,19 +712,19 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
     mlp.gate_proj MSE=1.103946e-05 RelErr=0.1394
     mlp.gate_proj [16384x4096] W4 quantized in 0.9s
     mlp.up_proj MSE=1.259446e-05 RelErr=0.1369
-    mlp.up_proj [16384x4096] W4 quantized in 0.8s
+    mlp.up_proj [16384x4096] W4 quantized in 0.9s
     self_attn.k_proj MSE=1.748380e-05 RelErr=0.1722
     self_attn.k_proj [4096x4096] W4 quantized in 0.9s
     self_attn.o_proj MSE=1.152678e-05 RelErr=0.1397
-    self_attn.o_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.o_proj [4096x4096] W4 quantized in 0.9s
     self_attn.q_proj MSE=1.412761e-05 RelErr=0.1569
-    self_attn.q_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.q_proj [4096x4096] W4 quantized in 0.9s
     self_attn.v_proj MSE=1.372643e-05 RelErr=0.1497
-    self_attn.v_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.v_proj [4096x4096] W4 quantized in 0.9s
     self_attn.z_proj MSE=1.052198e-05 RelErr=0.1412
-    self_attn.z_proj [4096x4096] W4 quantized in 0.9s
+    self_attn.z_proj [4096x4096] W4 quantized in 0.8s
   Updating hidden states for next layer...
-  Layer 21 done in 100.6s
+  Layer 21 done in 90.5s
 
 ======================================================================
 [LAYER 22/31] type=minicpm4  bits=4
@@ -737,23 +737,23 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
   Smoothed [up_proj] -> [down_proj] | s: min=0.3339 max=3.5788 std=0.1576
   Running GPTQ quantization (bits=4, group_size=128)...
     mlp.down_proj MSE=1.166824e-05 RelErr=0.1397
-    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.down_proj [4096x16384] W4 quantized in 3.7s
     mlp.gate_proj MSE=1.110281e-05 RelErr=0.1407
     mlp.gate_proj [16384x4096] W4 quantized in 0.9s
     mlp.up_proj MSE=1.255432e-05 RelErr=0.1371
     mlp.up_proj [16384x4096] W4 quantized in 0.9s
     self_attn.k_proj MSE=2.587789e-05 RelErr=0.1976
-    self_attn.k_proj [256x4096] W4 quantized in 0.8s
+    self_attn.k_proj [256x4096] W4 quantized in 0.9s
     self_attn.o_gate MSE=9.461909e-06 RelErr=0.1567
-    self_attn.o_gate [4096x4096] W4 quantized in 0.8s
+    self_attn.o_gate [4096x4096] W4 quantized in 0.9s
     self_attn.o_proj MSE=1.255097e-05 RelErr=0.1394
-    self_attn.o_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.o_proj [4096x4096] W4 quantized in 0.9s
     self_attn.q_proj MSE=1.484241e-05 RelErr=0.1518
-    self_attn.q_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.q_proj [4096x4096] W4 quantized in 0.9s
     self_attn.v_proj MSE=2.518594e-05 RelErr=0.1553
-    self_attn.v_proj [256x4096] W4 quantized in 0.8s
+    self_attn.v_proj [256x4096] W4 quantized in 0.9s
   Updating hidden states for next layer...
-  Layer 22 done in 108.9s
+  Layer 22 done in 96.9s
 
 ======================================================================
 [LAYER 23/31] type=lightning-attn  bits=4
@@ -767,23 +767,23 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
   Smoothed [up_proj] -> [down_proj] | s: min=0.3757 max=2.9362 std=0.1645
   Running GPTQ quantization (bits=4, group_size=128)...
     mlp.down_proj MSE=1.200225e-05 RelErr=0.1412
-    mlp.down_proj [4096x16384] W4 quantized in 3.7s
+    mlp.down_proj [4096x16384] W4 quantized in 3.6s
     mlp.gate_proj MSE=1.110357e-05 RelErr=0.1406
     mlp.gate_proj [16384x4096] W4 quantized in 0.9s
     mlp.up_proj MSE=1.256994e-05 RelErr=0.1363
     mlp.up_proj [16384x4096] W4 quantized in 0.9s
     self_attn.k_proj MSE=1.947741e-05 RelErr=0.1702
-    self_attn.k_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.k_proj [4096x4096] W4 quantized in 0.9s
     self_attn.o_proj MSE=1.042154e-05 RelErr=0.1341
-    self_attn.o_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.o_proj [4096x4096] W4 quantized in 0.9s
     self_attn.q_proj MSE=1.368149e-05 RelErr=0.1510
-    self_attn.q_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.q_proj [4096x4096] W4 quantized in 0.9s
     self_attn.v_proj MSE=1.202716e-05 RelErr=0.1412
     self_attn.v_proj [4096x4096] W4 quantized in 0.9s
     self_attn.z_proj MSE=1.033688e-05 RelErr=0.1410
-    self_attn.z_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.z_proj [4096x4096] W4 quantized in 0.9s
   Updating hidden states for next layer...
-  Layer 23 done in 100.3s
+  Layer 23 done in 90.6s
 
 ======================================================================
 [LAYER 24/31] type=lightning-attn  bits=4
@@ -801,19 +801,19 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
     mlp.gate_proj MSE=1.133161e-05 RelErr=0.1427
     mlp.gate_proj [16384x4096] W4 quantized in 0.9s
     mlp.up_proj MSE=1.291844e-05 RelErr=0.1371
-    mlp.up_proj [16384x4096] W4 quantized in 0.8s
+    mlp.up_proj [16384x4096] W4 quantized in 0.9s
     self_attn.k_proj MSE=1.981424e-05 RelErr=0.1719
-    self_attn.k_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.k_proj [4096x4096] W4 quantized in 0.9s
     self_attn.o_proj MSE=1.060596e-05 RelErr=0.1345
     self_attn.o_proj [4096x4096] W4 quantized in 0.9s
     self_attn.q_proj MSE=1.380526e-05 RelErr=0.1519
     self_attn.q_proj [4096x4096] W4 quantized in 0.9s
     self_attn.v_proj MSE=1.254241e-05 RelErr=0.1441
-    self_attn.v_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.v_proj [4096x4096] W4 quantized in 0.9s
     self_attn.z_proj MSE=1.056419e-05 RelErr=0.1422
-    self_attn.z_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.z_proj [4096x4096] W4 quantized in 0.9s
   Updating hidden states for next layer...
-  Layer 24 done in 100.3s
+  Layer 24 done in 90.2s
 
 ======================================================================
 [LAYER 25/31] type=lightning-attn  bits=4
@@ -837,13 +837,13 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
     self_attn.o_proj MSE=1.131950e-05 RelErr=0.1380
     self_attn.o_proj [4096x4096] W4 quantized in 0.9s
     self_attn.q_proj MSE=1.460586e-05 RelErr=0.1555
-    self_attn.q_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.q_proj [4096x4096] W4 quantized in 0.9s
     self_attn.v_proj MSE=1.273488e-05 RelErr=0.1440
     self_attn.v_proj [4096x4096] W4 quantized in 0.9s
     self_attn.z_proj MSE=1.083416e-05 RelErr=0.1430
-    self_attn.z_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.z_proj [4096x4096] W4 quantized in 0.9s
   Updating hidden states for next layer...
-  Layer 25 done in 101.0s
+  Layer 25 done in 90.9s
 
 ======================================================================
 [LAYER 26/31] type=lightning-attn  bits=4
@@ -857,13 +857,13 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
   Smoothed [up_proj] -> [down_proj] | s: min=0.3486 max=3.6336 std=0.2059
   Running GPTQ quantization (bits=4, group_size=128)...
     mlp.down_proj MSE=1.440267e-05 RelErr=0.1489
-    mlp.down_proj [4096x16384] W4 quantized in 3.6s
+    mlp.down_proj [4096x16384] W4 quantized in 3.7s
     mlp.gate_proj MSE=1.180828e-05 RelErr=0.1448
     mlp.gate_proj [16384x4096] W4 quantized in 0.9s
     mlp.up_proj MSE=1.381385e-05 RelErr=0.1383
     mlp.up_proj [16384x4096] W4 quantized in 0.9s
     self_attn.k_proj MSE=2.809661e-05 RelErr=0.1939
-    self_attn.k_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.k_proj [4096x4096] W4 quantized in 0.9s
     self_attn.o_proj MSE=1.105955e-05 RelErr=0.1333
     self_attn.o_proj [4096x4096] W4 quantized in 0.9s
     self_attn.q_proj MSE=1.605884e-05 RelErr=0.1599
@@ -873,7 +873,7 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
     self_attn.z_proj MSE=1.191558e-05 RelErr=0.1459
     self_attn.z_proj [4096x4096] W4 quantized in 0.9s
   Updating hidden states for next layer...
-  Layer 26 done in 100.1s
+  Layer 26 done in 90.6s
 
 ======================================================================
 [LAYER 27/31] type=lightning-attn  bits=4
@@ -893,17 +893,17 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
     mlp.up_proj MSE=1.385064e-05 RelErr=0.1382
     mlp.up_proj [16384x4096] W4 quantized in 0.9s
     self_attn.k_proj MSE=1.704204e-05 RelErr=0.1675
-    self_attn.k_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.k_proj [4096x4096] W4 quantized in 0.9s
     self_attn.o_proj MSE=1.205120e-05 RelErr=0.1412
     self_attn.o_proj [4096x4096] W4 quantized in 0.9s
     self_attn.q_proj MSE=1.479032e-05 RelErr=0.1583
-    self_attn.q_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.q_proj [4096x4096] W4 quantized in 0.9s
     self_attn.v_proj MSE=1.274189e-05 RelErr=0.1446
     self_attn.v_proj [4096x4096] W4 quantized in 0.9s
     self_attn.z_proj MSE=1.117287e-05 RelErr=0.1433
-    self_attn.z_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.z_proj [4096x4096] W4 quantized in 0.9s
   Updating hidden states for next layer...
-  Layer 27 done in 100.2s
+  Layer 27 done in 90.5s
 
 ======================================================================
 [LAYER 28/31] type=lightning-attn  bits=4
@@ -917,7 +917,7 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
   Smoothed [up_proj] -> [down_proj] | s: min=0.3229 max=2.8092 std=0.1852
   Running GPTQ quantization (bits=4, group_size=128)...
     mlp.down_proj MSE=1.377058e-05 RelErr=0.1440
-    mlp.down_proj [4096x16384] W4 quantized in 3.8s
+    mlp.down_proj [4096x16384] W4 quantized in 3.6s
     mlp.gate_proj MSE=1.138623e-05 RelErr=0.1432
     mlp.gate_proj [16384x4096] W4 quantized in 0.9s
     mlp.up_proj MSE=1.400711e-05 RelErr=0.1384
@@ -927,13 +927,13 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
     self_attn.o_proj MSE=1.263907e-05 RelErr=0.1457
     self_attn.o_proj [4096x4096] W4 quantized in 0.9s
     self_attn.q_proj MSE=1.652790e-05 RelErr=0.1634
-    self_attn.q_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.q_proj [4096x4096] W4 quantized in 0.9s
     self_attn.v_proj MSE=1.858072e-05 RelErr=0.1788
-    self_attn.v_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.v_proj [4096x4096] W4 quantized in 0.9s
     self_attn.z_proj MSE=1.234654e-05 RelErr=0.1480
     self_attn.z_proj [4096x4096] W4 quantized in 0.9s
   Updating hidden states for next layer...
-  Layer 28 done in 100.6s
+  Layer 28 done in 90.3s
 
 ======================================================================
 [LAYER 29/31] type=minicpm4  bits=4
@@ -960,9 +960,9 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
     self_attn.q_proj MSE=1.719950e-05 RelErr=0.1806
     self_attn.q_proj [4096x4096] W4 quantized in 0.9s
     self_attn.v_proj MSE=1.217749e-04 RelErr=0.2409
-    self_attn.v_proj [256x4096] W4 quantized in 0.8s
+    self_attn.v_proj [256x4096] W4 quantized in 0.9s
   Updating hidden states for next layer...
-  Layer 29 done in 109.2s
+  Layer 29 done in 97.3s
 
 ======================================================================
 [LAYER 30/31] type=minicpm4  bits=4
@@ -979,19 +979,19 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
     mlp.gate_proj MSE=1.091356e-05 RelErr=0.1415
     mlp.gate_proj [16384x4096] W4 quantized in 0.9s
     mlp.up_proj MSE=1.450823e-05 RelErr=0.1374
-    mlp.up_proj [16384x4096] W4 quantized in 0.8s
+    mlp.up_proj [16384x4096] W4 quantized in 0.9s
     self_attn.k_proj MSE=2.965691e-05 RelErr=0.2791
-    self_attn.k_proj [256x4096] W4 quantized in 0.8s
+    self_attn.k_proj [256x4096] W4 quantized in 0.9s
     self_attn.o_gate MSE=2.434660e-05 RelErr=0.1934
-    self_attn.o_gate [4096x4096] W4 quantized in 0.8s
+    self_attn.o_gate [4096x4096] W4 quantized in 0.9s
     self_attn.o_proj MSE=1.938129e-05 RelErr=0.1494
     self_attn.o_proj [4096x4096] W4 quantized in 0.9s
     self_attn.q_proj MSE=2.186162e-05 RelErr=0.1969
-    self_attn.q_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.q_proj [4096x4096] W4 quantized in 0.9s
     self_attn.v_proj MSE=3.154892e-04 RelErr=0.2831
     self_attn.v_proj [256x4096] W4 quantized in 0.8s
   Updating hidden states for next layer...
-  Layer 30 done in 108.8s
+  Layer 30 done in 96.9s
 
 ======================================================================
 [LAYER 31/31] type=minicpm4  bits=4
@@ -1006,21 +1006,21 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
     mlp.down_proj MSE=1.412152e-05 RelErr=0.1576
     mlp.down_proj [4096x16384] W4 quantized in 3.6s
     mlp.gate_proj MSE=1.085279e-05 RelErr=0.1402
-    mlp.gate_proj [16384x4096] W4 quantized in 0.8s
+    mlp.gate_proj [16384x4096] W4 quantized in 0.9s
     mlp.up_proj MSE=1.812456e-05 RelErr=0.1405
     mlp.up_proj [16384x4096] W4 quantized in 0.9s
     self_attn.k_proj MSE=1.671565e-05 RelErr=0.2562
-    self_attn.k_proj [256x4096] W4 quantized in 0.8s
+    self_attn.k_proj [256x4096] W4 quantized in 0.9s
     self_attn.o_gate MSE=1.162407e-05 RelErr=0.1496
     self_attn.o_gate [4096x4096] W4 quantized in 0.8s
     self_attn.o_proj MSE=1.340719e-05 RelErr=0.1339
-    self_attn.o_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.o_proj [4096x4096] W4 quantized in 0.9s
     self_attn.q_proj MSE=1.652029e-05 RelErr=0.1893
-    self_attn.q_proj [4096x4096] W4 quantized in 0.8s
+    self_attn.q_proj [4096x4096] W4 quantized in 0.9s
     self_attn.v_proj MSE=3.260338e-05 RelErr=0.1374
-    self_attn.v_proj [256x4096] W4 quantized in 0.8s
+    self_attn.v_proj [256x4096] W4 quantized in 0.9s
   Updating hidden states for next layer...
-  Layer 31 done in 109.3s
+  Layer 31 done in 97.3s
 
 ======================================================================
 [INFO] Phase 3: Processing final norm + lm_head...
@@ -1037,4 +1037,4 @@ Current Python version 3.10 is below the recommended 3.11 version. It is recomme
 
 [INFO] Quantization complete!
 
-[INFO] Total time: 55.3 minutes
+[INFO] Total time: 49.9 minutes
