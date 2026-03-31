@@ -2297,11 +2297,23 @@ class ModelRunner(ModelRunnerKVCacheMixin):
         )
 
         if can_run_graph:
-            ret = self.graph_runner.replay(
-                forward_batch,
-                skip_attn_backend_init=skip_attn_backend_init,
-                pp_proxy_tensors=pp_proxy_tensors,
-            )
+            profiler = get_profiler()
+            if profiler is not None:
+                graph_timer = CudaTimer()
+                with graph_timer:
+                    ret = self.graph_runner.replay(
+                        forward_batch,
+                        skip_attn_backend_init=skip_attn_backend_init,
+                        pp_proxy_tensors=pp_proxy_tensors,
+                    )
+                profiler.record_timing("cuda_graph_replay_ms", graph_timer.sync_and_get_ms())
+                profiler.record_timing("is_cuda_graph", 1.0)
+            else:
+                ret = self.graph_runner.replay(
+                    forward_batch,
+                    skip_attn_backend_init=skip_attn_backend_init,
+                    pp_proxy_tensors=pp_proxy_tensors,
+                )
             return ModelRunnerOutput(logits_output=ret, can_run_graph=can_run_graph)
 
         # For MLP sync

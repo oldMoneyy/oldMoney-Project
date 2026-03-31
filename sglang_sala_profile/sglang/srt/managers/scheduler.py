@@ -1087,21 +1087,44 @@ class Scheduler(
     @DynamicGradMode()
     def event_loop_normal(self):
         """A normal scheduler loop."""
+        profiler = get_profiler()
         while True:
+            if profiler is not None:
+                t0 = time.perf_counter()
+
             # Receive requests
             recv_reqs = self.recv_requests()
             self.process_input_requests(recv_reqs)
             if self._engine_paused:
                 continue
 
+            if profiler is not None:
+                t1 = time.perf_counter()
+
             # Get the next batch to run
             batch = self.get_next_batch_to_run()
             self.cur_batch = batch
 
+            if profiler is not None:
+                t2 = time.perf_counter()
+
             # Launch the current batch
             if batch:
                 result = self.run_batch(batch)
+
+                if profiler is not None:
+                    t3 = time.perf_counter()
+
                 self.process_batch_result(batch, result)
+
+                if profiler is not None:
+                    t4 = time.perf_counter()
+                    profiler.record_scheduler_timing(
+                        recv_ms=(t1 - t0) * 1000,
+                        schedule_ms=(t2 - t1) * 1000,
+                        run_batch_ms=(t3 - t2) * 1000,
+                        process_result_ms=(t4 - t3) * 1000,
+                    )
             else:
                 # When the server is idle, do self-check and re-init some states
                 self.self_check_during_idle()

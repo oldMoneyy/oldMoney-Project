@@ -124,6 +124,16 @@ class SalaProfiler:
         acc["total"] += value_ms
         acc["count"] += 1
 
+    def record_scheduler_timing(self, recv_ms: float, schedule_ms: float,
+                                 run_batch_ms: float, process_result_ms: float):
+        """Record scheduler loop timing (called outside of begin_step/end_step)."""
+        for name, val in [("sched_recv_ms", recv_ms), ("sched_schedule_ms", schedule_ms),
+                          ("sched_run_batch_ms", run_batch_ms), ("sched_process_result_ms", process_result_ms)]:
+            self._current_step[name] = round(val, 3)
+            acc = self._avg_accum[name]
+            acc["total"] += val
+            acc["count"] += 1
+
     def end_step(self):
         """Call at the end of each forward step. Writes the record."""
         self._current_step["wall_total_ms"] = round(

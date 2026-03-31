@@ -41,6 +41,7 @@ from sglang.srt.mem_cache.memory_pool import ReqToTokenPool
 from sglang.srt.model_executor.forward_batch_info import ForwardBatch, PPProxyTensors
 from sglang.srt.server_args import ServerArgs
 from sglang.srt.utils import MultiprocessingSerializer, broadcast_pyobj, set_random_seed
+from sglang.srt.utils.sala_profiler import CudaTimer, get_profiler
 from sglang.srt.utils.hf_transformers_utils import (
     get_processor,
     get_tokenizer,
@@ -445,11 +446,23 @@ class TpModelWorker(BaseTpWorker):
             return self._forward_batch_generation_dllm(forward_batch)
 
         if self.pp_group.is_last_rank:
-            out = self.model_runner.forward(
-                forward_batch,
-                pp_proxy_tensors=pp_proxy_tensors,
-                skip_attn_backend_init=skip_attn_backend_init,
-            )
+            profiler = get_profiler()
+
+            if profiler is not None:
+                fwd_timer = CudaTimer()
+                with fwd_timer:
+                    out = self.model_runner.forward(
+                        forward_batch,
+                        pp_proxy_tensors=pp_proxy_tensors,
+                        skip_attn_backend_init=skip_attn_backend_init,
+                    )
+                profiler.record_timing("tp_worker_forward_ms", fwd_timer.sync_and_get_ms())
+            else:
+                out = self.model_runner.forward(
+                    forward_batch,
+                    pp_proxy_tensors=pp_proxy_tensors,
+                    skip_attn_backend_init=skip_attn_backend_init,
+                )
             logits_output, can_run_cuda_graph = out.logits_output, out.can_run_graph
             batch_result = GenerationBatchResult(
                 logits_output=logits_output,
@@ -478,9 +491,17 @@ class TpModelWorker(BaseTpWorker):
 
             if not model_worker_batch.is_prefill_only:
                 # For normal requests, sample the next token ids.
-                batch_result.next_token_ids = self.model_runner.sample(
-                    logits_output, forward_batch
-                )
+                if profiler is not None:
+                    sample_timer = CudaTimer()
+                    with sample_timer:
+                        batch_result.next_token_ids = self.model_runner.sample(
+                            logits_output, forward_batch
+                        )
+                    profiler.record_timing("sampling_ms", sample_timer.sync_and_get_ms())
+                else:
+                    batch_result.next_token_ids = self.model_runner.sample(
+                        logits_output, forward_batch
+                    )
             else:
                 # For prefill-only requests, create dummy token IDs on CPU
                 # The size should match the batch size (number of sequences), not total tokens
