@@ -591,32 +591,15 @@ class MiniCPMForCausalLM(nn.Module):
         forward_batch: ForwardBatch,
         input_embeds: torch.Tensor = None,
     ) -> torch.Tensor:
-        profiler = get_profiler()
-
-        if profiler is not None:
-            logits_timer = CudaTimer()
-            if input_embeds is not None:
-                input_embeds = input_embeds * self.config.scale_emb
-            hidden_states = self.model(input_ids, positions, forward_batch, input_embeds)
-            hidden_states = hidden_states / self.scale_width
-            if self.config.tie_word_embeddings:
-                lm_head = self.model.embed_tokens
-            else:
-                lm_head = self.lm_head
-            with logits_timer:
-                result = self.logits_processor(input_ids, hidden_states, lm_head, forward_batch)
-            profiler.record_timing("logits_ms", logits_timer.sync_and_get_ms())
-            return result
+        if input_embeds is not None:
+            input_embeds = input_embeds * self.config.scale_emb
+        hidden_states = self.model(input_ids, positions, forward_batch, input_embeds)
+        hidden_states = hidden_states / self.scale_width
+        if self.config.tie_word_embeddings:
+            lm_head = self.model.embed_tokens
         else:
-            if input_embeds is not None:
-                input_embeds = input_embeds * self.config.scale_emb
-            hidden_states = self.model(input_ids, positions, forward_batch, input_embeds)
-            hidden_states = hidden_states / self.scale_width
-            if self.config.tie_word_embeddings:
-                lm_head = self.model.embed_tokens
-            else:
-                lm_head = self.lm_head
-            return self.logits_processor(input_ids, hidden_states, lm_head, forward_batch)
+            lm_head = self.lm_head
+        return self.logits_processor(input_ids, hidden_states, lm_head, forward_batch)
 
     def load_weights(self, weights: Iterable[Tuple[str, torch.Tensor]]):
         stacked_params_mapping = [
