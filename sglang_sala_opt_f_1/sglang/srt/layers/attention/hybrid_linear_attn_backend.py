@@ -33,10 +33,10 @@ from sglang.srt.layers.attention.mamba.mamba2_metadata import (
     Mamba2Metadata,
 )
 
-# Import Simple GLA from vendored optimized kernels
+# Import Simple GLA from fla package (vendored kernels had correctness issues)
 try:
-    from sglang.srt.layers.attention.fla.simple_gla import chunk_simple_gla
-    from sglang.srt.layers.attention.fla.simple_gla_recurrent import fused_recurrent_simple_gla
+    from fla.ops.simple_gla import chunk_simple_gla
+    from fla.ops.simple_gla.fused_recurrent import fused_recurrent_simple_gla
     SIMPLE_GLA_AVAILABLE = True
 except ImportError:
     SIMPLE_GLA_AVAILABLE = False
