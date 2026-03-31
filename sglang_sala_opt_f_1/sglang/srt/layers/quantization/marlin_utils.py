@@ -59,7 +59,7 @@ MARLIN_SUPPORTED_GROUP_SIZES = [-1, 32, 64, 128]
 # In case there is a performance issue with Marlin, the variable below can be
 # changed to False, which allows Marlin to perform global reductions in fp16
 # precision (instead of fp32), and therefore, save on some memory movements.
-USE_FP32_REDUCE_DEFAULT = False
+USE_FP32_REDUCE_DEFAULT = True
 
 
 @dataclass
