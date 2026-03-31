@@ -23,9 +23,24 @@ def is_profiling_enabled() -> bool:
     return _ENABLED
 
 
+def _is_capturing() -> bool:
+    """Check if CUDA graph capture is in progress."""
+    if hasattr(torch.cuda, "is_current_stream_capturing"):
+        return torch.cuda.is_current_stream_capturing()
+    # Fallback for older PyTorch
+    try:
+        s = torch.cuda.current_stream()
+        return s.is_capturing() if hasattr(s, "is_capturing") else False
+    except Exception:
+        return False
+
+
 def get_profiler() -> Optional["SalaProfiler"]:
     global _PROFILER
     if not _ENABLED:
+        return None
+    # Cannot use CUDA events during CUDA graph capture
+    if _is_capturing():
         return None
     if _PROFILER is None:
         _PROFILER = SalaProfiler()
