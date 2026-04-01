@@ -115,7 +115,7 @@ python -c "import torch; print(f'PyTorch Version: {torch.__version__}\nCUDA Vers
 
 SALA official start command:
 ```bash
-uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_fuse
+uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
 # uv pip install --no-deps -e /opt/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python
 fuser -k -9 31333/tcp
 export PYTORCH_ALLOC_CONF=expandable_segments:True
@@ -128,7 +128,6 @@ nohup python3 -m sglang.launch_server \
     --attention-backend minicpm_flashinfer \
     --chunked-prefill-size 8192 \
     --max-running-requests 32 \
-    --kv-cache-dtype fp8_e5m2 \
     --port 31333 \
     --dense-as-sparse \
     --mem-fraction-static 0.82 \
