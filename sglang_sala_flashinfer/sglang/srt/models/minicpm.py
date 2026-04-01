@@ -255,18 +255,33 @@ class MiniCPMLightningMixer(nn.Module):
 
         self.q_size = self.num_heads * self.head_dim
         self.kv_size = self.num_kv_heads * self.head_dim
+        self.z_size = self.num_heads * self.head_dim
         self.rope_theta = rope_theta
         self.max_position_embeddings = max_position_embeddings
 
-        self.qkv_proj = QKVParallelLinear(
-            hidden_size,
-            self.head_dim,
-            self.total_num_heads,
-            self.total_num_kv_heads,
-            bias=False,
-            quant_config=quant_config,
-            prefix=add_prefix("qkv_proj", prefix),
-        )
+        if self.use_output_gate:
+            # Merge Q, K, V, Z into a single GEMM — saves 1 kernel launch per layer
+            # (z_proj was a separate GEMM reading hidden_states redundantly)
+            self.qkvz_proj = MergedColumnParallelLinear(
+                hidden_size,
+                [self.total_num_heads * self.head_dim,      # Q
+                 self.total_num_kv_heads * self.head_dim,   # K
+                 self.total_num_kv_heads * self.head_dim,   # V
+                 self.total_num_heads * self.head_dim],     # Z
+                bias=False,
+                quant_config=quant_config,
+                prefix=add_prefix("qkvz_proj", prefix),
+            )
+        else:
+            self.qkv_proj = QKVParallelLinear(
+                hidden_size,
+                self.head_dim,
+                self.total_num_heads,
+                self.total_num_kv_heads,
+                bias=False,
+                quant_config=quant_config,
+                prefix=add_prefix("qkv_proj", prefix),
+            )
 
         self.o_proj = RowParallelLinear(
             self.total_num_heads * self.head_dim,
@@ -278,15 +293,6 @@ class MiniCPMLightningMixer(nn.Module):
 
         if self.use_output_norm:
             self.o_norm = RMSNorm(self.num_heads * self.head_dim, eps=self.rms_norm_eps)
-
-        if self.use_output_gate:
-            self.z_proj = ColumnParallelLinear(
-                self.hidden_size,
-                self.total_num_heads * self.head_dim,
-                bias=self.attention_bias,
-                quant_config=quant_config,
-                prefix=add_prefix("z_proj", prefix),
-            )
 
         if self.qk_norm:
             self.q_norm = RMSNorm(self.head_dim, eps=self.rms_norm_eps)
@@ -310,12 +316,15 @@ class MiniCPMLightningMixer(nn.Module):
         hidden_states: torch.Tensor,
         forward_batch: ForwardBatch,
     ) -> torch.Tensor:
-        qkv, _ = self.qkv_proj(hidden_states)
-        q, k, v = qkv.split([self.q_size, self.kv_size, self.kv_size], dim=-1)
-
-        # Compute z BEFORE attention — hidden_states still in L2 from qkv_proj
         if self.use_output_gate:
-            z, _ = self.z_proj(hidden_states)
+            # Single merged GEMM for Q, K, V, Z — eliminates separate z_proj call
+            qkvz, _ = self.qkvz_proj(hidden_states)
+            q, k, v, z = qkvz.split(
+                [self.q_size, self.kv_size, self.kv_size, self.z_size], dim=-1
+            )
+        else:
+            qkv, _ = self.qkv_proj(hidden_states)
+            q, k, v = qkv.split([self.q_size, self.kv_size, self.kv_size], dim=-1)
 
         if self.qk_norm:
             q = self.q_norm(q.reshape(-1, self.head_dim))
@@ -324,10 +333,10 @@ class MiniCPMLightningMixer(nn.Module):
         if self.use_rope:
             q = q.reshape(-1, self.num_heads * self.head_dim)
             k = k.reshape(-1, self.num_kv_heads * self.head_dim)
-            # apply_rope_with_cos_sin_cache_inplace handles bf16→f32→bf16 internally
-            # (cos_sin_cache is kept in FP32 on CUDA). The explicit float32 roundtrip
-            # was redundant: 4 cast kernels eliminated per lightning layer.
+            orig_dtype = q.dtype
+            q, k = q.float(), k.float()
             q, k = self.rotary_emb(positions, q, k)
+            q, k = q.to(orig_dtype), k.to(orig_dtype)
 
         q = q.reshape(-1, self.num_heads, self.head_dim)
         k = k.reshape(-1, self.num_kv_heads, self.head_dim)
@@ -587,9 +596,16 @@ class MiniCPMForCausalLM(nn.Module):
 
     def load_weights(self, weights: Iterable[Tuple[str, torch.Tensor]]):
         stacked_params_mapping = [
+            # minicpm4 layers: Q/K/V go into qkv_proj (QKVParallelLinear, string shards)
             ("qkv_proj", "q_proj", "q"),
             ("qkv_proj", "k_proj", "k"),
             ("qkv_proj", "v_proj", "v"),
+            # lightning layers: Q/K/V/Z go into qkvz_proj (MergedColumnParallelLinear, int shards)
+            ("qkvz_proj", "q_proj", 0),
+            ("qkvz_proj", "k_proj", 1),
+            ("qkvz_proj", "v_proj", 2),
+            ("qkvz_proj", "z_proj", 3),
+            # MLP
             ("gate_up_proj", "gate_proj", 0),
             ("gate_up_proj", "up_proj", 1),
         ]
@@ -617,8 +633,13 @@ class MiniCPMForCausalLM(nn.Module):
                 name = name.replace(weight_name, param_name)
                 if name.endswith(".bias") and name not in params_dict:
                     continue
+                # Skip if param doesn't exist — handles qkv_proj vs qkvz_proj routing:
+                # lightning layers have qkvz_proj (skips qkv_proj match),
+                # minicpm4 layers have qkv_proj (skips qkvz_proj match)
+                if name not in params_dict:
+                    continue
                 param = params_dict[name]
-                weight_loader = param.weight_loader
+                weight_loader = getattr(param, "weight_loader", default_weight_loader)
                 weight_loader(param, loaded_weight, shard_id)
                 break
             else:
