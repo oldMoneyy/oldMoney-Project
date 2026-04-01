@@ -29,7 +29,7 @@ from sglang.srt.layers.attention.minicpm_sparse_utils import (
     SparseMetadata,
     SparseMetadataBuilder,
 )
-from sglang.srt.layers.fused_kernels import fused_scale_add_rmsnorm, fused_sigmoid_mul, fused_qk_rmsnorm, fused_rmsnorm_sigmoid_mul
+from sglang.srt.layers.fused_kernels import fused_sigmoid_mul, fused_qk_rmsnorm, fused_rmsnorm_sigmoid_mul
 from sglang.srt.layers.layernorm import RMSNorm
 from sglang.srt.layers.linear import (
     ColumnParallelLinear,
@@ -464,25 +464,22 @@ class MiniCPMDecoderLayer(nn.Module):
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         scale = self.config.scale_depth / math.sqrt(self.config.num_hidden_layers)
 
-        if residual is None:
-            residual = hidden_states
-            hidden_states = self.input_layernorm(hidden_states)
-        else:
-            # In-place: residual = hidden_states * scale + residual; hidden_states = rmsnorm(residual)
-            fused_scale_add_rmsnorm(hidden_states, residual, self.input_layernorm.weight.data, scale, self.input_layernorm.variance_epsilon)
-
+        # Official residual pattern (proven correct)
+        residual = hidden_states
+        hidden_states = self.input_layernorm(hidden_states)
         hidden_states = self.self_attn(
             positions=positions,
             hidden_states=hidden_states,
             forward_batch=forward_batch,
         )
+        hidden_states = residual + hidden_states * scale
 
-        # In-place: residual = hidden_states * scale + residual; hidden_states = rmsnorm(residual)
-        fused_scale_add_rmsnorm(hidden_states, residual, self.post_attention_layernorm.weight.data, scale, self.post_attention_layernorm.variance_epsilon)
-
+        residual = hidden_states
+        hidden_states = self.post_attention_layernorm(hidden_states)
         hidden_states = self.mlp(hidden_states)
+        hidden_states = residual + hidden_states * scale
 
-        return hidden_states, residual
+        return hidden_states, None
 
 
 class MiniCPMModel(nn.Module):
@@ -536,9 +533,6 @@ class MiniCPMModel(nn.Module):
                 forward_batch,
                 residual,
             )
-        # Final layer: apply deferred scaled-add, then final RMSNorm
-        scale = self.config.scale_depth / math.sqrt(self.config.num_hidden_layers)
-        hidden_states = residual + hidden_states * scale
         hidden_states = self.norm(hidden_states)
         return hidden_states
 
