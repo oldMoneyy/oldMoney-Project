@@ -32,6 +32,7 @@ from sglang.srt.layers.attention.minicpm_sparse_utils import (
     SparseMetadata,
     SparseMetadataBuilder,
 )
+from sglang.srt.layers.fused_kernels import fused_scaled_add
 from sglang.srt.layers.layernorm import RMSNorm
 from sglang.srt.layers.linear import (
     ColumnParallelLinear,
@@ -547,17 +548,17 @@ class MiniCPMDecoderLayer(nn.Module):
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         scale = self.config.scale_depth / math.sqrt(self.config.num_hidden_layers)
 
-        # --- Input layernorm (fused with scaled-add when residual exists) ---
+        # --- Input layernorm (fused scaled-add from prev layer when possible) ---
         if residual is None:
-            # First layer: standalone RMSNorm, no preceding scaled-add
+            # First layer: no preceding scaled-add
             residual = hidden_states
             hidden_states = self.input_layernorm(hidden_states)
         else:
-            # Layers 1+: pre-scale then use sgl_kernel's fused_add_rmsnorm
-            # hidden_states here is prev layer's MLP output (raw, unscaled)
-            hidden_states = hidden_states * scale
-            # fused_add_rmsnorm: residual = hidden_states + residual; hidden_states = rmsnorm(residual)
-            hidden_states, residual = self.input_layernorm(hidden_states, residual)
+            # Layers 1+: fused_scaled_add replaces separate mul + add (1 kernel vs 2)
+            # Then sgl_kernel.rmsnorm (unchanged, bit-exact)
+            hidden_states = fused_scaled_add(hidden_states, residual, scale)
+            residual = hidden_states
+            hidden_states = self.input_layernorm(hidden_states)
 
         # --- Self Attention ---
         hidden_states = self.self_attn(
@@ -566,15 +567,15 @@ class MiniCPMDecoderLayer(nn.Module):
             forward_batch=forward_batch,
         )
 
-        # --- Fused: (residual += attn_out * scale) + post_attention_layernorm ---
-        hidden_states = hidden_states * scale
-        hidden_states, residual = self.post_attention_layernorm(hidden_states, residual)
+        # --- Post-attention: fused scaled-add + rmsnorm ---
+        hidden_states = fused_scaled_add(hidden_states, residual, scale)
+        residual = hidden_states
+        hidden_states = self.post_attention_layernorm(hidden_states)
 
         # --- MLP ---
         hidden_states = self.mlp(hidden_states)
 
-        # Return raw MLP output + residual; the NEXT layer (or final norm)
-        # will do the scaled-add.
+        # Return raw MLP output + residual; next layer fuses the scaled-add.
         return hidden_states, residual
     # dotv ######################################################################
 
@@ -632,8 +633,8 @@ class MiniCPMModel(nn.Module):
             )
         # Final: fuse last layer's MLP scaled-add + final RMSNorm
         scale = self.config.scale_depth / math.sqrt(self.config.num_hidden_layers)
-        hidden_states = hidden_states * scale
-        hidden_states, _ = self.norm(hidden_states, residual)
+        hidden_states = fused_scaled_add(hidden_states, residual, scale)
+        hidden_states = self.norm(hidden_states)
         return hidden_states
 
 

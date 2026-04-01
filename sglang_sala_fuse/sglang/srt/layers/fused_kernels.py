@@ -1,10 +1,17 @@
-"""Fused Triton kernels for MiniCPM-SALA inference.
+"""Fused Triton kernel for MiniCPM-SALA scaled residual add.
 
-Provides fused_scaled_add_rmsnorm which combines:
-    residual = residual + x * scale
-    out = rmsnorm(residual, weight, eps)
-into a single GPU kernel pass, eliminating ~2 redundant reads/writes of the
-hidden-state tensor per invocation (fires 64x per forward = 32 layers x 2).
+Fuses `result = residual + x * scale` (two PyTorch kernels: mul + add)
+into a single kernel, eliminating the intermediate tensor and one kernel launch.
+
+Does NOT touch RMSNorm — that stays with sgl_kernel.rmsnorm for bit-exact results.
+
+PRECISION CONTRACT:
+  PyTorch computes `residual + hidden_states * scale` as two ops:
+    1. temp = bf16(fp32(x) * fp32(scale))      — mul with bf16 rounding
+    2. result = bf16(fp32(residual) + fp32(temp)) — add with bf16 rounding
+  This kernel reproduces the SAME two-rounding behavior in one pass:
+    load fp32(x), fp32(r) → multiply → round to bf16 → widen to fp32 → add → round to bf16 → store
+  Same IEEE 754 RNE hardware instruction for both roundings → bit-for-bit identical.
 """
 
 import torch
@@ -13,59 +20,33 @@ import triton.language as tl
 
 
 @triton.jit
-def _fused_scaled_add_rmsnorm_kernel(
+def _fused_scaled_add_kernel(
     X_ptr,
     Residual_ptr,
     Out_ptr,
-    Weight_ptr,
     scale,
-    eps,
     hidden_size,
     BLOCK_SIZE: tl.constexpr,
 ):
-    """Fuses: residual = residual + x * scale; out = rmsnorm(residual, w, eps)
-
-    One program per row.  Entire hidden dimension fits in BLOCK_SIZE.
-
-    PRECISION CONTRACT (must match the unfused PyTorch path exactly):
-      1. Scaled-add computed in fp32 (PyTorch's opmath for bf16).
-      2. Result rounded to bf16 and stored as residual.
-      3. RMSNorm operates on the bf16-rounded value (converted back to fp32),
-         NOT the full-precision fp32 value from step 1.  This matches the
-         original code where rmsnorm() receives a bf16 tensor and upcasts
-         to fp32 internally.
-    """
+    """result = residual + x * scale, matching PyTorch's two-rounding bf16 path."""
     row = tl.program_id(0)
-    base = row.to(tl.int64) * hidden_size  # int64 prevents overflow for large token counts
+    base = row.to(tl.int64) * hidden_size
     off = tl.arange(0, BLOCK_SIZE)
     mask = off < hidden_size
 
-    # --- load x and residual in fp32 ---
     x = tl.load(X_ptr + base + off, mask=mask, other=0.0).to(tl.float32)
     r = tl.load(Residual_ptr + base + off, mask=mask, other=0.0).to(tl.float32)
 
-    # --- scaled residual add (fp32, matching PyTorch opmath) ---
-    r_new = r + x * tl.cast(scale, tl.float32)
+    # Step 1: x * scale → round to bf16 (matches PyTorch's mul kernel output)
+    scaled = (x * tl.cast(scale, tl.float32)).to(tl.bfloat16).to(tl.float32)
 
-    # --- round to bf16: CRITICAL for numerical equivalence ---
-    # The original code stores the sum as bf16, then rmsnorm loads bf16.
-    # Without this round-trip, RMSNorm sees slightly different fp32 values
-    # and the error cascades through 32 layers via attention softmax.
-    r_rounded = r_new.to(tl.bfloat16)
-    tl.store(Residual_ptr + base + off, r_rounded, mask=mask)
+    # Step 2: residual + scaled → round to bf16 (matches PyTorch's add kernel output)
+    result = (r + scaled).to(tl.bfloat16)
 
-    # --- RMSNorm on bf16-rounded value (upcast to fp32 for precision) ---
-    r_f32 = r_rounded.to(tl.float32)
-    var = tl.sum(r_f32 * r_f32, axis=0) / hidden_size
-    rrms = tl.rsqrt(var + tl.cast(eps, tl.float32))
-    w = tl.load(Weight_ptr + off, mask=mask, other=1.0).to(tl.float32)
-    out = r_f32 * rrms * w
-
-    tl.store(Out_ptr + base + off, out, mask=mask)
+    tl.store(Out_ptr + base + off, result, mask=mask)
 
 
 def _next_pow2(n: int) -> int:
-    """Smallest power of 2 >= n."""
     n -= 1
     n |= n >> 1
     n |= n >> 2
@@ -75,38 +56,33 @@ def _next_pow2(n: int) -> int:
     return n + 1
 
 
-def fused_scaled_add_rmsnorm(
+def fused_scaled_add(
     x: torch.Tensor,
     residual: torch.Tensor,
-    weight: torch.Tensor,
     scale: float,
-    eps: float,
-) -> tuple:
-    """Fused scaled-add + RMSNorm.
+) -> torch.Tensor:
+    """Fused: result = residual + x * scale.
 
-    Computes in one kernel pass:
-        residual = residual + x * scale   (in-place)
-        out      = rmsnorm(residual, weight, eps)
+    Replaces two PyTorch kernel launches (mul + add) with one Triton kernel.
+    Bit-for-bit identical to the unfused path (same two-rounding behavior).
 
     Args:
         x:        [num_tokens, hidden_size]  sublayer output (attn or mlp)
-        residual: [num_tokens, hidden_size]  running residual (modified in-place)
-        weight:   [hidden_size]              RMSNorm weight
-        scale:    muP scale factor  (scale_depth / sqrt(num_hidden_layers))
-        eps:      RMSNorm epsilon
+        residual: [num_tokens, hidden_size]  running residual
+        scale:    muP scale factor
 
     Returns:
-        (out, residual) — residual is the same tensor, modified in-place.
+        New tensor = residual + x * scale
     """
     num_tokens, hidden_size = x.shape
     out = torch.empty_like(x)
     BLOCK_SIZE = _next_pow2(hidden_size)
 
-    _fused_scaled_add_rmsnorm_kernel[(num_tokens,)](
-        x, residual, out, weight,
-        scale, eps, hidden_size,
+    _fused_scaled_add_kernel[(num_tokens,)](
+        x, residual, out,
+        scale, hidden_size,
         BLOCK_SIZE=BLOCK_SIZE,
         num_warps=max(4, min(16, BLOCK_SIZE // 256)),
     )
 
-    return out, residual
+    return out
