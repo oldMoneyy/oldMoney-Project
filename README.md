@@ -128,7 +128,7 @@ nohup python3 -m sglang.launch_server \
     --attention-backend minicpm_flashinfer \
     --chunked-prefill-size 8192 \
     --max-running-requests 32 \
-    --skip-server-warmup \
+    --kv-cache-dtype fp8_e5m2 \
     --port 31333 \
     --dense-as-sparse \
     --mem-fraction-static 0.82 \
