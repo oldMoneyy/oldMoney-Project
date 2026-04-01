@@ -186,6 +186,10 @@ class MiniCPMAttention(nn.Module):
         qkv, _ = self.qkv_proj(hidden_states)
         q, k, v = qkv.split([self.q_size, self.kv_size, self.kv_size], dim=-1)
 
+        # Compute gate early — before attention, while hidden_states is in L2 cache.
+        if self.use_output_gate:
+            o_gate_output, _ = self.o_gate(hidden_states)
+
         if self.attn_use_rope:
             orig_dtype = q.dtype
             q, k = q.float(), k.float()
@@ -195,7 +199,6 @@ class MiniCPMAttention(nn.Module):
         attn_output = self.attn(q, k, v, forward_batch)
 
         if self.use_output_gate:
-            o_gate_output, _ = self.o_gate(hidden_states)
             attn_output = attn_output * F.sigmoid(o_gate_output)
 
         output, _ = self.o_proj(attn_output)
@@ -321,6 +324,11 @@ class MiniCPMLightningMixer(nn.Module):
         qkv, _ = self.qkv_proj(hidden_states)
         q, k, v = qkv.split([self.q_size, self.kv_size, self.kv_size], dim=-1)
 
+        # Compute z early — before attention, while hidden_states is still in L2 cache.
+        # This moves z_proj off the critical path (was after attention in original code).
+        if self.use_output_gate:
+            z, _ = self.z_proj(hidden_states)
+
         if self.qk_norm:
             q = self.q_norm(q.reshape(-1, self.head_dim))
             k = self.k_norm(k.reshape(-1, self.head_dim))
@@ -375,7 +383,6 @@ class MiniCPMLightningMixer(nn.Module):
             o = self.o_norm(o)
 
         if self.use_output_gate:
-            z, _ = self.z_proj(hidden_states)
             o = o * F.sigmoid(z)
 
         y, _ = self.o_proj(o)
