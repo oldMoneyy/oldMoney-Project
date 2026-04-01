@@ -668,8 +668,16 @@ class MiniCPMSparseBackend(AttentionBackend):
 
             all_sparse = forward_batch.sparse_batch_size == forward_batch.batch_size
             if all_sparse:
+                import time as _time
+                _do_prof = (not torch.cuda.is_current_stream_capturing()) and query_states.shape[0] > 100
+
                 # all batch is sparse
                 metadata = self.forward_metadata
+
+                if _do_prof:
+                    torch.cuda.synchronize()
+                    _ta = _time.perf_counter()
+
                 compressed_k = torch.full(
                     (forward_batch.batch_size * self.max_context_len // self.k1_kernel_stride, self.head_group_num, self.head_dim),
                     dtype=self.model_dtype,
@@ -677,11 +685,15 @@ class MiniCPMSparseBackend(AttentionBackend):
                     fill_value=float('-inf')
                 )
                 compressed_k2 = torch.full(
-                    (forward_batch.batch_size * self.max_context_len // self.k2_kernel_stride, self.head_group_num, self.head_dim), 
-                    dtype=self.model_dtype, 
+                    (forward_batch.batch_size * self.max_context_len // self.k2_kernel_stride, self.head_group_num, self.head_dim),
+                    dtype=self.model_dtype,
                     device=self.device,
                     fill_value=float('-inf')
                 )
+
+                if _do_prof:
+                    torch.cuda.synchronize()
+                    _tb = _time.perf_counter()
 
                 get_compress_k_v2(
                     layer=layer,
@@ -691,12 +703,16 @@ class MiniCPMSparseBackend(AttentionBackend):
                     full_compressed_k2=compressed_k2, # output
                     max_context_length=self.max_context_len,
                 )
-                
+
+                if _do_prof:
+                    torch.cuda.synchronize()
+                    _tc = _time.perf_counter()
+
                 cu_seqlens_k = metadata.cu_seqlens_k
                 max_seqlen_in_batch_k = metadata.max_seq_len_k
                 cu_seqlens_q = metadata.cu_seqlens_q
                 max_seqlen_in_batch_q = metadata.max_seq_len_q
-                
+
                 ret = self.sparse_get_topk_impl(
                             query_states,
                             cu_seqlens_q,
@@ -708,6 +724,17 @@ class MiniCPMSparseBackend(AttentionBackend):
                             compressed_k2=compressed_k2, compressed_cu_seqlens2=metadata.k2.cu_seqlens,
                             fused_kernel=self.prefill_fused_kernels[forward_batch.batch_size] if self.fuse_topk else None
                 )
+
+                if _do_prof:
+                    torch.cuda.synchronize()
+                    _td = _time.perf_counter()
+                    print(f"    [get_topk L{layer.layer_id}] "
+                          f"alloc_fill={1000*(_tb-_ta):.1f}ms "
+                          f"compress_k={1000*(_tc-_tb):.1f}ms "
+                          f"attn+pool+topk={1000*(_td-_tc):.1f}ms "
+                          f"TOTAL={1000*(_td-_ta):.1f}ms",
+                          flush=True)
+
                 return ret
 
             topk_metadata = self.sparse_metadata_builder.build_prefill_topk_metadata(
@@ -1223,12 +1250,12 @@ class MiniCPMSparseBackend(AttentionBackend):
     #     return result.view(-1, layer.tp_q_head_num * layer.head_dim)
     def forward_extend(self, q, k, v, layer, forward_batch, save_kv_cache=True,
                        q_rope=None, k_rope=None, sinks=None):
-        # import time
-        # do_profile = (not torch.cuda.is_current_stream_capturing()) and q.shape[0] > 100
-        
-        # if do_profile:
-        #     torch.cuda.synchronize()
-        #     t0 = time.perf_counter()
+        import time
+        do_profile = (not torch.cuda.is_current_stream_capturing()) and q.shape[0] > 100
+
+        if do_profile:
+            torch.cuda.synchronize()
+            t0 = time.perf_counter()
 
         # --- KV cache save ---
         if k is not None:
@@ -1239,9 +1266,9 @@ class MiniCPMSparseBackend(AttentionBackend):
                     layer, cache_loc, k, v, layer.k_scale, layer.v_scale
                 )
 
-        # if do_profile:
-        #     torch.cuda.synchronize()
-        #     t1 = time.perf_counter()
+        if do_profile:
+            torch.cuda.synchronize()
+            t1 = time.perf_counter()
 
         metadata = self.forward_metadata
         is_swa_layer = (layer.sliding_window_size is not None and layer.sliding_window_size > -1)
@@ -1268,9 +1295,9 @@ class MiniCPMSparseBackend(AttentionBackend):
         bs = forward_batch.batch_size
 
         # --- TopK computation ---
-        # if do_profile:
-        #     torch.cuda.synchronize()
-        #     t2 = time.perf_counter()
+        if do_profile:
+            torch.cuda.synchronize()
+            t2 = time.perf_counter()
 
         if max(forward_batch.seq_lens_cpu) >= self.dense_len:
             q_reshaped = q.contiguous().view(-1, layer.tp_q_head_num, layer.head_dim)
@@ -1285,9 +1312,9 @@ class MiniCPMSparseBackend(AttentionBackend):
             #     print(f"  [L{layer.layer_id}] topk consecutive match rate: {same.item():.3f}", flush=True)
             # dotv === DIAGNOSTIC: measure topk sharing between consecutive tokens ===
 
-            # if do_profile:
-            #     torch.cuda.synchronize()
-            #     t3 = time.perf_counter()
+            if do_profile:
+                torch.cuda.synchronize()
+                t3 = time.perf_counter()
 
             sparse_page_table_sparse_bs = sparse_kernel_extension.get_block_table_v2(
                 topk_idx, page_table, metadata.token_to_bs,
@@ -1296,7 +1323,7 @@ class MiniCPMSparseBackend(AttentionBackend):
             ).reshape(-1, self.num_sparse_topk_tokens)
             metadata.sparse_page_table[forward_batch.sparse_idx, :self.num_sparse_topk_tokens] = sparse_page_table_sparse_bs
         else:
-            # t3 = t2  # no topk needed
+            t3 = t2 if do_profile else 0  # no topk needed
             total_k1 = self.forward_metadata.k1.cu_total_compress_token_nums[-1].item()
             total_k2 = self.forward_metadata.k2.cu_total_compress_token_nums[-1].item()
             full_compressed_k1_ext, full_compressed_k2_ext = allocate_and_compress_keys(
@@ -1306,9 +1333,9 @@ class MiniCPMSparseBackend(AttentionBackend):
                 max_context_length=self.max_context_len, split_stage1=self.split_stage1,
             )
 
-        # if do_profile:
-        #     torch.cuda.synchronize()
-        #     t4 = time.perf_counter()
+        if do_profile:
+            torch.cuda.synchronize()
+            t4 = time.perf_counter()
 
         # --- Page table setup + dense/sparse handling ---
         q_reshaped = q.contiguous().view(-1, layer.tp_q_head_num // 2, layer.head_dim)
@@ -1357,9 +1384,9 @@ class MiniCPMSparseBackend(AttentionBackend):
         key_cache = key_cache.view(-1, self.page_size, layer.tp_k_head_num // 2, layer.head_dim)
         value_cache = value_cache.view(-1, self.page_size, layer.tp_v_head_num // 2, layer.head_dim)
 
-        # if do_profile:
-        #     torch.cuda.synchronize()
-        #     t5 = time.perf_counter()
+        if do_profile:
+            torch.cuda.synchronize()
+            t5 = time.perf_counter()
 
         # --- FlashAttention ---
         attn_params = AttentionParams(
@@ -1377,26 +1404,26 @@ class MiniCPMSparseBackend(AttentionBackend):
         )
         result = self.attention_kernel.forward(attn_params, layer)
 
-        # if do_profile:
-        #     torch.cuda.synchronize()
-        #     t6 = time.perf_counter()
+        if do_profile:
+            torch.cuda.synchronize()
+            t6 = time.perf_counter()
 
         # --- Dense result interleaving ---
         if forward_batch.sparse_batch_size < bs:
             pass  # KEEP YOUR EXISTING CODE HERE
 
-        # if do_profile:
-        #     torch.cuda.synchronize()
-        #     t7 = time.perf_counter()
-        #     print(f"  [forward_extend L{layer.layer_id}] "
-        #           f"kv_save={1000*(t1-t0):.1f}ms "
-        #           f"topk={1000*(t3-t2):.1f}ms "
-        #           f"block_table={1000*(t4-t3):.1f}ms "
-        #           f"page_setup={1000*(t5-t4):.1f}ms "
-        #           f"flash_attn={1000*(t6-t5):.1f}ms "
-        #           f"post={1000*(t7-t6):.1f}ms "
-        #           f"TOTAL={1000*(t7-t0):.1f}ms",
-        #           flush=True)
+        if do_profile:
+            torch.cuda.synchronize()
+            t7 = time.perf_counter()
+            print(f"  [forward_extend L{layer.layer_id}] "
+                  f"kv_save={1000*(t1-t0):.1f}ms "
+                  f"topk={1000*(t3-t2):.1f}ms "
+                  f"block_table={1000*(t4-t3):.1f}ms "
+                  f"page_setup={1000*(t5-t4):.1f}ms "
+                  f"flash_attn={1000*(t6-t5):.1f}ms "
+                  f"post={1000*(t7-t6):.1f}ms "
+                  f"TOTAL={1000*(t7-t0):.1f}ms",
+                  flush=True)
 
         return result.view(-1, layer.tp_q_head_num * layer.head_dim)
     # dotv ###################################################################################
