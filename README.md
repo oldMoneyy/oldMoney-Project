@@ -116,6 +116,7 @@ python -c "import torch; print(f'PyTorch Version: {torch.__version__}\nCUDA Vers
 SALA official start command:
 ```bash
 uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
+# uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_fuse
 # uv pip install --no-deps -e /opt/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python
 fuser -k -9 31333/tcp
 export PYTORCH_ALLOC_CONF=expandable_segments:True
