@@ -115,8 +115,11 @@ python -c "import torch; print(f'PyTorch Version: {torch.__version__}\nCUDA Vers
 
 SALA official start command:
 ```bash
-cd /opt
+uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_fuse
 fuser -k -9 31333/tcp
+export PYTORCH_ALLOC_CONF=expandable_segments:True
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+cd /opt
 nohup python3 -m sglang.launch_server \
     --model /opt/model \
     --trust-remote-code \
