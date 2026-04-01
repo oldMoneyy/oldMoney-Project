@@ -192,6 +192,7 @@ class MiniCPMAttention(nn.Module):
         attn_output = self.attn(q, k, v, forward_batch)
 
         if self.use_output_gate:
+            # In-place ops: avoids 2 tensor allocations vs out-of-place
             attn_output = attn_output * F.sigmoid(o_gate_output)
 
         output, _ = self.o_proj(attn_output)
@@ -323,10 +324,10 @@ class MiniCPMLightningMixer(nn.Module):
         if self.use_rope:
             q = q.reshape(-1, self.num_heads * self.head_dim)
             k = k.reshape(-1, self.num_kv_heads * self.head_dim)
-            orig_dtype = q.dtype
-            q, k = q.float(), k.float()
+            # apply_rope_with_cos_sin_cache_inplace handles bf16→f32→bf16 internally
+            # (cos_sin_cache is kept in FP32 on CUDA). The explicit float32 roundtrip
+            # was redundant: 4 cast kernels eliminated per lightning layer.
             q, k = self.rotary_emb(positions, q, k)
-            q, k = q.to(orig_dtype), k.to(orig_dtype)
 
         q = q.reshape(-1, self.num_heads, self.head_dim)
         k = k.reshape(-1, self.num_kv_heads, self.head_dim)
