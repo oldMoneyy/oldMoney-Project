@@ -7,7 +7,7 @@ import numpy as np
 import requests
 
 # # Step 1: Start BF16 model, run baseline
-# python /opt/oldMoney-Project/quantization/fast_eval.py --mode baseline --api-base http://127.0.0.1:31333
+# cd /opt/oldMoney-Project/quantization && python /opt/oldMoney-Project/quantization/fast_eval.py --mode baseline --api-base http://127.0.0.1:31333
 
 # # Step 2: Start quantized model, run eval
 # cd /opt/oldMoney-Project/quantization && python /opt/oldMoney-Project/quantization/fast_eval.py --mode eval --api-base http://127.0.0.1:31333

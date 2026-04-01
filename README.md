@@ -168,6 +168,7 @@ Expected answers: `Paris`, `BLUE-TIGER-42`, `Alice Zhang, 1987`.
 ### KL divergence test
 ```bash
 cd /opt/oldMoney-Project/quantization && python /opt/oldMoney-Project/quantization/fast_eval.py --mode eval --api-base http://127.0.0.1:31333
+# cd /opt/oldMoney-Project/quantization && python /opt/oldMoney-Project/quantization/fast_eval_quantization.py --mode eval --api-base http://127.0.0.1:31333
 ```
 
 ### Profiling
@@ -297,7 +298,7 @@ Dense:
 ```bash
 uv pip install --no-deps -e /opt/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python
 # uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
-# uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_fuse
+# uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_flashinfer
 # uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_opt
 # export SGLANG_SALA_PROFILE=1
 fuser -k -9 31333/tcp
