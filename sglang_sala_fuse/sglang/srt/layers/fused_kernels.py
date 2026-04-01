@@ -26,28 +26,40 @@ def _fused_scaled_add_rmsnorm_kernel(
     """Fuses: residual = residual + x * scale; out = rmsnorm(residual, w, eps)
 
     One program per row.  Entire hidden dimension fits in BLOCK_SIZE.
-    All arithmetic in fp32; stores auto-cast to the tensor's dtype.
+
+    PRECISION CONTRACT (must match the unfused PyTorch path exactly):
+      1. Scaled-add computed in fp32 (PyTorch's opmath for bf16).
+      2. Result rounded to bf16 and stored as residual.
+      3. RMSNorm operates on the bf16-rounded value (converted back to fp32),
+         NOT the full-precision fp32 value from step 1.  This matches the
+         original code where rmsnorm() receives a bf16 tensor and upcasts
+         to fp32 internally.
     """
     row = tl.program_id(0)
-    base = row * hidden_size
+    base = row.to(tl.int64) * hidden_size  # int64 prevents overflow for large token counts
     off = tl.arange(0, BLOCK_SIZE)
     mask = off < hidden_size
 
-    # --- load x and residual ---
+    # --- load x and residual in fp32 ---
     x = tl.load(X_ptr + base + off, mask=mask, other=0.0).to(tl.float32)
     r = tl.load(Residual_ptr + base + off, mask=mask, other=0.0).to(tl.float32)
 
-    # --- scaled residual add ---
-    r_new = r + x * scale
+    # --- scaled residual add (fp32, matching PyTorch opmath) ---
+    r_new = r + x * tl.cast(scale, tl.float32)
 
-    # --- write updated residual (auto-casts to tensor dtype) ---
-    tl.store(Residual_ptr + base + off, r_new, mask=mask)
+    # --- round to bf16: CRITICAL for numerical equivalence ---
+    # The original code stores the sum as bf16, then rmsnorm loads bf16.
+    # Without this round-trip, RMSNorm sees slightly different fp32 values
+    # and the error cascades through 32 layers via attention softmax.
+    r_rounded = r_new.to(tl.bfloat16)
+    tl.store(Residual_ptr + base + off, r_rounded, mask=mask)
 
-    # --- RMSNorm ---
-    var = tl.sum(r_new * r_new, axis=0) / hidden_size
-    rrms = tl.rsqrt(var + eps)
+    # --- RMSNorm on bf16-rounded value (upcast to fp32 for precision) ---
+    r_f32 = r_rounded.to(tl.float32)
+    var = tl.sum(r_f32 * r_f32, axis=0) / hidden_size
+    rrms = tl.rsqrt(var + tl.cast(eps, tl.float32))
     w = tl.load(Weight_ptr + off, mask=mask, other=1.0).to(tl.float32)
-    out = r_new * rrms * w
+    out = r_f32 * rrms * w
 
     tl.store(Out_ptr + base + off, out, mask=mask)
 
