@@ -1600,7 +1600,7 @@ class SimpleGLAAttnBackend(MambaAttnBackendBase):
                 cu_seqlens=self.forward_metadata.query_start_loc,
             )
         else:
-            o, final_state = fused_chunk_simple_gla(
+            o, final_state = chunk_simple_gla(
                 q=q,
                 k=k,
                 v=v,
