@@ -11,17 +11,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""Flashinfer-optimized MiniCPM-SALA model.
-
-Optimizations vs official package:
-  1. fused_scaled_add_rmsnorm: merges residual scaling + RMSNorm (2→1 kernels)
-  2. fused_norm_sigmoid_mul:   merges o_norm + sigmoid(z) * o   (3→1 kernels)
-  3. fused_sigmoid_mul:        merges sigmoid(gate) * x          (2→1 kernels)
-  4. Early gate computation:   z_proj/o_gate before attention (overlaps with attn)
-  5. GPTQ weight loading fix:  handles edge cases in merged weight packing
-
-Per decode step this saves ~200 kernel launches across 32 layers.
-"""
+"""Inference-only MiniCPM model compatible with HuggingFace weights."""
 
 import math
 from typing import Any, Dict, Iterable, Optional, Tuple
@@ -38,11 +28,6 @@ from sglang.srt.layers.attention.minicpm_sparse_utils import (
     SparseConfig,
     SparseMetadata,
     SparseMetadataBuilder,
-)
-from sglang.srt.layers.fused_kernels import (
-    fused_scaled_add,
-    fused_norm_sigmoid_mul,
-    fused_sigmoid_mul,
 )
 from sglang.srt.layers.layernorm import RMSNorm
 from sglang.srt.layers.linear import (
@@ -193,11 +178,6 @@ class MiniCPMAttention(nn.Module):
         qkv, _ = self.qkv_proj(hidden_states)
         q, k, v = qkv.split([self.q_size, self.kv_size, self.kv_size], dim=-1)
 
-        # Compute gate BEFORE attention — overlaps o_gate GEMM with attn setup,
-        # and hidden_states is still in L2 cache from qkv_proj.
-        if self.use_output_gate:
-            o_gate_output, _ = self.o_gate(hidden_states)
-
         if self.attn_use_rope:
             orig_dtype = q.dtype
             q, k = q.float(), k.float()
@@ -206,20 +186,16 @@ class MiniCPMAttention(nn.Module):
 
         attn_output = self.attn(q, k, v, forward_batch)
 
-        # Fused sigmoid(gate) * x: 2 kernels → 1
         if self.use_output_gate:
-            attn_output = fused_sigmoid_mul(attn_output, o_gate_output)
+            o_gate_output, _ = self.o_gate(hidden_states)
+            attn_output = attn_output * F.sigmoid(o_gate_output)
 
         output, _ = self.o_proj(attn_output)
         return output
 
 
 class MiniCPMLightningMixer(nn.Module):
-    """Lightning attention mixer using SimpleGLAAttnBackend.
-
-    Flashinfer-optimized: fuses output processing (o_norm + sigmoid(z) * o)
-    and computes z_proj before attention for better cache utilization.
-    """
+    """Lightning attention mixer that uses SimpleGLAAttnBackend."""
 
     def __init__(
         self,
@@ -323,9 +299,6 @@ class MiniCPMLightningMixer(nn.Module):
         self.layer_id = layer_id
         self.state_shape = (self.num_kv_heads, self.head_dim, self.head_dim)
 
-        # Pre-check: can we use the fused norm+sigmoid+mul path?
-        self._use_fused_output = self.use_output_norm and self.use_output_gate
-
     def forward(
         self,
         positions: torch.Tensor,
@@ -334,11 +307,6 @@ class MiniCPMLightningMixer(nn.Module):
     ) -> torch.Tensor:
         qkv, _ = self.qkv_proj(hidden_states)
         q, k, v = qkv.split([self.q_size, self.kv_size, self.kv_size], dim=-1)
-
-        # Compute z BEFORE attention — while hidden_states is still in L2 cache
-        # from qkv_proj. This moves z_proj off the critical path.
-        if self.use_output_gate:
-            z, _ = self.z_proj(hidden_states)
 
         if self.qk_norm:
             q = self.q_norm(q.reshape(-1, self.head_dim))
@@ -364,7 +332,8 @@ class MiniCPMLightningMixer(nn.Module):
         if not hasattr(attn_backend, "linear_attn_backend"):
             raise RuntimeError(
                 "SimpleGLAAttnBackend requires HybridLinearAttnBackend but got "
-                f"{type(attn_backend).__name__}."
+                f"{type(attn_backend).__name__}. This mixer should only be used for "
+                "MiniCPM hybrid models."
             )
 
         linear_attn_backend = attn_backend.linear_attn_backend
@@ -374,7 +343,9 @@ class MiniCPMLightningMixer(nn.Module):
             )
 
         o = linear_attn_backend.forward(
-            q=q, k=k, v=v,
+            q=q,
+            k=k,
+            v=v,
             forward_batch=forward_batch,
             layer_id=self.layer_id,
             output_attentions=False,
@@ -382,14 +353,12 @@ class MiniCPMLightningMixer(nn.Module):
 
         o = o.reshape(-1, self.num_heads * self.head_dim)
 
-        # Fused output path: o_norm + sigmoid(z) * o → 1 kernel instead of 3
-        if self._use_fused_output:
-            o = fused_norm_sigmoid_mul(o, z, self.o_norm.weight, self.rms_norm_eps)
-        else:
-            if self.use_output_norm:
-                o = self.o_norm(o)
-            if self.use_output_gate:
-                o = fused_sigmoid_mul(o, z)
+        if self.use_output_norm:
+            o = self.o_norm(o)
+
+        if self.use_output_gate:
+            z, _ = self.z_proj(hidden_states)
+            o = o * F.sigmoid(z)
 
         y, _ = self.o_proj(o)
         return y
@@ -404,9 +373,6 @@ class MiniCPMDecoderLayer(nn.Module):
         prefix: str = "",
     ) -> None:
         super().__init__()
-        if quant_config is not None and layer_id == 0:
-            print(f"quant_config type={type(quant_config).__name__}, get_name={quant_config.get_name() if hasattr(quant_config, 'get_name') else 'NO METHOD'}")
-
         self.config = config
         self.layer_id = layer_id
         self.hidden_size = config.hidden_size
@@ -418,42 +384,6 @@ class MiniCPMDecoderLayer(nn.Module):
         rope_theta = getattr(config, "rope_theta", 10000)
         rope_scaling = getattr(config, "rope_scaling", None)
         max_position_embeddings = getattr(config, "max_position_embeddings", 8192)
-
-        # Dynamic quantization routing for mixed-precision models
-        attn_quant_config = quant_config
-        mlp_quant_config = quant_config
-
-        if quant_config is not None:
-            exclude_modules = []
-            if hasattr(config, "quantization_config"):
-                q_cfg = config.quantization_config
-                if isinstance(q_cfg, dict):
-                    exclude_modules = q_cfg.get("exclude_modules", [])
-                elif hasattr(q_cfg, "exclude_modules"):
-                    exclude_modules = q_cfg.exclude_modules
-
-            if not exclude_modules and hasattr(config, "hf_quant_config"):
-                h_cfg = config.hf_quant_config
-                if isinstance(h_cfg, dict):
-                    exclude_modules = h_cfg.get("exclude_modules", [])
-                elif hasattr(h_cfg, "exclude_modules"):
-                    exclude_modules = h_cfg.exclude_modules
-
-            def is_excluded(target_prefix: str) -> bool:
-                for ex in exclude_modules:
-                    ex_clean = ex.replace(".*", "")
-                    if target_prefix.startswith(ex_clean):
-                        return True
-                    if ex_clean.startswith(target_prefix):
-                        return True
-                return False
-
-            layer_prefix = f"model.layers.{layer_id}"
-            if is_excluded(f"{layer_prefix}.self_attn"):
-                attn_quant_config = None
-            if is_excluded(f"{layer_prefix}.mlp"):
-                mlp_quant_config = None
-
         if self.mixer_type == "minicpm4":
             self.self_attn = MiniCPMAttention(
                 hidden_size=self.hidden_size,
@@ -463,7 +393,7 @@ class MiniCPMDecoderLayer(nn.Module):
                 rope_theta=rope_theta,
                 rope_scaling=rope_scaling,
                 max_position_embeddings=max_position_embeddings,
-                quant_config=attn_quant_config,
+                quant_config=quant_config,
                 attn_use_rope=(
                     config.attn_use_rope if hasattr(config, "attn_use_rope") else True
                 ),
@@ -487,7 +417,7 @@ class MiniCPMDecoderLayer(nn.Module):
                 rope_theta=rope_theta,
                 rope_scaling=rope_scaling,
                 max_position_embeddings=max_position_embeddings,
-                quant_config=attn_quant_config,
+                quant_config=quant_config,
                 use_rope=config.lightning_use_rope,
                 use_output_gate=config.use_output_gate,
                 attention_bias=config.attention_bias,
@@ -499,22 +429,22 @@ class MiniCPMDecoderLayer(nn.Module):
             )
         else:
             raise ValueError(f"Unsupported mixer type: {self.mixer_type}")
-
         self.mlp = MiniCPMMLP(
             hidden_size=self.hidden_size,
             intermediate_size=config.intermediate_size,
             hidden_act=config.hidden_act,
-            quant_config=mlp_quant_config,
+            quant_config=quant_config,
             prefix=add_prefix("mlp", prefix),
         )
         self.input_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.post_attention_layernorm = RMSNorm(
             config.hidden_size, eps=config.rms_norm_eps
         )
-
-        # Cache scale factor
-        self._scale = config.scale_depth / math.sqrt(config.num_hidden_layers)
-        self._eps = config.rms_norm_eps
+    def _compute_topk(self, forward_batch, base_metadata, sparse_metadata):
+        if forward_batch.forward_mode.is_decode_or_idle():
+            sparse_metadata.topk_indices = base_metadata.sparse_page_table
+        else:
+            pass
 
     def forward(
         self,
@@ -523,31 +453,24 @@ class MiniCPMDecoderLayer(nn.Module):
         forward_batch: ForwardBatch,
         residual: Optional[torch.Tensor],
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        scale = self._scale
-
-        # --- Input layernorm (same pattern as official) ---
+        # Identical to official
         residual = hidden_states
         hidden_states = self.input_layernorm(hidden_states)
-
-        # --- Self Attention ---
         hidden_states = self.self_attn(
             positions=positions,
             hidden_states=hidden_states,
             forward_batch=forward_batch,
         )
+        hidden_states = residual + hidden_states * (
+            self.config.scale_depth / math.sqrt(self.config.num_hidden_layers)
+        )
 
-        # --- Post-attention residual add (fused mul+add: 2 kernels → 1) ---
-        hidden_states = fused_scaled_add(hidden_states, residual, scale)
-
-        # --- Post-attention layernorm ---
         residual = hidden_states
         hidden_states = self.post_attention_layernorm(hidden_states)
-
-        # --- MLP ---
         hidden_states = self.mlp(hidden_states)
-
-        # --- Post-MLP residual add (fused mul+add: 2 kernels → 1) ---
-        hidden_states = fused_scaled_add(hidden_states, residual, scale)
+        hidden_states = residual + hidden_states * (
+            self.config.scale_depth / math.sqrt(self.config.num_hidden_layers)
+        )
 
         return hidden_states, None
 
@@ -654,7 +577,6 @@ class MiniCPMForCausalLM(nn.Module):
 
     def load_weights(self, weights: Iterable[Tuple[str, torch.Tensor]]):
         stacked_params_mapping = [
-            # (param_name, shard_name, shard_id)
             ("qkv_proj", "q_proj", "q"),
             ("qkv_proj", "k_proj", "k"),
             ("qkv_proj", "v_proj", "v"),
@@ -662,7 +584,6 @@ class MiniCPMForCausalLM(nn.Module):
             ("gate_up_proj", "up_proj", 1),
         ]
         expert_params_mapping = [
-            # (param_name, weight_name, expert_id)
             (
                 "ws" if weight_name in ["w1", "w3"] else "w2s",
                 f"experts.{expert_id}.{weight_name}.weight",
@@ -684,44 +605,17 @@ class MiniCPMForCausalLM(nn.Module):
                 if weight_name not in name:
                     continue
                 name = name.replace(weight_name, param_name)
-                # Skip loading extra bias for GPTQ models.
                 if name.endswith(".bias") and name not in params_dict:
                     continue
-
-                # Prevent missing key crashes from unmapped/dummy tensors
-                if name not in params_dict:
-                    continue
-
                 param = params_dict[name]
-
-                # GPTQ merged-layer weight loading fix: handles shape mismatches
-                # from quantized weight packing in MergedColumnParallelLinear.
-                try:
-                    weight_loader = getattr(param, "weight_loader", default_weight_loader)
-                    weight_loader(param, loaded_weight, shard_id)
-                except AssertionError as e:
-                    if param.data.numel() == 1:
-                        lw = loaded_weight.to(param.data.device).reshape(param.data.shape)
-                        if param.data.item() == 0.0 or param.data.item() == 1.0:
-                            param.data.copy_(lw)
-                        else:
-                            param.data.copy_(torch.max(param.data, lw))
-                    else:
-                        if isinstance(shard_id, int):
-                            dim0 = loaded_weight.shape[0]
-                            param.data[shard_id * dim0 : (shard_id + 1) * dim0].copy_(loaded_weight)
-                        else:
-                            raise e
+                weight_loader = param.weight_loader
+                weight_loader(param, loaded_weight, shard_id)
                 break
             else:
                 for param_name, weight_name, expert_id in expert_params_mapping:
                     if weight_name not in name:
                         continue
                     name = name.replace(weight_name, param_name)
-
-                    if name not in params_dict:
-                        continue
-
                     param = params_dict[name]
                     weight_loader = param.weight_loader
                     weight_loader(
@@ -729,13 +623,8 @@ class MiniCPMForCausalLM(nn.Module):
                     )
                     break
                 else:
-                    # Skip loading extra bias for GPTQ models.
                     if name.endswith(".bias") and name not in params_dict:
                         continue
-
-                    if name not in params_dict:
-                        continue
-
                     param = params_dict[name]
                     weight_loader = getattr(
                         param, "weight_loader", default_weight_loader
