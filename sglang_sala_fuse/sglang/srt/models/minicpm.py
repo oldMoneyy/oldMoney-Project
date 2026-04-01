@@ -32,6 +32,7 @@ from sglang.srt.layers.attention.minicpm_sparse_utils import (
     SparseMetadata,
     SparseMetadataBuilder,
 )
+from sglang.srt.layers.fused_kernels import fused_scaled_add_rmsnorm
 from sglang.srt.layers.layernorm import RMSNorm
 from sglang.srt.layers.linear import (
     ColumnParallelLinear,
@@ -545,59 +546,42 @@ class MiniCPMDecoderLayer(nn.Module):
         forward_batch: ForwardBatch,
         residual: Optional[torch.Tensor],
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        import time
-        
-        # Only profile during real forward, not CUDA graph capture
-        do_profile = (hidden_states.shape[0] > 100) and not torch.cuda.is_current_stream_capturing()
+        scale = self.config.scale_depth / math.sqrt(self.config.num_hidden_layers)
+        eps = self.config.rms_norm_eps
 
-        if do_profile:
-            torch.cuda.synchronize()
-            t0 = time.perf_counter()
-        
-        residual = hidden_states
-        hidden_states = self.input_layernorm(hidden_states)
+        # --- Input layernorm (fused with scaled-add when residual exists) ---
+        if residual is None:
+            # First layer: no preceding scaled-add, standalone norm
+            residual = hidden_states
+            hidden_states = self.input_layernorm(hidden_states)
+        else:
+            # Layers 1+: fuse (residual += hidden_states * scale) + rmsnorm
+            hidden_states, residual = fused_scaled_add_rmsnorm(
+                hidden_states, residual,
+                self.input_layernorm.weight.data,
+                scale, eps,
+            )
 
-        if do_profile:
-            torch.cuda.synchronize()
-            t1 = time.perf_counter()
-        
+        # --- Self Attention ---
         hidden_states = self.self_attn(
             positions=positions,
             hidden_states=hidden_states,
             forward_batch=forward_batch,
         )
 
-        if do_profile:
-            torch.cuda.synchronize()
-            t2 = time.perf_counter()
-        
-        hidden_states = residual + hidden_states * (
-            self.config.scale_depth / math.sqrt(self.config.num_hidden_layers)
+        # --- Fused: (residual += attn_out * scale) + post_attention_layernorm ---
+        hidden_states, residual = fused_scaled_add_rmsnorm(
+            hidden_states, residual,
+            self.post_attention_layernorm.weight.data,
+            scale, eps,
         )
-        residual = hidden_states
-        hidden_states = self.post_attention_layernorm(hidden_states)
 
-        if do_profile:
-            torch.cuda.synchronize()
-            t3 = time.perf_counter()
-        
+        # --- MLP ---
         hidden_states = self.mlp(hidden_states)
 
-        if do_profile:
-            torch.cuda.synchronize()
-            t4 = time.perf_counter()
-        
-        hidden_states = residual + hidden_states * (
-            self.config.scale_depth / math.sqrt(self.config.num_hidden_layers)
-        )
-
-        # PROFILE
-        # if do_profile:
-        #     attn_ms = (t2 - t1) * 1000
-        #     mlp_ms = (t4 - t3) * 1000
-        #     print(f"[Layer {self.layer_id}] type={self.mixer_type} attn={attn_ms:.1f}ms mlp={mlp_ms:.1f}ms tokens={hidden_states.shape[0]}", flush=True)
-        
-        return hidden_states, None
+        # Return raw MLP output + residual; the NEXT layer (or final norm)
+        # will fuse the scaled-add.
+        return hidden_states, residual
     # dotv ######################################################################
 
 
@@ -652,7 +636,13 @@ class MiniCPMModel(nn.Module):
                 forward_batch,
                 residual,
             )
-        hidden_states = self.norm(hidden_states)
+        # Final: fuse last layer's MLP scaled-add + final RMSNorm
+        scale = self.config.scale_depth / math.sqrt(self.config.num_hidden_layers)
+        hidden_states, _ = fused_scaled_add_rmsnorm(
+            hidden_states, residual,
+            self.norm.weight.data,
+            scale, self.norm.variance_epsilon,
+        )
         return hidden_states
 
 
