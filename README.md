@@ -115,8 +115,8 @@ python -c "import torch; print(f'PyTorch Version: {torch.__version__}\nCUDA Vers
 
 SALA official start command:
 ```bash
-uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
-# uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_fuse
+# uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
+uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_fuse
 # uv pip install --no-deps -e /opt/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python
 fuser -k -9 31333/tcp
 export PYTORCH_ALLOC_CONF=expandable_segments:True
@@ -209,12 +209,12 @@ python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31333 \
 cd /opt/oldMoney-Project/SOAR-Toolkit
 nohup python3 eval_model.py \
   --api_base http://127.0.0.1:31333 \
-  --model_path /opt/model_GPTQ_int4_lightning_only_minicpm4_bf16 \
+  --model_path /opt/model_gptq_int4_dense_smooth \
   --data_path eval_dataset/perf_public_set.jsonl \
   --concurrency 64 \
   --num_samples 150 \
   --verbose \
-  > /opt/oldMoney-Project/logs/eval_model_GPTQ_int4_lightning_only_minicpm4_bf16.log 2>&1 &
+  > /opt/oldMoney-Project/logs/eval_model_gptq_int4_dense_smooth.log 2>&1 &
 ```
 
 
@@ -295,11 +295,11 @@ tail -f /opt/oldMoney-Project/logs/model_gptq_int4_minicpm_flashinfer_sparse.log
 
 Dense:
 ```bash
-# uv pip install --no-deps -e /opt/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python
+uv pip install --no-deps -e /opt/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python
 # uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
-uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_fuse
+# uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_fuse
 # uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_opt
-export SGLANG_SALA_PROFILE=1
+# export SGLANG_SALA_PROFILE=1
 fuser -k -9 31333/tcp
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
