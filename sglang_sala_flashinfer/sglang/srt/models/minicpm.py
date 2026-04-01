@@ -29,6 +29,7 @@ from sglang.srt.layers.attention.minicpm_sparse_utils import (
     SparseMetadata,
     SparseMetadataBuilder,
 )
+from sglang.srt.layers.fused_kernels import fused_scaled_add
 from sglang.srt.layers.layernorm import RMSNorm
 from sglang.srt.layers.linear import (
     ColumnParallelLinear,
@@ -453,7 +454,7 @@ class MiniCPMDecoderLayer(nn.Module):
         forward_batch: ForwardBatch,
         residual: Optional[torch.Tensor],
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        # Identical to official
+        # Identical to official but uses fused_scaled_add (2 kernels → 1)
         residual = hidden_states
         hidden_states = self.input_layernorm(hidden_states)
         hidden_states = self.self_attn(
@@ -461,15 +462,17 @@ class MiniCPMDecoderLayer(nn.Module):
             hidden_states=hidden_states,
             forward_batch=forward_batch,
         )
-        hidden_states = residual + hidden_states * (
-            self.config.scale_depth / math.sqrt(self.config.num_hidden_layers)
+        hidden_states = fused_scaled_add(
+            hidden_states, residual,
+            self.config.scale_depth / math.sqrt(self.config.num_hidden_layers),
         )
 
         residual = hidden_states
         hidden_states = self.post_attention_layernorm(hidden_states)
         hidden_states = self.mlp(hidden_states)
-        hidden_states = residual + hidden_states * (
-            self.config.scale_depth / math.sqrt(self.config.num_hidden_layers)
+        hidden_states = fused_scaled_add(
+            hidden_states, residual,
+            self.config.scale_depth / math.sqrt(self.config.num_hidden_layers),
         )
 
         return hidden_states, None
