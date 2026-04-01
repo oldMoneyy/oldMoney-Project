@@ -29,7 +29,7 @@ from sglang.srt.layers.attention.minicpm_sparse_utils import (
     SparseMetadata,
     SparseMetadataBuilder,
 )
-from sglang.srt.layers.fused_kernels import fused_sigmoid_mul, fused_qk_rmsnorm, fused_rmsnorm_sigmoid_mul
+from sglang.srt.layers.fused_kernels import fused_scaled_add
 from sglang.srt.layers.layernorm import RMSNorm
 from sglang.srt.layers.linear import (
     ColumnParallelLinear,
@@ -192,7 +192,7 @@ class MiniCPMAttention(nn.Module):
         attn_output = self.attn(q, k, v, forward_batch)
 
         if self.use_output_gate:
-            fused_sigmoid_mul(attn_output, o_gate_output)
+            attn_output = attn_output * F.sigmoid(o_gate_output)
 
         output, _ = self.o_proj(attn_output)
         return output
@@ -317,9 +317,8 @@ class MiniCPMLightningMixer(nn.Module):
             z, _ = self.z_proj(hidden_states)
 
         if self.qk_norm:
-            q = q.reshape(-1, self.head_dim)
-            k = k.reshape(-1, self.head_dim)
-            fused_qk_rmsnorm(q, k, self.q_norm.weight.data, self.k_norm.weight.data, self.q_norm.variance_epsilon)
+            q = self.q_norm(q.reshape(-1, self.head_dim))
+            k = self.k_norm(k.reshape(-1, self.head_dim))
 
         if self.use_rope:
             q = q.reshape(-1, self.num_heads * self.head_dim)
@@ -362,12 +361,11 @@ class MiniCPMLightningMixer(nn.Module):
 
         o = o.reshape(-1, self.num_heads * self.head_dim)
 
-        if self.use_output_gate and self.use_output_norm:
-            fused_rmsnorm_sigmoid_mul(o, z, self.o_norm.weight.data, self.o_norm.variance_epsilon)
-        elif self.use_output_norm:
+        if self.use_output_norm:
             o = self.o_norm(o)
-        elif self.use_output_gate:
-            fused_sigmoid_mul(o, z)
+
+        if self.use_output_gate:
+            o = o * F.sigmoid(z)
 
         y, _ = self.o_proj(o)
         return y
@@ -462,9 +460,7 @@ class MiniCPMDecoderLayer(nn.Module):
         forward_batch: ForwardBatch,
         residual: Optional[torch.Tensor],
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        scale = self.config.scale_depth / math.sqrt(self.config.num_hidden_layers)
-
-        # Official residual pattern (proven correct)
+        # Identical to official but uses fused_scaled_add (2 kernels → 1)
         residual = hidden_states
         hidden_states = self.input_layernorm(hidden_states)
         hidden_states = self.self_attn(
@@ -472,12 +468,18 @@ class MiniCPMDecoderLayer(nn.Module):
             hidden_states=hidden_states,
             forward_batch=forward_batch,
         )
-        hidden_states = residual + hidden_states * scale
+        hidden_states = fused_scaled_add(
+            hidden_states, residual,
+            self.config.scale_depth / math.sqrt(self.config.num_hidden_layers),
+        )
 
         residual = hidden_states
         hidden_states = self.post_attention_layernorm(hidden_states)
         hidden_states = self.mlp(hidden_states)
-        hidden_states = residual + hidden_states * scale
+        hidden_states = fused_scaled_add(
+            hidden_states, residual,
+            self.config.scale_depth / math.sqrt(self.config.num_hidden_layers),
+        )
 
         return hidden_states, None
 
