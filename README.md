@@ -15,6 +15,12 @@ service ssh restart
 
 cd /opt
 git clone https://oldMoneyy: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@github.com/oldMoneyy/oldMoney-Project.git
+
+python3 -c "
+from huggingface_hub import snapshot_download
+snapshot_download('borisdotv/model-gptq-int4-dense-smooth', local_dir='/opt/model_gptq_int4_dense_smooth', token='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')
+print('Done!')
+"
 ```
 
 Steps to push commits:
@@ -296,12 +302,12 @@ tail -f /opt/oldMoney-Project/logs/model_gptq_int4_minicpm_flashinfer_sparse.log
 
 Dense:
 ```bash
-uv pip install --no-deps -e /opt/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python
+fuser -k -9 31333/tcp
+# uv pip install --no-deps -e /opt/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python
 # uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
-# uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_flashinfer
+uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_flashinfer
 # uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_opt
 # export SGLANG_SALA_PROFILE=1
-fuser -k -9 31333/tcp
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 nohup python3 -m sglang.launch_server \
@@ -320,6 +326,7 @@ nohup python3 -m sglang.launch_server \
     > /opt/server.log 2>&1 &
 
 python /opt/oldMoney-Project/bench/long_context_test_case.py
+cd /opt/oldMoney-Project/quantization && python /opt/oldMoney-Project/quantization/fast_eval_quantization.py --mode eval --api-base http://127.0.0.1:31333
 ```
 
 

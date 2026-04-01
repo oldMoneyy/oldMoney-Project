@@ -1,0 +1,8 @@
+
+
+
+
+20260401:
+1. 理解了 SALA 的 Algorithm 1 里设置 KC1 和 KC2 的动机以及 KC2 何种程度上缓和了 bottleneck；
+2. 定位了 fuse_topk 参数的位置，在 minicpm backend 的 def sparse_get_topk_impl 中，具体实现在 minicpm sparse utils 的 def compressed_attention_tilelang 中；
+3. 上传了 GPTQ smooth W4A16 模型，以及收集了对应的 KL 散度信息，并确认了 0330 21:03 提交的 tar 即为当前的 SOTA 包。
