@@ -1,18 +1,7 @@
-"""Fused Triton kernels for MiniCPM-SALA optimized forward pass.
+"""Fused Triton kernels for MiniCPM acceleration.
 
-Provides kernel fusions that reduce kernel launch overhead — the dominant
-bottleneck for decode with small batch sizes on quantized (GPTQ/Marlin) models
-where individual kernels are fast but numerous.
-
-Kernels:
-  1. fused_scaled_add:         residual + x * scale  (replaces mul + add)
-  2. fused_scaled_add_rmsnorm: residual + x * scale, then RMSNorm  (replaces 3 kernels → 1)
-  3. fused_norm_sigmoid_mul:   RMSNorm(x) * sigmoid(gate)  (replaces 3 kernels → 1)
-  4. fused_sigmoid_mul:        x * sigmoid(gate)  (replaces 2 kernels → 1)
-
-PRECISION CONTRACT:
-  All kernels reproduce PyTorch's bf16 two-rounding behavior exactly:
-  intermediate results are rounded to bf16 at the same points PyTorch would.
+These kernels fuse adjacent memory-bound operations to eliminate
+intermediate DRAM round-trips without changing numerical results.
 """
 
 import torch
@@ -20,230 +9,252 @@ import triton
 import triton.language as tl
 
 
-def _next_pow2(n: int) -> int:
-    n -= 1
-    n |= n >> 1
-    n |= n >> 2
-    n |= n >> 4
-    n |= n >> 8
-    n |= n >> 16
-    return n + 1
-
-
-# =============================================================================
-# 1. fused_scaled_add: result = residual + x * scale
-# =============================================================================
-
 @triton.jit
-def _fused_scaled_add_kernel(
-    X_ptr, Residual_ptr, Out_ptr,
-    scale,
-    hidden_size,
-    BLOCK_SIZE: tl.constexpr,
+def _fused_scale_add_rmsnorm_kernel(
+    X_ptr,          # [T, H] - input (scaled attn/mlp output), overwritten with norm output
+    Residual_ptr,   # [T, H] - residual, overwritten with x*scale + residual
+    Weight_ptr,     # [H]    - RMSNorm weight
+    scale,          # float  - residual scale factor
+    eps,            # float  - RMSNorm epsilon
+    H: tl.constexpr,
+    BLOCK_H: tl.constexpr,
 ):
-    row = tl.program_id(0)
-    base = row.to(tl.int64) * hidden_size
-    off = tl.arange(0, BLOCK_SIZE)
-    mask = off < hidden_size
+    """Fused: residual = x * scale + residual; x = rmsnorm(residual)
 
-    x = tl.load(X_ptr + base + off, mask=mask, other=0.0).to(tl.float32)
-    r = tl.load(Residual_ptr + base + off, mask=mask, other=0.0).to(tl.float32)
-
-    scaled = (x * tl.cast(scale, tl.float32)).to(tl.bfloat16).to(tl.float32)
-    result = (r + scaled).to(tl.bfloat16)
-
-    tl.store(Out_ptr + base + off, result, mask=mask)
-
-
-def fused_scaled_add(
-    x: torch.Tensor,
-    residual: torch.Tensor,
-    scale: float,
-) -> torch.Tensor:
-    """Fused: result = residual + x * scale.
-
-    Replaces two PyTorch kernel launches (mul + add) with one Triton kernel.
+    Replaces separate `x *= scale` + `fused_add_rmsnorm(x, residual)`.
+    Saves one full [T, H] memory round-trip per call.
     """
-    num_tokens, hidden_size = x.shape
-    out = torch.empty_like(x)
-    BLOCK_SIZE = _next_pow2(hidden_size)
-
-    _fused_scaled_add_kernel[(num_tokens,)](
-        x, residual, out,
-        scale, hidden_size,
-        BLOCK_SIZE=BLOCK_SIZE,
-        num_warps=max(4, min(16, BLOCK_SIZE // 256)),
-    )
-    return out
-
-
-# =============================================================================
-# 2. fused_scaled_add_rmsnorm: (residual + x * scale) then RMSNorm
-#    Replaces: fused_scaled_add + RMSNorm = 2 kernels → 1 kernel
-#    Returns (normed_output, new_residual)
-# =============================================================================
-
-@triton.jit
-def _fused_scaled_add_rmsnorm_kernel(
-    X_ptr, Residual_ptr, Weight_ptr,
-    Normed_ptr, NewResidual_ptr,
-    scale, eps,
-    hidden_size,
-    BLOCK_SIZE: tl.constexpr,
-):
     row = tl.program_id(0)
-    base = row.to(tl.int64) * hidden_size
-    off = tl.arange(0, BLOCK_SIZE)
-    mask = off < hidden_size
+    X_row = X_ptr + row * H
+    R_row = Residual_ptr + row * H
 
-    x = tl.load(X_ptr + base + off, mask=mask, other=0.0).to(tl.float32)
-    r = tl.load(Residual_ptr + base + off, mask=mask, other=0.0).to(tl.float32)
-    w = tl.load(Weight_ptr + off, mask=mask, other=0.0).to(tl.float32)
+    # Accumulate variance in FP32 for numerical stability
+    variance = tl.zeros([BLOCK_H], dtype=tl.float32)
 
-    # Step 1: scaled add with bf16 two-rounding
-    scaled = (x * tl.cast(scale, tl.float32)).to(tl.bfloat16).to(tl.float32)
-    new_res = (r + scaled).to(tl.bfloat16)
+    # Pass 1: compute residual_new = x * scale + residual, accumulate variance
+    for off in range(0, H, BLOCK_H):
+        cols = off + tl.arange(0, BLOCK_H)
+        mask = cols < H
 
-    # Store new residual
-    tl.store(NewResidual_ptr + base + off, new_res, mask=mask)
+        x = tl.load(X_row + cols, mask=mask, other=0.0).to(tl.float32)
+        r = tl.load(R_row + cols, mask=mask, other=0.0).to(tl.float32)
 
-    # Step 2: RMSNorm on the new residual
-    new_res_f32 = new_res.to(tl.float32)
-    var = tl.sum(new_res_f32 * new_res_f32, axis=0) / hidden_size
-    rstd = 1.0 / tl.sqrt(var + tl.cast(eps, tl.float32))
-    normed = (new_res_f32 * rstd * w).to(tl.bfloat16)
+        # Fused: residual_new = x * scale + residual
+        r_new = x * scale + r
+        tl.store(R_row + cols, r_new.to(tl.bfloat16), mask=mask)
 
-    tl.store(Normed_ptr + base + off, normed, mask=mask)
+        variance += r_new * r_new
 
+    # Compute rsqrt(mean(x^2) + eps)
+    var_sum = tl.sum(variance)
+    rrms = tl.math.rsqrt(var_sum / H + eps)
 
-def fused_scaled_add_rmsnorm(
-    x: torch.Tensor,
-    residual: torch.Tensor,
-    weight: torch.Tensor,
-    scale: float,
-    eps: float,
-) -> tuple:
-    """Fused: new_res = residual + x * scale; normed = rmsnorm(new_res).
+    # Pass 2: normalize and write output
+    for off in range(0, H, BLOCK_H):
+        cols = off + tl.arange(0, BLOCK_H)
+        mask = cols < H
 
-    Returns (normed_output, new_residual).
-    Replaces fused_scaled_add + RMSNorm = 2 kernel launches → 1.
-    """
-    num_tokens, hidden_size = x.shape
-    normed = torch.empty_like(x)
-    new_residual = torch.empty_like(x)
-    BLOCK_SIZE = _next_pow2(hidden_size)
+        r_new = tl.load(R_row + cols, mask=mask, other=0.0).to(tl.float32)
+        w = tl.load(Weight_ptr + cols, mask=mask, other=0.0).to(tl.float32)
 
-    _fused_scaled_add_rmsnorm_kernel[(num_tokens,)](
-        x, residual, weight,
-        normed, new_residual,
-        scale, eps,
-        hidden_size,
-        BLOCK_SIZE=BLOCK_SIZE,
-        num_warps=max(4, min(16, BLOCK_SIZE // 256)),
-    )
-    return normed, new_residual
+        out = r_new * rrms * w
+        tl.store(X_row + cols, out.to(tl.bfloat16), mask=mask)
 
-
-# =============================================================================
-# 3. fused_norm_sigmoid_mul: RMSNorm(x) * sigmoid(gate)
-#    Replaces: RMSNorm + sigmoid + mul = 3 kernels → 1 kernel
-#    Used for lightning layer output: o_norm(o) * sigmoid(z)
-# =============================================================================
-
-@triton.jit
-def _fused_norm_sigmoid_mul_kernel(
-    X_ptr, Gate_ptr, Weight_ptr, Out_ptr,
-    eps,
-    hidden_size,
-    BLOCK_SIZE: tl.constexpr,
-):
-    row = tl.program_id(0)
-    base = row.to(tl.int64) * hidden_size
-    off = tl.arange(0, BLOCK_SIZE)
-    mask = off < hidden_size
-
-    x = tl.load(X_ptr + base + off, mask=mask, other=0.0).to(tl.float32)
-    g = tl.load(Gate_ptr + base + off, mask=mask, other=0.0).to(tl.float32)
-    w = tl.load(Weight_ptr + off, mask=mask, other=0.0).to(tl.float32)
-
-    # RMSNorm
-    var = tl.sum(x * x, axis=0) / hidden_size
-    rstd = 1.0 / tl.sqrt(var + tl.cast(eps, tl.float32))
-    normed = x * rstd * w
-
-    # sigmoid(gate) * normed
-    sig_g = 1.0 / (1.0 + tl.exp(-g))
-    result = (normed * sig_g).to(tl.bfloat16)
-
-    tl.store(Out_ptr + base + off, result, mask=mask)
-
-
-def fused_norm_sigmoid_mul(
-    x: torch.Tensor,
-    gate: torch.Tensor,
-    weight: torch.Tensor,
-    eps: float,
-) -> torch.Tensor:
-    """Fused: result = RMSNorm(x, weight) * sigmoid(gate).
-
-    Used in lightning layers: o_norm(attn_out) * sigmoid(z_proj(hidden_states)).
-    Replaces 3 kernel launches (rmsnorm + sigmoid + mul) with 1.
-    """
-    num_tokens, hidden_size = x.shape
-    out = torch.empty_like(x)
-    BLOCK_SIZE = _next_pow2(hidden_size)
-
-    _fused_norm_sigmoid_mul_kernel[(num_tokens,)](
-        x, gate, weight, out,
-        eps,
-        hidden_size,
-        BLOCK_SIZE=BLOCK_SIZE,
-        num_warps=max(4, min(16, BLOCK_SIZE // 256)),
-    )
-    return out
-
-
-# =============================================================================
-# 4. fused_sigmoid_mul: x * sigmoid(gate)
-#    Replaces: sigmoid + mul = 2 kernels → 1 kernel
-#    Used for minicpm4 layer output: attn_output * sigmoid(o_gate)
-# =============================================================================
 
 @triton.jit
 def _fused_sigmoid_mul_kernel(
-    X_ptr, Gate_ptr, Out_ptr,
-    n_elements,
-    BLOCK_SIZE: tl.constexpr,
+    O_ptr,          # [T, D] - attention output, overwritten with o * sigmoid(z)
+    Z_ptr,          # [T, D] - gate values
+    D: tl.constexpr,
+    BLOCK_D: tl.constexpr,
 ):
-    pid = tl.program_id(0)
-    offsets = pid * BLOCK_SIZE + tl.arange(0, BLOCK_SIZE)
-    mask = offsets < n_elements
+    """Fused: o = o * sigmoid(z) in a single pass."""
+    row = tl.program_id(0)
+    O_row = O_ptr + row * D
+    Z_row = Z_ptr + row * D
 
-    x = tl.load(X_ptr + offsets, mask=mask, other=0.0).to(tl.float32)
-    g = tl.load(Gate_ptr + offsets, mask=mask, other=0.0).to(tl.float32)
+    for off in range(0, D, BLOCK_D):
+        cols = off + tl.arange(0, BLOCK_D)
+        mask = cols < D
 
-    sig_g = 1.0 / (1.0 + tl.exp(-g))
-    result = (x * sig_g).to(tl.bfloat16)
+        o = tl.load(O_row + cols, mask=mask, other=0.0).to(tl.float32)
+        z = tl.load(Z_row + cols, mask=mask, other=0.0).to(tl.float32)
 
-    tl.store(Out_ptr + offsets, result, mask=mask)
+        out = o * tl.sigmoid(z)
+        tl.store(O_row + cols, out.to(tl.bfloat16), mask=mask)
 
 
-def fused_sigmoid_mul(
-    x: torch.Tensor,
-    gate: torch.Tensor,
-) -> torch.Tensor:
-    """Fused: result = x * sigmoid(gate).
+def fused_sigmoid_mul(o: torch.Tensor, z: torch.Tensor) -> None:
+    """In-place fused: o = o * sigmoid(z).
 
-    Used in minicpm4 layers: attn_output * sigmoid(o_gate_output).
-    Replaces 2 kernel launches (sigmoid + mul) with 1.
+    Args:
+        o: [T, D] bf16 - overwritten with result
+        z: [T, D] bf16 - gate values
     """
-    out = torch.empty_like(x)
-    n_elements = x.numel()
-    BLOCK_SIZE = 1024
+    T, D = o.shape
+    BLOCK_D = triton.next_power_of_2(min(D, 4096))
+    _fused_sigmoid_mul_kernel[(T,)](o, z, D=D, BLOCK_D=BLOCK_D)
 
-    _fused_sigmoid_mul_kernel[(triton.cdiv(n_elements, BLOCK_SIZE),)](
-        x, gate, out,
-        n_elements,
-        BLOCK_SIZE=BLOCK_SIZE,
+
+@triton.jit
+def _rmsnorm_kernel(
+    X_ptr,          # [N, head_dim]
+    W_ptr,          # [head_dim]
+    eps,
+    stride_row,
+    head_dim: tl.constexpr,
+    BLOCK_H: tl.constexpr,
+):
+    """Single-row RMSNorm kernel, reused for both q and k."""
+    row = tl.program_id(0)
+    Row_ptr = X_ptr + row * stride_row
+
+    variance = tl.zeros([BLOCK_H], dtype=tl.float32)
+    for off in range(0, head_dim, BLOCK_H):
+        cols = off + tl.arange(0, BLOCK_H)
+        mask = cols < head_dim
+        x = tl.load(Row_ptr + cols, mask=mask, other=0.0).to(tl.float32)
+        variance += x * x
+
+    var_sum = tl.sum(variance)
+    rrms = tl.math.rsqrt(var_sum / head_dim + eps)
+
+    for off in range(0, head_dim, BLOCK_H):
+        cols = off + tl.arange(0, BLOCK_H)
+        mask = cols < head_dim
+        x = tl.load(Row_ptr + cols, mask=mask, other=0.0).to(tl.float32)
+        w = tl.load(W_ptr + cols, mask=mask, other=0.0).to(tl.float32)
+        out = x * rrms * w
+        tl.store(Row_ptr + cols, out.to(tl.bfloat16), mask=mask)
+
+
+def fused_qk_rmsnorm(
+    q: torch.Tensor,
+    k: torch.Tensor,
+    q_weight: torch.Tensor,
+    k_weight: torch.Tensor,
+    eps: float,
+) -> None:
+    """In-place fused RMSNorm for q and k tensors.
+
+    Launches both q and k norms on the same CUDA stream back-to-back
+    with zero CPU overhead between them (no Python loop, no cat/copy).
+
+    Args:
+        q: [N_q, head_dim] bf16 - overwritten with rmsnorm(q)
+        k: [N_k, head_dim] bf16 - overwritten with rmsnorm(k)
+        q_weight: [head_dim] - q RMSNorm weight
+        k_weight: [head_dim] - k RMSNorm weight
+        eps: RMSNorm epsilon
+    """
+    N_q, head_dim = q.shape
+    N_k = k.shape[0]
+    BLOCK_H = triton.next_power_of_2(min(head_dim, 4096))
+
+    _rmsnorm_kernel[(N_q,)](
+        q, q_weight, eps,
+        q.stride(0),
+        head_dim=head_dim, BLOCK_H=BLOCK_H,
     )
-    return out
+    _rmsnorm_kernel[(N_k,)](
+        k, k_weight, eps,
+        k.stride(0),
+        head_dim=head_dim, BLOCK_H=BLOCK_H,
+    )
+
+
+def fused_scale_add_rmsnorm(
+    x: torch.Tensor,
+    residual: torch.Tensor,
+    weight: torch.Tensor,
+    scale: float,
+    eps: float,
+) -> None:
+    """In-place fused: residual = x * scale + residual; x = rmsnorm(residual).
+
+    Args:
+        x: [T, H] bf16 - overwritten with norm output
+        residual: [T, H] bf16 - overwritten with updated residual
+        weight: [H] - RMSNorm weight parameter
+        scale: scalar - residual scale factor (scale_depth / sqrt(num_layers))
+        eps: RMSNorm epsilon
+    """
+    T, H = x.shape
+    BLOCK_H = triton.next_power_of_2(min(H, 4096))
+
+    _fused_scale_add_rmsnorm_kernel[(T,)](
+        x, residual, weight,
+        scale, eps,
+        H=H,
+        BLOCK_H=BLOCK_H,
+    )
+
+
+@triton.jit
+def _fused_rmsnorm_sigmoid_mul_kernel(
+    O_ptr,          # [T, D] - input, overwritten with rmsnorm(o) * sigmoid(z)
+    Z_ptr,          # [T, D] - gate values
+    W_ptr,          # [D]    - RMSNorm weight
+    eps,            # float  - RMSNorm epsilon
+    D: tl.constexpr,
+    BLOCK_D: tl.constexpr,
+):
+    """Fused: o = rmsnorm(o, weight) * sigmoid(z) in a single 2-pass kernel.
+
+    Replaces separate `o_norm(o)` + `fused_sigmoid_mul(o, z)`.
+    Saves one full [T, D] memory round-trip per call.
+    """
+    row = tl.program_id(0)
+    O_row = O_ptr + row * D
+    Z_row = Z_ptr + row * D
+
+    # Pass 1: accumulate variance in FP32
+    variance = tl.zeros([BLOCK_D], dtype=tl.float32)
+    for off in range(0, D, BLOCK_D):
+        cols = off + tl.arange(0, BLOCK_D)
+        mask = cols < D
+        o = tl.load(O_row + cols, mask=mask, other=0.0).to(tl.float32)
+        variance += o * o
+
+    var_sum = tl.sum(variance)
+    rrms = tl.math.rsqrt(var_sum / D + eps)
+
+    # Pass 2: normalize, gate with sigmoid, and write
+    for off in range(0, D, BLOCK_D):
+        cols = off + tl.arange(0, BLOCK_D)
+        mask = cols < D
+
+        o = tl.load(O_row + cols, mask=mask, other=0.0).to(tl.float32)
+        z = tl.load(Z_row + cols, mask=mask, other=0.0).to(tl.float32)
+        w = tl.load(W_ptr + cols, mask=mask, other=0.0).to(tl.float32)
+
+        out = (o * rrms * w) * tl.sigmoid(z)
+        tl.store(O_row + cols, out.to(tl.bfloat16), mask=mask)
+
+
+def fused_rmsnorm_sigmoid_mul(
+    o: torch.Tensor,
+    z: torch.Tensor,
+    weight: torch.Tensor,
+    eps: float,
+) -> None:
+    """In-place fused: o = rmsnorm(o, weight) * sigmoid(z).
+
+    Fuses RMSNorm + sigmoid gating into a single kernel, eliminating
+    the intermediate normalized tensor write/read.
+
+    Args:
+        o: [T, D] bf16 - overwritten with result
+        z: [T, D] bf16 - gate values
+        weight: [D] - RMSNorm weight
+        eps: RMSNorm epsilon
+    """
+    T, D = o.shape
+    BLOCK_D = triton.next_power_of_2(min(D, 4096))
+
+    _fused_rmsnorm_sigmoid_mul_kernel[(T,)](
+        o, z, weight,
+        eps,
+        D=D,
+        BLOCK_D=BLOCK_D,
+    )
