@@ -108,6 +108,13 @@ class PetitNvFp4Config(QuantizationConfig):
     def is_petit_nvfp4_compatible(cls, quant_config: Dict[str, Any]) -> bool:
         quant_method = quant_config.get("quant_method", "").lower()
         return _is_hip and quant_method == "modelopt"
+    # dotv
+    # @classmethod
+    # def is_petit_nvfp4_compatible(cls, quant_config: Dict[str, Any]) -> bool:
+    #     quant_method = quant_config.get("quant_method", "").lower()
+    #     # 原本是：return _is_hip and quant_method == "modelopt"
+    #     # 修改为：只要 quant_method 是 "petit"，就无条件使用它！
+    #     return quant_method == "petit"
 
     def is_layer_excluded(self, prefix: str, exclude_modules: list):
         for pattern in exclude_modules:

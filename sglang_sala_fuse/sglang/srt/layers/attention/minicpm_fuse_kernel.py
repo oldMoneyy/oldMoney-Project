@@ -622,3 +622,559 @@ def fused_attn_pooling_online_topk_decode(
                     TopkValues[kv_head_idx, global_q_idx, i] = topk_value_shared[i]
     
     return main
+
+
+# dotv ################################################################################################
+@tilelang.jit(pass_configs=_pass_configs)
+def fused_attn_pooling_online_topk_decode_optimized(
+        batch_size: int,
+        groups: int,
+        heads: int,
+        dim: int,
+        topk: int,
+        pooled_k_len: int,
+        m_block_dim: int = 16,
+        block_M: int = 16,
+        block_N: int = 64,
+        block_stride: int = 4,
+        pad_len: int = 1,
+        num_offs: int = 5,
+        block_size: int = 64,
+        init_blocks: int = 0,
+        local_blocks: int = 0,
+        num_stages: int = 0,
+        threads: int = 128,
+        dtype_str: str = "bfloat16",
+):
+    """
+    Optimized decode kernel: Q×K GEMM computed exactly TWICE (not 1 + loop_range_pool times).
+    
+    The pool buffer is allocated in shared memory at size pooled_k_len.
+    For max_context=524288, block_size=64: pooled_k_len=8192 → 32KB shared mem (feasible).
+    """
+    assert topk == tilelang.math.next_power_of_2(topk), "topk must be power of 2"
+    
+    scale = (1.0 / dim)**0.5 * 1.44269504
+    head_kv = heads // groups
+    
+    UQ = T.dynamic("UQ")
+    UKV = T.dynamic("UKV")
+    
+    q_shape = [UQ * groups, head_kv, dim]
+    kv_shape = [UKV, head_kv, dim]
+    topk_indices_shape = [head_kv, UQ, topk]
+    topk_values_shape = [head_kv, UQ, topk]
+    
+    dtype = dtype_str
+    accum_dtype = "float"
+    
+    N = 2 * topk
+    num_sort_iters = int(round(math.log2(N)))
+    block_P = topk
+    max_seqlen_q = 1
+    
+    @T.macro
+    def bitonic_sort(
+        topk_index_shared: T.Buffer([N], "int32"),
+        topk_value_shared: T.Buffer([N], "float32"),
+    ):
+        T.sync_threads()
+        for i1 in T.serial(num_sort_iters):
+            for i2 in T.serial(i1 + 1):
+                for i in T.Parallel(N):
+                    ascending = (i & (1 << (i1 + 1))) != 0
+                    j = i ^ (1 << (i1 - i2))
+                    if i < j and (
+                        (ascending and topk_value_shared[i] > topk_value_shared[j])
+                        or (not ascending and topk_value_shared[i] < topk_value_shared[j])
+                    ):
+                        val = topk_value_shared[i]
+                        topk_value_shared[i] = topk_value_shared[j]
+                        topk_value_shared[j] = val
+                        idx = topk_index_shared[i]
+                        topk_index_shared[i] = topk_index_shared[j]
+                        topk_index_shared[j] = idx
+                T.sync_threads()
+    
+    @T.prim_func
+    def main(
+            Q_unpad: T.Tensor(q_shape, dtype),
+            K_unpad: T.Tensor(kv_shape, dtype),
+            cu_seqlens_q: T.Tensor([batch_size + 1], "int32"),
+            cu_seqlens_k: T.Tensor([batch_size + 1], "int32"),
+            cache_lens: T.Tensor([batch_size], "int32"),
+            TopkIndices: T.Tensor(topk_indices_shape, "int32"),
+            TopkValues: T.Tensor(topk_values_shape, "float32"),
+    ):
+        with T.Kernel(
+                max_seqlen_q, head_kv, batch_size,
+                threads=threads) as (bx, by, bz):
+            
+            Q_shared = T.alloc_shared([block_M, dim], dtype)
+            K_shared = T.alloc_shared([block_N, dim], dtype)
+            topk_index_shared = T.alloc_shared([N], "int32")
+            topk_value_shared = T.alloc_shared([N], "float32")
+            
+            # ============================================================
+            # KEY CHANGE: Full-size pool buffer in shared memory
+            # Instead of pool_max_shared[block_P], we use pool_max_shared[pooled_k_len]
+            # This allows scattering ALL pool results in a single K-scan pass.
+            # Memory: pooled_k_len * 4 bytes (e.g., 8192 * 4 = 32KB)
+            # ============================================================
+            pool_max_shared = T.alloc_shared([pooled_k_len], "float32")
+            
+            acc_s = T.alloc_fragment([block_M, block_N], accum_dtype)
+            scores_max = T.alloc_fragment([block_M], accum_dtype)
+            scores_max_prev = T.alloc_fragment([block_M], accum_dtype)
+            scores_scale = T.alloc_fragment([block_M], accum_dtype)
+            scores_sum = T.alloc_fragment([block_M], accum_dtype)
+            logsum = T.alloc_fragment([block_M], accum_dtype)
+            acc_output = T.alloc_fragment([block_N], accum_dtype)
+            
+            batch_idx = bz
+            kv_head_idx = by
+            original_q_idx = bx
+            
+            q_start_idx = cu_seqlens_q[batch_idx]
+            k_start_idx = cu_seqlens_k[batch_idx]
+            q_end_idx = cu_seqlens_q[batch_idx + 1]
+            k_end_idx = cu_seqlens_k[batch_idx + 1]
+            
+            q_current_seqlen = q_end_idx - q_start_idx
+            k_current_seqlen = k_end_idx - k_start_idx
+            
+            cache_len = cache_lens[batch_idx]
+            actual_pooled_k_len = (1 + cache_len + block_size - 1) // block_size
+            
+            T.fill(topk_index_shared, -1)
+            T.fill(topk_value_shared, float("-inf"))
+            # Initialize full pool buffer once
+            T.fill(pool_max_shared, float("-inf"))
+            T.sync_threads()
+            
+            q_copy_end = T.min(q_start_idx * groups + (bx + 1) * block_M, q_end_idx * groups)
+            T.copy(
+                Q_unpad[q_start_idx * groups + bx * block_M:q_copy_end, kv_head_idx, :],
+                Q_shared)
+            for i, d in T.Parallel(block_M, dim):
+                if original_q_idx >= q_current_seqlen:
+                    Q_shared[i, d] = 0
+            
+            T.fill(logsum, 0)
+            T.fill(scores_max, -T.infinity(accum_dtype))
+            
+            loop_range_k = T.ceildiv(k_current_seqlen, block_N)
+            
+            # =================================================================
+            # PASS 1: Attention scan — compute scores_max and logsum
+            # (identical to original)
+            # =================================================================
+            for k in T.Pipelined(loop_range_k, num_stages=num_stages):
+                k_copy_end = T.min(k_start_idx + (k + 1) * block_N, k_end_idx)
+                T.copy(
+                    K_unpad[k_start_idx + k * block_N:k_copy_end,
+                            kv_head_idx, :], K_shared)
+                for i, d in T.Parallel(block_N, dim):
+                    if k * block_N + i >= k_current_seqlen:
+                        K_shared[i, d] = 0
+                
+                for i, j in T.Parallel(block_M, block_N):
+                    acc_s[i, j] = T.if_then_else(
+                        (original_q_idx >= q_current_seqlen or k * block_N + j >= k_current_seqlen),
+                        -1e9, 0)
+                
+                T.gemm(Q_shared, K_shared, acc_s, transpose_B=True, policy=T.GemmWarpPolicy.FullRow)
+                
+                T.copy(scores_max, scores_max_prev)
+                T.fill(scores_max, -T.infinity(accum_dtype))
+                T.reduce_max(acc_s, scores_max, dim=1, clear=False)
+                for i in T.Parallel(block_M):
+                    scores_max[i] = T.max(scores_max[i], scores_max_prev[i])
+                
+                for i in T.Parallel(block_M):
+                    scores_scale[i] = T.exp2(scores_max_prev[i] * scale - scores_max[i] * scale)
+                
+                for i, j in T.Parallel(block_M, block_N):
+                    acc_s[i, j] = T.exp2(acc_s[i, j] * scale - scores_max[i] * scale)
+                
+                T.reduce_sum(acc_s, scores_sum, dim=1)
+                for i in T.Parallel(block_M):
+                    logsum[i] = logsum[i] * scores_scale[i] + scores_sum[i]
+            
+            # =================================================================
+            # PASS 2: Normalized pooling scan — ONE pass over K blocks
+            # Scatter to FULL pool buffer (no outer p_block loop!)
+            # =================================================================
+            for k in T.serial(loop_range_k):
+                k_copy_end = T.min(k_start_idx + (k + 1) * block_N, k_end_idx)
+                T.copy(
+                    K_unpad[k_start_idx + k * block_N:k_copy_end,
+                            kv_head_idx, :], K_shared)
+                for i, d in T.Parallel(block_N, dim):
+                    if k * block_N + i >= k_current_seqlen:
+                        K_shared[i, d] = 0
+                
+                for i, j in T.Parallel(block_M, block_N):
+                    acc_s[i, j] = T.if_then_else(
+                        (original_q_idx >= q_current_seqlen or k * block_N + j >= k_current_seqlen),
+                        -1e9, 0)
+                
+                T.gemm(Q_shared, K_shared, acc_s, transpose_B=True, policy=T.GemmWarpPolicy.FullRow)
+                
+                for i, j in T.Parallel(block_M, block_N):
+                    normalized = T.exp2(acc_s[i, j] * scale - scores_max[i] * scale) / logsum[i]
+                    acc_s[i, j] = T.if_then_else(
+                        (logsum[i] > 1e-10) and (normalized >= 0) and (normalized <= 1e10),
+                        normalized,
+                        T.Cast(accum_dtype, 0.0)
+                    )
+                
+                T.fill(acc_output, 0)
+                T.reduce_sum(acc_s, acc_output, dim=0)
+                
+                # Scatter to ALL pool positions (not just one p_block chunk)
+                for j in T.Parallel(block_N):
+                    k_idx = k * block_N + j
+                    if original_q_idx < q_current_seqlen and k_idx < k_current_seqlen:
+                        start_pool = T.max(0, (k_idx - num_offs + 1 + pad_len + block_stride - 1) // block_stride)
+                        end_pool = T.min(actual_pooled_k_len - 1, (k_idx + pad_len) // block_stride)
+                        
+                        # Write directly to full pool buffer — no p_block range check needed
+                        for p_off in T.serial(num_offs):
+                            p_idx = start_pool + p_off
+                            if p_idx <= end_pool and p_idx < pooled_k_len:
+                                T.atomic_max(pool_max_shared[p_idx], acc_output[j])
+                T.sync_threads()
+            
+            # =================================================================
+            # PASS 3: TopK selection — stream through pool buffer, NO GEMMs
+            # =================================================================
+            loop_range_pool = T.ceildiv(pooled_k_len, block_P)
+            
+            for p_block in T.serial(loop_range_pool):
+                for p_off in T.Parallel(block_P):
+                    p_idx = p_block * block_P + p_off
+                    if p_idx < actual_pooled_k_len and original_q_idx < q_current_seqlen:
+                        off_bq = (original_q_idx + cache_len) // block_size
+                        off_bk = p_idx
+                        
+                        is_init_masked = (init_blocks > 0) and (off_bk < init_blocks)
+                        is_local_masked = (local_blocks > 0) and (off_bq >= off_bk) and (off_bq <= off_bk + local_blocks)
+                        is_masked = T.if_then_else(
+                            is_init_masked,
+                            1,
+                            T.if_then_else(is_local_masked, 1, 0)
+                        )
+                        
+                        write_pos = topk + p_off
+                        topk_index_shared[write_pos] = p_idx
+                        topk_value_shared[write_pos] = T.if_then_else(
+                            is_masked == 1,
+                            T.Cast("float32", float("inf")),
+                            pool_max_shared[p_idx]  # ← read from full buffer
+                        )
+                T.sync_threads()
+                
+                bitonic_sort(topk_index_shared, topk_value_shared)
+            
+            for i in T.Parallel(topk):
+                if original_q_idx < q_current_seqlen:
+                    global_q_idx = q_start_idx + original_q_idx
+                    TopkIndices[kv_head_idx, global_q_idx, i] = topk_index_shared[i]
+                    TopkValues[kv_head_idx, global_q_idx, i] = topk_value_shared[i]
+    
+    return main
+
+
+
+
+
+
+@tilelang.jit(pass_configs=_pass_configs)
+def fused_attn_pooling_online_topk_prefill_optimized(
+        batch_size: int,
+        groups: int,
+        heads: int,
+        dim: int,
+        topk: int,
+        max_seqlen_q_grid: int,
+        pooled_k_len: int,
+        actual_max_seqlen_q: int,
+        actual_max_seqlen_k: int,
+        m_block_dim: int = 16,
+        block_M: int = 16,
+        block_N: int = 64,
+        block_stride: int = 4,
+        pad_len: int = 1,
+        num_offs: int = 5,
+        block_size: int = 64,
+        init_blocks: int = 0,
+        local_blocks: int = 0,
+        num_stages: int = 0,
+        threads: int = 128,
+        dtype_str: str = "bfloat16",
+):
+    """
+    Optimized prefill kernel: Q×K GEMM computed exactly TWICE (not 1 + loop_range_pool times).
+    
+    Same optimization as decode: separate K-scan (GEMM + normalize + scatter to full pool buffer)
+    from TopK selection (bitonic sort only, no GEMM).
+    """
+    assert topk == tilelang.math.next_power_of_2(topk), "topk must be power of 2"
+    
+    scale = (1.0 / dim)**0.5 * 1.44269504
+    head_kv = heads // groups
+    
+    UQ = T.dynamic("UQ")
+    UKV = T.dynamic("UKV")
+    
+    q_shape = [UQ * groups, head_kv, dim]
+    kv_shape = [UKV, head_kv, dim]
+    topk_indices_shape = [head_kv, UQ, topk]
+    topk_values_shape = [head_kv, UQ, topk]
+    
+    dtype = dtype_str
+    accum_dtype = "float"
+    
+    N = 2 * topk
+    num_sort_iters = int(round(math.log2(N)))
+    block_P = topk
+    
+    @T.macro
+    def bitonic_sort(
+        topk_index_shared: T.Buffer([N], "int32"),
+        topk_value_shared: T.Buffer([N], "float32"),
+    ):
+        T.sync_threads()
+        for i1 in T.serial(num_sort_iters):
+            for i2 in T.serial(i1 + 1):
+                for i in T.Parallel(N):
+                    ascending = (i & (1 << (i1 + 1))) != 0
+                    j = i ^ (1 << (i1 - i2))
+                    if i < j and (
+                        (ascending and topk_value_shared[i] > topk_value_shared[j])
+                        or (not ascending and topk_value_shared[i] < topk_value_shared[j])
+                    ):
+                        val = topk_value_shared[i]
+                        topk_value_shared[i] = topk_value_shared[j]
+                        topk_value_shared[j] = val
+                        idx = topk_index_shared[i]
+                        topk_index_shared[i] = topk_index_shared[j]
+                        topk_index_shared[j] = idx
+                T.sync_threads()
+    
+    @T.prim_func
+    def main(
+            Q_unpad: T.Tensor(q_shape, dtype),
+            K_unpad: T.Tensor(kv_shape, dtype),
+            cu_seqlens_q: T.Tensor([batch_size + 1], "int32"),
+            cu_seqlens_k: T.Tensor([batch_size + 1], "int32"),
+            cache_lens: T.Tensor([batch_size], "int32"),
+            TopkIndices: T.Tensor(topk_indices_shape, "int32"),
+            TopkValues: T.Tensor(topk_values_shape, "float32"),
+    ):
+        with T.Kernel(
+                max_seqlen_q_grid, head_kv, batch_size,
+                threads=threads) as (bx, by, bz):
+            
+            Q_shared = T.alloc_shared([block_M, dim], dtype)
+            K_shared = T.alloc_shared([block_N, dim], dtype)
+            topk_index_shared = T.alloc_shared([N], "int32")
+            topk_value_shared = T.alloc_shared([N], "float32")
+            
+            # ============================================================
+            # CHANGE 1: Full-size pool buffer instead of [block_P]
+            # ============================================================
+            pool_max_shared = T.alloc_shared([pooled_k_len], "float32")
+            
+            acc_s = T.alloc_fragment([block_M, block_N], accum_dtype)
+            scores_max = T.alloc_fragment([block_M], accum_dtype)
+            scores_max_prev = T.alloc_fragment([block_M], accum_dtype)
+            scores_scale = T.alloc_fragment([block_M], accum_dtype)
+            scores_sum = T.alloc_fragment([block_M], accum_dtype)
+            logsum = T.alloc_fragment([block_M], accum_dtype)
+            acc_output = T.alloc_fragment([block_N], accum_dtype)
+            
+            batch_idx = bz
+            kv_head_idx = by
+            original_q_idx = bx
+            
+            q_start_idx = cu_seqlens_q[batch_idx]
+            k_start_idx = cu_seqlens_k[batch_idx]
+            q_end_idx = cu_seqlens_q[batch_idx + 1]
+            k_end_idx = cu_seqlens_k[batch_idx + 1]
+            
+            q_current_seqlen = q_end_idx - q_start_idx
+            k_current_seqlen = k_end_idx - k_start_idx
+            
+            cache_len = cache_lens[batch_idx]
+            
+            T.fill(topk_index_shared, -1)
+            T.fill(topk_value_shared, float("-inf"))
+            # Initialize full pool buffer once
+            T.fill(pool_max_shared, float("-inf"))
+            T.sync_threads()
+            
+            q_copy_end = T.min(q_start_idx * groups + (bx + 1) * block_M, q_end_idx * groups)
+            T.copy(
+                Q_unpad[q_start_idx * groups + bx * block_M:q_copy_end, kv_head_idx, :],
+                Q_shared)
+            for i, d in T.Parallel(block_M, dim):
+                if original_q_idx >= q_current_seqlen:
+                    Q_shared[i, d] = 0
+            
+            T.fill(logsum, 0)
+            T.fill(scores_max, -T.infinity(accum_dtype))
+            
+            loop_range_k = T.ceildiv(k_current_seqlen, block_N)
+            
+            # =================================================================
+            # PASS 1: Attention scan — compute scores_max and logsum
+            # (identical to original)
+            # =================================================================
+            for k in T.Pipelined(loop_range_k, num_stages=num_stages):
+                k_copy_end = T.min(k_start_idx + (k + 1) * block_N, k_end_idx)
+                T.copy(
+                    K_unpad[k_start_idx + k * block_N:k_copy_end,
+                            kv_head_idx, :], K_shared)
+                for i, d in T.Parallel(block_N, dim):
+                    if k * block_N + i >= k_current_seqlen:
+                        K_shared[i, d] = 0
+                
+                # Causal mask (identical to original)
+                for i, j in T.Parallel(block_M, block_N):
+                    k_idx = k * block_N + j
+                    
+                    boundary_mask = (original_q_idx >= q_current_seqlen) or (k_idx >= k_current_seqlen)
+                    
+                    row_idx = original_q_idx * block_M + i + cache_len * block_M
+                    orig_row_idx = row_idx // m_block_dim
+                    orig_seqlen_q = (q_current_seqlen * block_M) // m_block_dim
+                    
+                    stride = 16
+                    compressed_seqlen_q = (orig_seqlen_q - stride + 1) // stride
+                    offset_row_idx = T.max(0, (orig_row_idx + 1) // stride - 1 + k_current_seqlen - compressed_seqlen_q)
+                    
+                    q_compress_clamped = T.min(k_current_seqlen, offset_row_idx)
+                    
+                    causal_mask = k_idx > q_compress_clamped
+                    acc_s[i, j] = T.if_then_else(boundary_mask or causal_mask, -1e9, 0)
+                
+                T.gemm(Q_shared, K_shared, acc_s, transpose_B=True, policy=T.GemmWarpPolicy.FullRow)
+                
+                T.copy(scores_max, scores_max_prev)
+                T.fill(scores_max, -T.infinity(accum_dtype))
+                T.reduce_max(acc_s, scores_max, dim=1, clear=False)
+                for i in T.Parallel(block_M):
+                    scores_max[i] = T.max(scores_max[i], scores_max_prev[i])
+                
+                for i in T.Parallel(block_M):
+                    scores_scale[i] = T.exp2(scores_max_prev[i] * scale - scores_max[i] * scale)
+                
+                for i, j in T.Parallel(block_M, block_N):
+                    acc_s[i, j] = T.exp2(acc_s[i, j] * scale - scores_max[i] * scale)
+                
+                T.reduce_sum(acc_s, scores_sum, dim=1)
+                for i in T.Parallel(block_M):
+                    logsum[i] = logsum[i] * scores_scale[i] + scores_sum[i]
+            
+            # =================================================================
+            # CHANGE 2: PASS 2 — Single K-scan, scatter to full pool buffer
+            # Original: for p_block: for k: GEMM+scatter (nested)
+            # Optimized: for k: GEMM+scatter (flat, one pass)
+            # =================================================================
+            for k in T.serial(loop_range_k):
+                k_copy_end = T.min(k_start_idx + (k + 1) * block_N, k_end_idx)
+                T.copy(
+                    K_unpad[k_start_idx + k * block_N:k_copy_end,
+                            kv_head_idx, :], K_shared)
+                for i, d in T.Parallel(block_N, dim):
+                    if k * block_N + i >= k_current_seqlen:
+                        K_shared[i, d] = 0
+                
+                # Causal mask (identical to original)
+                for i, j in T.Parallel(block_M, block_N):
+                    k_idx = k * block_N + j
+                    
+                    boundary_mask = (original_q_idx >= q_current_seqlen) or (k_idx >= k_current_seqlen)
+                    
+                    row_idx = original_q_idx * block_M + i + cache_len * block_M
+                    orig_row_idx = row_idx // m_block_dim
+                    orig_seqlen_q = (q_current_seqlen * block_M) // m_block_dim
+                    
+                    stride = 16
+                    compressed_seqlen_q = (orig_seqlen_q - stride + 1) // stride
+                    offset_row_idx = T.max(0, (orig_row_idx + 1) // stride - 1 + k_current_seqlen - compressed_seqlen_q)
+                    
+                    q_compress_clamped = T.min(k_current_seqlen, offset_row_idx)
+                    
+                    causal_mask = k_idx > q_compress_clamped
+                    acc_s[i, j] = T.if_then_else(boundary_mask or causal_mask, -1e9, 0)
+                
+                T.gemm(Q_shared, K_shared, acc_s, transpose_B=True, policy=T.GemmWarpPolicy.FullRow)
+                
+                # Normalize
+                for i, j in T.Parallel(block_M, block_N):
+                    normalized = T.exp2(acc_s[i, j] * scale - scores_max[i] * scale) / logsum[i]
+                    acc_s[i, j] = T.if_then_else(
+                        (logsum[i] > 1e-10) and (normalized >= 0) and (normalized <= 1e10),
+                        normalized,
+                        T.Cast(accum_dtype, 0.0)
+                    )
+                
+                T.fill(acc_output, 0)
+                T.reduce_sum(acc_s, acc_output, dim=0)
+                
+                # Scatter to full pool buffer — no p_block filter
+                for j in T.Parallel(block_N):
+                    k_idx = k * block_N + j
+                    if original_q_idx < q_current_seqlen and k_idx < k_current_seqlen:
+                        start_pool = T.max(0, (k_idx - num_offs + 1 + pad_len + block_stride - 1) // block_stride)
+                        end_pool = T.min(pooled_k_len - 1, (k_idx + pad_len) // block_stride)
+                        
+                        for p_off in T.serial(num_offs):
+                            p_idx = start_pool + p_off
+                            if p_idx <= end_pool and p_idx < pooled_k_len:
+                                T.atomic_max(pool_max_shared[p_idx], acc_output[j])
+                T.sync_threads()
+            
+            # =================================================================
+            # PASS 3: TopK selection only — NO GEMM
+            # =================================================================
+            loop_range_pool = T.ceildiv(pooled_k_len, block_P)
+            
+            for p_block in T.serial(loop_range_pool):
+                # CHANGE 3: Read from global index pool_max_shared[p_idx]
+                for p_off in T.Parallel(block_P):
+                    p_idx = p_block * block_P + p_off
+                    if p_idx < pooled_k_len and original_q_idx < q_current_seqlen:
+                        off_bq = (original_q_idx + cache_len) // block_size
+                        off_bk = p_idx
+                        
+                        is_init_masked = (init_blocks > 0) and (off_bk < init_blocks)
+                        is_local_masked = (local_blocks > 0) and (off_bq >= off_bk) and (off_bq <= off_bk + local_blocks)
+                        is_masked = T.if_then_else(
+                            is_init_masked,
+                            1,
+                            T.if_then_else(is_local_masked, 1, 0)
+                        )
+                        
+                        write_pos = topk + p_off
+                        topk_index_shared[write_pos] = p_idx
+                        topk_value_shared[write_pos] = T.if_then_else(
+                            is_masked == 1,
+                            T.Cast("float32", float("inf")),
+                            pool_max_shared[p_idx]
+                        )
+                T.sync_threads()
+                
+                bitonic_sort(topk_index_shared, topk_value_shared)
+            
+            for i in T.Parallel(topk):
+                if original_q_idx < q_current_seqlen:
+                    global_q_idx = q_start_idx + original_q_idx
+                    TopkIndices[kv_head_idx, global_q_idx, i] = topk_index_shared[i]
+                    TopkValues[kv_head_idx, global_q_idx, i] = topk_value_shared[i]
+    
+    return main
+# dotv ################################################################################################
