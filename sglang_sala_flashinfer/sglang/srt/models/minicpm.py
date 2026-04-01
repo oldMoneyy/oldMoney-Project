@@ -630,13 +630,13 @@ class MiniCPMForCausalLM(nn.Module):
             for param_name, weight_name, shard_id in stacked_params_mapping:
                 if weight_name not in name:
                     continue
+                original_name = name
                 name = name.replace(weight_name, param_name)
                 if name.endswith(".bias") and name not in params_dict:
+                    name = original_name
                     continue
-                # Skip if param doesn't exist — handles qkv_proj vs qkvz_proj routing:
-                # lightning layers have qkvz_proj (skips qkv_proj match),
-                # minicpm4 layers have qkv_proj (skips qkvz_proj match)
                 if name not in params_dict:
+                    name = original_name
                     continue
                 param = params_dict[name]
                 weight_loader = getattr(param, "weight_loader", default_weight_loader)
