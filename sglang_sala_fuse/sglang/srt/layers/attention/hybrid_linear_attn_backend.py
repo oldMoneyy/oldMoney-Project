@@ -36,6 +36,7 @@ from sglang.srt.layers.attention.mamba.mamba2_metadata import (
 # Import Simple GLA from fla if available
 try:
     from fla.ops.simple_gla import chunk_simple_gla
+    from fla.ops.simple_gla import fused_chunk_simple_gla
     from fla.ops.simple_gla.fused_recurrent import fused_recurrent_simple_gla
     SIMPLE_GLA_AVAILABLE = True
 except ImportError:
@@ -1599,7 +1600,7 @@ class SimpleGLAAttnBackend(MambaAttnBackendBase):
                 cu_seqlens=self.forward_metadata.query_start_loc,
             )
         else:
-            o, final_state = chunk_simple_gla(
+            o, final_state = fused_chunk_simple_gla(
                 q=q,
                 k=k,
                 v=v,
