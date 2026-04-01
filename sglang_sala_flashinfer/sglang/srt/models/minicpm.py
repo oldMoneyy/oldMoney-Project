@@ -29,7 +29,7 @@ from sglang.srt.layers.attention.minicpm_sparse_utils import (
     SparseMetadata,
     SparseMetadataBuilder,
 )
-from sglang.srt.layers.fused_kernels import fused_scaled_add, fused_sigmoid_mul
+from sglang.srt.layers.fused_kernels import fused_scaled_add
 from sglang.srt.layers.layernorm import RMSNorm
 from sglang.srt.layers.linear import (
     ColumnParallelLinear,
@@ -192,7 +192,7 @@ class MiniCPMAttention(nn.Module):
         attn_output = self.attn(q, k, v, forward_batch)
 
         if self.use_output_gate:
-            attn_output = fused_sigmoid_mul(attn_output, o_gate_output)
+            attn_output = attn_output * F.sigmoid(o_gate_output)
 
         output, _ = self.o_proj(attn_output)
         return output
@@ -365,7 +365,7 @@ class MiniCPMLightningMixer(nn.Module):
             o = self.o_norm(o)
 
         if self.use_output_gate:
-            o = fused_sigmoid_mul(o, z)
+            o = o * F.sigmoid(z)
 
         y, _ = self.o_proj(o)
         return y
