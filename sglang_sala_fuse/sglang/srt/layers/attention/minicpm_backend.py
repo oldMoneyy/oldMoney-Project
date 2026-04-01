@@ -1316,7 +1316,7 @@ class MiniCPMSparseBackend(AttentionBackend):
                 torch.cuda.synchronize()
                 t3 = time.perf_counter()
 
-            sparse_page_table_sparse_bs = sparse_kernel_extension.get_block_table_v2(
+            sparse_page_table_sparse_bs = sparse_kernel_extension.get_block_table_v3(
                 topk_idx, page_table, metadata.token_to_bs,
                 metadata.token_pos_in_bs, metadata.seqlen_k_sparse_bs_tensor,
                 self.sparse_topk
