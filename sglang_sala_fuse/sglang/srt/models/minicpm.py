@@ -326,17 +326,19 @@ class MiniCPMLightningMixer(nn.Module):
         q, k, v = qkv.split([self.q_size, self.kv_size, self.kv_size], dim=-1)
 
         if self.qk_norm:
-            q = q.reshape(-1, self.head_dim)
-            k = k.reshape(-1, self.head_dim)
+            num_tokens = q.shape[0] // (self.num_heads * self.head_dim) * self.head_dim
+            # Reshape to 2D for separate norms, or 3D for fused kernel
             if self._use_fused_qknorm:
+                q = q.reshape(-1, self.num_heads, self.head_dim)
+                k = k.reshape(-1, self.num_kv_heads, self.head_dim)
                 fused_inplace_qknorm(
                     q, k,
                     self.q_norm.weight, self.k_norm.weight,
                     eps=self.rms_norm_eps, head_dim=self.head_dim,
                 )
             else:
-                q = self.q_norm(q)
-                k = self.k_norm(k)
+                q = self.q_norm(q.reshape(-1, self.head_dim))
+                k = self.k_norm(k.reshape(-1, self.head_dim))
 
         if self.use_rope:
             q = q.reshape(-1, self.num_heads * self.head_dim)
