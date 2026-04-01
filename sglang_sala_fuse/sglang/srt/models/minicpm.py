@@ -33,7 +33,6 @@ from sglang.srt.layers.attention.minicpm_sparse_utils import (
     SparseMetadataBuilder,
 )
 from sglang.srt.layers.fused_kernels import fused_scaled_add
-from sglang.jit_kernel.norm import can_use_fused_inplace_qknorm, fused_inplace_qknorm
 from sglang.srt.layers.layernorm import RMSNorm
 from sglang.srt.layers.linear import (
     ColumnParallelLinear,
@@ -300,9 +299,6 @@ class MiniCPMLightningMixer(nn.Module):
         if self.qk_norm:
             self.q_norm = RMSNorm(self.head_dim, eps=self.rms_norm_eps)
             self.k_norm = RMSNorm(self.head_dim, eps=self.rms_norm_eps)
-            self._use_fused_qknorm = can_use_fused_inplace_qknorm(
-                self.head_dim, torch.bfloat16
-            )
 
         if self.use_rope:
             self.rotary_emb = get_rope(
@@ -326,19 +322,8 @@ class MiniCPMLightningMixer(nn.Module):
         q, k, v = qkv.split([self.q_size, self.kv_size, self.kv_size], dim=-1)
 
         if self.qk_norm:
-            num_tokens = q.shape[0] // (self.num_heads * self.head_dim) * self.head_dim
-            # Reshape to 2D for separate norms, or 3D for fused kernel
-            if self._use_fused_qknorm:
-                q = q.reshape(-1, self.num_heads, self.head_dim)
-                k = k.reshape(-1, self.num_kv_heads, self.head_dim)
-                fused_inplace_qknorm(
-                    q, k,
-                    self.q_norm.weight, self.k_norm.weight,
-                    eps=self.rms_norm_eps, head_dim=self.head_dim,
-                )
-            else:
-                q = self.q_norm(q.reshape(-1, self.head_dim))
-                k = self.k_norm(k.reshape(-1, self.head_dim))
+            q = self.q_norm(q.reshape(-1, self.head_dim))
+            k = self.k_norm(k.reshape(-1, self.head_dim))
 
         if self.use_rope:
             q = q.reshape(-1, self.num_heads * self.head_dim)
