@@ -1,0 +1,909 @@
+[2026-04-01 09:02:40] INFO:     127.0.0.1:42084 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[2026-04-01 09:02:40] Prefill batch, #new-seq: 1, #new-token: 8192, #cached-token: 0, full token usage: 0.00, mamba usage: 0.00, #running-req: 0, #queue-req: 0, 
+    [get_topk L0] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=3.2ms TOTAL=3.5ms
+  [forward_extend L0] kv_save=0.1ms topk=3.7ms block_table=3.0ms page_setup=1.6ms flash_attn=69.3ms post=0.0ms TOTAL=77.8ms
+    [get_topk L9] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=3.2ms TOTAL=3.6ms
+  [forward_extend L9] kv_save=0.2ms topk=4.0ms block_table=3.2ms page_setup=1.6ms flash_attn=6.5ms post=0.0ms TOTAL=15.6ms
+    [get_topk L16] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=3.3ms TOTAL=3.7ms
+  [forward_extend L16] kv_save=0.3ms topk=4.1ms block_table=3.5ms page_setup=1.6ms flash_attn=6.5ms post=0.0ms TOTAL=16.0ms
+    [get_topk L17] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=3.3ms TOTAL=3.7ms
+  [forward_extend L17] kv_save=0.3ms topk=4.1ms block_table=3.4ms page_setup=1.7ms flash_attn=6.5ms post=0.0ms TOTAL=16.0ms
+    [get_topk L22] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=3.3ms TOTAL=3.7ms
+  [forward_extend L22] kv_save=0.2ms topk=4.0ms block_table=3.5ms page_setup=1.6ms flash_attn=6.4ms post=0.0ms TOTAL=15.9ms
+    [get_topk L29] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=3.2ms TOTAL=3.5ms
+  [forward_extend L29] kv_save=0.1ms topk=3.7ms block_table=3.1ms page_setup=1.6ms flash_attn=6.5ms post=0.0ms TOTAL=15.0ms
+    [get_topk L30] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=3.2ms TOTAL=3.5ms
+  [forward_extend L30] kv_save=0.1ms topk=3.6ms block_table=3.0ms page_setup=1.6ms flash_attn=6.4ms post=0.0ms TOTAL=14.8ms
+    [get_topk L31] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=3.2ms TOTAL=3.4ms
+  [forward_extend L31] kv_save=0.1ms topk=3.6ms block_table=3.0ms page_setup=1.6ms flash_attn=6.2ms post=0.0ms TOTAL=14.5ms
+[2026-04-01 09:02:41] Prefill batch, #new-seq: 1, #new-token: 8192, #cached-token: 0, full token usage: 0.00, mamba usage: 0.03, #running-req: 0, #queue-req: 0, 
+    [get_topk L0] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=3.7ms TOTAL=3.9ms
+  [forward_extend L0] kv_save=0.1ms topk=4.2ms block_table=3.0ms page_setup=1.6ms flash_attn=67.3ms post=0.0ms TOTAL=76.2ms
+    [get_topk L9] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=3.7ms TOTAL=4.0ms
+  [forward_extend L9] kv_save=0.1ms topk=4.2ms block_table=3.1ms page_setup=1.6ms flash_attn=9.5ms post=0.0ms TOTAL=18.5ms
+    [get_topk L16] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=3.8ms TOTAL=4.1ms
+  [forward_extend L16] kv_save=0.1ms topk=4.3ms block_table=3.5ms page_setup=1.6ms flash_attn=9.8ms post=0.1ms TOTAL=19.4ms
+    [get_topk L17] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=3.8ms TOTAL=4.2ms
+  [forward_extend L17] kv_save=0.3ms topk=4.6ms block_table=4.7ms page_setup=1.6ms flash_attn=9.5ms post=0.1ms TOTAL=20.8ms
+    [get_topk L22] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=3.8ms TOTAL=4.2ms
+  [forward_extend L22] kv_save=0.2ms topk=4.6ms block_table=3.2ms page_setup=1.6ms flash_attn=9.6ms post=0.0ms TOTAL=19.2ms
+    [get_topk L29] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=3.8ms TOTAL=4.2ms
+  [forward_extend L29] kv_save=0.2ms topk=4.6ms block_table=3.3ms page_setup=1.6ms flash_attn=9.4ms post=0.0ms TOTAL=19.2ms
+    [get_topk L30] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=3.8ms TOTAL=4.2ms
+  [forward_extend L30] kv_save=0.2ms topk=4.6ms block_table=3.3ms page_setup=1.6ms flash_attn=9.5ms post=0.0ms TOTAL=19.3ms
+    [get_topk L31] alloc_fill=0.1ms compress_k=0.4ms attn+pool+topk=3.8ms TOTAL=4.3ms
+  [forward_extend L31] kv_save=0.4ms topk=4.7ms block_table=3.2ms page_setup=1.6ms flash_attn=9.2ms post=0.0ms TOTAL=19.1ms
+[2026-04-01 09:02:42] Prefill batch, #new-seq: 1, #new-token: 8192, #cached-token: 0, full token usage: 0.00, mamba usage: 0.03, #running-req: 0, #queue-req: 0, 
+    [get_topk L0] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=4.1ms TOTAL=4.4ms
+  [forward_extend L0] kv_save=0.1ms topk=4.6ms block_table=3.1ms page_setup=1.6ms flash_attn=8.9ms post=0.0ms TOTAL=18.3ms
+    [get_topk L9] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=4.2ms TOTAL=4.4ms
+  [forward_extend L9] kv_save=0.1ms topk=4.6ms block_table=3.0ms page_setup=1.6ms flash_attn=9.6ms post=0.0ms TOTAL=18.9ms
+    [get_topk L16] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=4.2ms TOTAL=4.4ms
+  [forward_extend L16] kv_save=0.1ms topk=4.6ms block_table=3.0ms page_setup=1.6ms flash_attn=9.7ms post=0.0ms TOTAL=18.9ms
+    [get_topk L17] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=4.2ms TOTAL=4.4ms
+  [forward_extend L17] kv_save=0.1ms topk=4.6ms block_table=3.0ms page_setup=1.6ms flash_attn=9.5ms post=0.0ms TOTAL=18.8ms
+    [get_topk L22] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=4.2ms TOTAL=4.4ms
+  [forward_extend L22] kv_save=0.1ms topk=4.6ms block_table=3.0ms page_setup=1.6ms flash_attn=9.7ms post=0.0ms TOTAL=19.0ms
+    [get_topk L29] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=4.4ms TOTAL=4.7ms
+  [forward_extend L29] kv_save=0.1ms topk=4.9ms block_table=3.1ms page_setup=1.6ms flash_attn=9.7ms post=0.0ms TOTAL=19.4ms
+    [get_topk L30] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=4.2ms TOTAL=4.6ms
+  [forward_extend L30] kv_save=0.1ms topk=4.9ms block_table=3.1ms page_setup=1.6ms flash_attn=9.7ms post=0.1ms TOTAL=19.5ms
+    [get_topk L31] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=4.2ms TOTAL=4.6ms
+  [forward_extend L31] kv_save=0.2ms topk=4.9ms block_table=3.2ms page_setup=1.6ms flash_attn=9.3ms post=0.0ms TOTAL=19.3ms
+[2026-04-01 09:02:43] Prefill batch, #new-seq: 1, #new-token: 8192, #cached-token: 0, full token usage: 0.00, mamba usage: 0.03, #running-req: 0, #queue-req: 0, 
+    [get_topk L0] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=4.6ms TOTAL=4.8ms
+  [forward_extend L0] kv_save=0.1ms topk=5.1ms block_table=3.2ms page_setup=1.6ms flash_attn=9.0ms post=0.0ms TOTAL=19.1ms
+    [get_topk L9] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=4.7ms TOTAL=5.0ms
+  [forward_extend L9] kv_save=0.2ms topk=5.4ms block_table=3.1ms page_setup=1.6ms flash_attn=9.4ms post=0.0ms TOTAL=19.8ms
+    [get_topk L16] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=4.7ms TOTAL=4.9ms
+  [forward_extend L16] kv_save=0.1ms topk=5.2ms block_table=3.0ms page_setup=1.6ms flash_attn=9.6ms post=0.0ms TOTAL=19.5ms
+    [get_topk L17] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=4.6ms TOTAL=4.8ms
+  [forward_extend L17] kv_save=0.1ms topk=5.0ms block_table=3.0ms page_setup=1.6ms flash_attn=9.3ms post=0.0ms TOTAL=18.9ms
+    [get_topk L22] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=4.6ms TOTAL=4.8ms
+  [forward_extend L22] kv_save=0.1ms topk=5.0ms block_table=3.0ms page_setup=1.6ms flash_attn=9.7ms post=0.0ms TOTAL=19.4ms
+    [get_topk L29] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=4.6ms TOTAL=4.8ms
+  [forward_extend L29] kv_save=0.1ms topk=5.0ms block_table=3.0ms page_setup=1.6ms flash_attn=9.6ms post=0.0ms TOTAL=19.4ms
+    [get_topk L30] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=4.6ms TOTAL=4.8ms
+  [forward_extend L30] kv_save=0.1ms topk=5.0ms block_table=3.1ms page_setup=1.6ms flash_attn=9.4ms post=0.0ms TOTAL=19.2ms
+    [get_topk L31] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=4.6ms TOTAL=4.8ms
+  [forward_extend L31] kv_save=0.1ms topk=5.0ms block_table=3.1ms page_setup=1.6ms flash_attn=9.4ms post=0.0ms TOTAL=19.1ms
+[2026-04-01 09:02:43] Prefill batch, #new-seq: 1, #new-token: 8192, #cached-token: 0, full token usage: 0.00, mamba usage: 0.03, #running-req: 0, #queue-req: 0, 
+    [get_topk L0] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=5.0ms TOTAL=5.3ms
+  [forward_extend L0] kv_save=0.1ms topk=5.5ms block_table=3.1ms page_setup=1.6ms flash_attn=9.1ms post=0.0ms TOTAL=19.4ms
+    [get_topk L9] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=5.1ms TOTAL=5.4ms
+  [forward_extend L9] kv_save=0.1ms topk=5.6ms block_table=3.0ms page_setup=1.6ms flash_attn=9.6ms post=0.0ms TOTAL=19.9ms
+    [get_topk L16] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=5.1ms TOTAL=5.3ms
+  [forward_extend L16] kv_save=0.1ms topk=5.5ms block_table=3.0ms page_setup=1.6ms flash_attn=9.7ms post=0.0ms TOTAL=19.9ms
+    [get_topk L17] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=5.1ms TOTAL=5.3ms
+  [forward_extend L17] kv_save=0.1ms topk=5.5ms block_table=3.0ms page_setup=1.6ms flash_attn=9.4ms post=0.0ms TOTAL=19.6ms
+    [get_topk L22] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=5.1ms TOTAL=5.3ms
+  [forward_extend L22] kv_save=0.1ms topk=5.5ms block_table=3.2ms page_setup=1.6ms flash_attn=9.9ms post=0.0ms TOTAL=20.2ms
+    [get_topk L29] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=5.2ms TOTAL=5.5ms
+  [forward_extend L29] kv_save=0.2ms topk=5.8ms block_table=3.1ms page_setup=1.6ms flash_attn=9.7ms post=0.0ms TOTAL=20.5ms
+    [get_topk L30] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=5.1ms TOTAL=5.5ms
+  [forward_extend L30] kv_save=0.2ms topk=5.8ms block_table=3.1ms page_setup=1.6ms flash_attn=9.6ms post=0.0ms TOTAL=20.3ms
+    [get_topk L31] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=5.1ms TOTAL=5.5ms
+  [forward_extend L31] kv_save=0.2ms topk=5.8ms block_table=3.1ms page_setup=1.6ms flash_attn=9.3ms post=0.0ms TOTAL=20.0ms
+[2026-04-01 09:02:44] Prefill batch, #new-seq: 1, #new-token: 8192, #cached-token: 0, full token usage: 0.01, mamba usage: 0.03, #running-req: 0, #queue-req: 0, 
+    [get_topk L0] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=5.5ms TOTAL=5.8ms
+  [forward_extend L0] kv_save=0.1ms topk=6.0ms block_table=3.1ms page_setup=1.6ms flash_attn=9.0ms post=0.0ms TOTAL=19.8ms
+    [get_topk L9] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=5.6ms TOTAL=5.8ms
+  [forward_extend L9] kv_save=0.1ms topk=6.1ms block_table=3.1ms page_setup=1.6ms flash_attn=9.6ms post=0.0ms TOTAL=20.5ms
+    [get_topk L16] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=5.6ms TOTAL=5.8ms
+  [forward_extend L16] kv_save=0.1ms topk=6.1ms block_table=3.2ms page_setup=1.6ms flash_attn=9.7ms post=0.0ms TOTAL=20.7ms
+    [get_topk L17] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=5.6ms TOTAL=5.9ms
+  [forward_extend L17] kv_save=0.2ms topk=6.2ms block_table=3.3ms page_setup=1.6ms flash_attn=9.6ms post=0.0ms TOTAL=21.0ms
+    [get_topk L22] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=5.6ms TOTAL=5.9ms
+  [forward_extend L22] kv_save=0.2ms topk=6.2ms block_table=3.1ms page_setup=1.6ms flash_attn=9.8ms post=0.0ms TOTAL=21.0ms
+    [get_topk L29] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=5.6ms TOTAL=5.9ms
+  [forward_extend L29] kv_save=0.2ms topk=6.3ms block_table=3.2ms page_setup=1.6ms flash_attn=9.7ms post=0.0ms TOTAL=21.1ms
+    [get_topk L30] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=5.6ms TOTAL=5.9ms
+  [forward_extend L30] kv_save=0.2ms topk=6.2ms block_table=3.1ms page_setup=1.6ms flash_attn=9.5ms post=0.0ms TOTAL=20.6ms
+    [get_topk L31] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=5.6ms TOTAL=5.9ms
+  [forward_extend L31] kv_save=0.1ms topk=6.3ms block_table=3.3ms page_setup=1.6ms flash_attn=9.2ms post=0.0ms TOTAL=20.6ms
+[2026-04-01 09:02:45] Prefill batch, #new-seq: 1, #new-token: 8192, #cached-token: 0, full token usage: 0.01, mamba usage: 0.03, #running-req: 0, #queue-req: 0, 
+    [get_topk L0] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=5.9ms TOTAL=6.2ms
+  [forward_extend L0] kv_save=0.1ms topk=6.5ms block_table=3.3ms page_setup=1.6ms flash_attn=9.1ms post=0.0ms TOTAL=20.7ms
+    [get_topk L9] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=6.1ms TOTAL=6.4ms
+  [forward_extend L9] kv_save=0.2ms topk=6.8ms block_table=3.1ms page_setup=1.6ms flash_attn=9.5ms post=0.0ms TOTAL=21.3ms
+    [get_topk L16] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=6.0ms TOTAL=6.3ms
+  [forward_extend L16] kv_save=0.1ms topk=6.6ms block_table=3.0ms page_setup=1.6ms flash_attn=9.7ms post=0.0ms TOTAL=21.0ms
+    [get_topk L17] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=6.0ms TOTAL=6.4ms
+  [forward_extend L17] kv_save=0.1ms topk=6.6ms block_table=3.1ms page_setup=1.6ms flash_attn=9.5ms post=0.0ms TOTAL=20.8ms
+    [get_topk L22] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=6.0ms TOTAL=6.3ms
+  [forward_extend L22] kv_save=0.1ms topk=6.5ms block_table=3.1ms page_setup=1.6ms flash_attn=9.9ms post=0.0ms TOTAL=21.2ms
+    [get_topk L29] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=6.1ms TOTAL=6.3ms
+  [forward_extend L29] kv_save=0.1ms topk=6.5ms block_table=3.1ms page_setup=1.6ms flash_attn=9.7ms post=0.0ms TOTAL=21.0ms
+    [get_topk L30] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=6.0ms TOTAL=6.2ms
+  [forward_extend L30] kv_save=0.1ms topk=6.4ms block_table=3.0ms page_setup=1.6ms flash_attn=9.5ms post=0.0ms TOTAL=20.6ms
+    [get_topk L31] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=6.0ms TOTAL=6.2ms
+  [forward_extend L31] kv_save=0.1ms topk=6.4ms block_table=3.0ms page_setup=1.6ms flash_attn=9.3ms post=0.0ms TOTAL=20.3ms
+[2026-04-01 09:02:45] Prefill batch, #new-seq: 1, #new-token: 8192, #cached-token: 0, full token usage: 0.01, mamba usage: 0.03, #running-req: 0, #queue-req: 0, 
+    [get_topk L0] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=6.3ms TOTAL=6.6ms
+  [forward_extend L0] kv_save=0.1ms topk=6.8ms block_table=3.0ms page_setup=1.6ms flash_attn=9.1ms post=0.0ms TOTAL=20.7ms
+    [get_topk L9] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=6.5ms TOTAL=6.9ms
+  [forward_extend L9] kv_save=0.1ms topk=7.2ms block_table=3.3ms page_setup=1.6ms flash_attn=9.7ms post=0.0ms TOTAL=22.0ms
+    [get_topk L16] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=6.5ms TOTAL=6.9ms
+  [forward_extend L16] kv_save=0.2ms topk=7.2ms block_table=3.2ms page_setup=1.6ms flash_attn=9.7ms post=0.0ms TOTAL=21.9ms
+    [get_topk L17] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=6.5ms TOTAL=6.8ms
+  [forward_extend L17] kv_save=0.2ms topk=7.2ms block_table=3.2ms page_setup=1.6ms flash_attn=9.4ms post=0.0ms TOTAL=21.7ms
+    [get_topk L22] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=6.5ms TOTAL=6.8ms
+  [forward_extend L22] kv_save=0.1ms topk=7.1ms block_table=3.1ms page_setup=1.6ms flash_attn=9.8ms post=0.0ms TOTAL=21.8ms
+    [get_topk L29] alloc_fill=0.1ms compress_k=0.4ms attn+pool+topk=6.6ms TOTAL=7.1ms
+  [forward_extend L29] kv_save=0.3ms topk=7.4ms block_table=3.1ms page_setup=1.6ms flash_attn=9.7ms post=0.0ms TOTAL=22.1ms
+    [get_topk L30] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=6.5ms TOTAL=6.7ms
+  [forward_extend L30] kv_save=0.1ms topk=6.9ms block_table=3.1ms page_setup=1.6ms flash_attn=9.6ms post=0.0ms TOTAL=21.4ms
+    [get_topk L31] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=6.5ms TOTAL=6.8ms
+  [forward_extend L31] kv_save=0.3ms topk=7.2ms block_table=3.2ms page_setup=1.6ms flash_attn=9.3ms post=0.0ms TOTAL=21.6ms
+[2026-04-01 09:02:46] Prefill batch, #new-seq: 1, #new-token: 8192, #cached-token: 0, full token usage: 0.01, mamba usage: 0.03, #running-req: 0, #queue-req: 0, 
+    [get_topk L0] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=6.8ms TOTAL=7.1ms
+  [forward_extend L0] kv_save=0.1ms topk=7.3ms block_table=3.2ms page_setup=1.6ms flash_attn=9.1ms post=0.0ms TOTAL=21.4ms
+    [get_topk L9] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=7.0ms TOTAL=7.3ms
+  [forward_extend L9] kv_save=0.3ms topk=7.7ms block_table=3.1ms page_setup=1.6ms flash_attn=9.5ms post=0.0ms TOTAL=22.2ms
+    [get_topk L16] alloc_fill=0.1ms compress_k=0.4ms attn+pool+topk=7.0ms TOTAL=7.5ms
+  [forward_extend L16] kv_save=0.2ms topk=7.8ms block_table=3.3ms page_setup=1.6ms flash_attn=9.7ms post=0.0ms TOTAL=22.7ms
+    [get_topk L17] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=7.0ms TOTAL=7.4ms
+  [forward_extend L17] kv_save=0.3ms topk=7.8ms block_table=3.2ms page_setup=1.6ms flash_attn=9.4ms post=0.0ms TOTAL=22.3ms
+    [get_topk L22] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=7.0ms TOTAL=7.3ms
+  [forward_extend L22] kv_save=0.1ms topk=7.6ms block_table=3.1ms page_setup=1.6ms flash_attn=9.9ms post=0.0ms TOTAL=22.3ms
+    [get_topk L29] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=7.0ms TOTAL=7.4ms
+  [forward_extend L29] kv_save=0.1ms topk=7.6ms block_table=3.1ms page_setup=1.6ms flash_attn=9.7ms post=0.0ms TOTAL=22.2ms
+    [get_topk L30] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=6.9ms TOTAL=7.1ms
+  [forward_extend L30] kv_save=0.1ms topk=7.3ms block_table=3.0ms page_setup=1.6ms flash_attn=9.5ms post=0.0ms TOTAL=21.5ms
+    [get_topk L31] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=6.9ms TOTAL=7.1ms
+  [forward_extend L31] kv_save=0.1ms topk=7.3ms block_table=3.0ms page_setup=1.6ms flash_attn=9.3ms post=0.0ms TOTAL=21.3ms
+[2026-04-01 09:02:47] Prefill batch, #new-seq: 1, #new-token: 8192, #cached-token: 0, full token usage: 0.01, mamba usage: 0.03, #running-req: 0, #queue-req: 0, 
+    [get_topk L0] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=7.2ms TOTAL=7.5ms
+  [forward_extend L0] kv_save=0.1ms topk=7.7ms block_table=3.0ms page_setup=1.6ms flash_attn=9.2ms post=0.0ms TOTAL=21.6ms
+    [get_topk L9] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=7.4ms TOTAL=7.6ms
+  [forward_extend L9] kv_save=0.1ms topk=7.9ms block_table=3.1ms page_setup=1.6ms flash_attn=9.7ms post=0.0ms TOTAL=22.4ms
+    [get_topk L16] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=7.4ms TOTAL=7.7ms
+  [forward_extend L16] kv_save=0.1ms topk=7.8ms block_table=3.0ms page_setup=1.6ms flash_attn=9.8ms post=0.0ms TOTAL=22.3ms
+    [get_topk L17] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=7.4ms TOTAL=7.6ms
+  [forward_extend L17] kv_save=0.1ms topk=7.8ms block_table=3.0ms page_setup=1.6ms flash_attn=9.6ms post=0.0ms TOTAL=22.1ms
+    [get_topk L22] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=7.4ms TOTAL=7.6ms
+  [forward_extend L22] kv_save=0.1ms topk=7.8ms block_table=3.1ms page_setup=1.6ms flash_attn=9.8ms post=0.0ms TOTAL=22.4ms
+    [get_topk L29] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=7.4ms TOTAL=7.7ms
+  [forward_extend L29] kv_save=0.1ms topk=7.9ms block_table=3.3ms page_setup=1.6ms flash_attn=9.8ms post=0.0ms TOTAL=22.8ms
+    [get_topk L30] alloc_fill=0.1ms compress_k=0.4ms attn+pool+topk=7.5ms TOTAL=8.0ms
+  [forward_extend L30] kv_save=0.3ms topk=8.4ms block_table=4.3ms page_setup=1.6ms flash_attn=9.6ms post=0.0ms TOTAL=24.3ms
+    [get_topk L31] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=7.3ms TOTAL=7.6ms
+  [forward_extend L31] kv_save=0.1ms topk=7.8ms block_table=3.0ms page_setup=1.6ms flash_attn=9.2ms post=0.0ms TOTAL=21.7ms
+[2026-04-01 09:02:48] Prefill batch, #new-seq: 1, #new-token: 8192, #cached-token: 0, full token usage: 0.01, mamba usage: 0.03, #running-req: 0, #queue-req: 0, 
+    [get_topk L0] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=7.6ms TOTAL=7.9ms
+  [forward_extend L0] kv_save=0.1ms topk=8.1ms block_table=3.0ms page_setup=1.6ms flash_attn=9.0ms post=0.0ms TOTAL=21.9ms
+    [get_topk L9] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=7.8ms TOTAL=8.1ms
+  [forward_extend L9] kv_save=0.1ms topk=8.3ms block_table=3.0ms page_setup=1.6ms flash_attn=9.6ms post=0.0ms TOTAL=22.5ms
+    [get_topk L16] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=7.9ms TOTAL=8.3ms
+  [forward_extend L16] kv_save=0.2ms topk=8.7ms block_table=3.2ms page_setup=1.6ms flash_attn=9.9ms post=0.0ms TOTAL=23.6ms
+    [get_topk L17] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=7.9ms TOTAL=8.3ms
+  [forward_extend L17] kv_save=0.2ms topk=8.6ms block_table=3.2ms page_setup=1.6ms flash_attn=9.6ms post=0.0ms TOTAL=23.2ms
+    [get_topk L22] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=7.9ms TOTAL=8.1ms
+  [forward_extend L22] kv_save=0.1ms topk=8.4ms block_table=3.0ms page_setup=1.6ms flash_attn=9.9ms post=0.0ms TOTAL=22.9ms
+    [get_topk L29] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=7.9ms TOTAL=8.1ms
+  [forward_extend L29] kv_save=0.1ms topk=8.3ms block_table=3.0ms page_setup=1.6ms flash_attn=9.7ms post=0.0ms TOTAL=22.7ms
+    [get_topk L30] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=7.9ms TOTAL=8.1ms
+  [forward_extend L30] kv_save=0.1ms topk=8.3ms block_table=3.0ms page_setup=1.6ms flash_attn=9.5ms post=0.0ms TOTAL=22.4ms
+    [get_topk L31] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=7.8ms TOTAL=8.0ms
+  [forward_extend L31] kv_save=0.1ms topk=8.2ms block_table=3.0ms page_setup=1.6ms flash_attn=9.4ms post=0.0ms TOTAL=22.3ms
+[2026-04-01 09:02:48] Prefill batch, #new-seq: 1, #new-token: 8192, #cached-token: 0, full token usage: 0.01, mamba usage: 0.03, #running-req: 0, #queue-req: 0, 
+    [get_topk L0] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=8.1ms TOTAL=8.4ms
+  [forward_extend L0] kv_save=0.1ms topk=8.6ms block_table=3.1ms page_setup=1.6ms flash_attn=9.2ms post=0.0ms TOTAL=22.6ms
+    [get_topk L9] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=8.4ms TOTAL=8.7ms
+  [forward_extend L9] kv_save=0.1ms topk=8.9ms block_table=3.4ms page_setup=1.6ms flash_attn=9.7ms post=0.0ms TOTAL=23.7ms
+    [get_topk L16] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=8.4ms TOTAL=8.8ms
+  [forward_extend L16] kv_save=0.2ms topk=9.1ms block_table=3.3ms page_setup=1.7ms flash_attn=9.8ms post=0.0ms TOTAL=24.2ms
+    [get_topk L17] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=8.3ms TOTAL=8.7ms
+  [forward_extend L17] kv_save=0.2ms topk=9.1ms block_table=3.3ms page_setup=1.6ms flash_attn=9.6ms post=0.0ms TOTAL=23.8ms
+    [get_topk L22] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=8.4ms TOTAL=8.7ms
+  [forward_extend L22] kv_save=0.2ms topk=9.1ms block_table=3.3ms page_setup=1.6ms flash_attn=9.8ms post=0.0ms TOTAL=24.1ms
+    [get_topk L29] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=8.4ms TOTAL=8.6ms
+  [forward_extend L29] kv_save=0.1ms topk=8.9ms block_table=3.1ms page_setup=1.6ms flash_attn=9.8ms post=0.0ms TOTAL=23.4ms
+    [get_topk L30] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=8.3ms TOTAL=8.5ms
+  [forward_extend L30] kv_save=0.1ms topk=8.7ms block_table=3.1ms page_setup=1.6ms flash_attn=9.5ms post=0.0ms TOTAL=23.0ms
+    [get_topk L31] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=8.2ms TOTAL=8.4ms
+  [forward_extend L31] kv_save=0.1ms topk=8.6ms block_table=3.0ms page_setup=1.6ms flash_attn=9.4ms post=0.0ms TOTAL=22.7ms
+[2026-04-01 09:02:49] Prefill batch, #new-seq: 1, #new-token: 8192, #cached-token: 0, full token usage: 0.01, mamba usage: 0.03, #running-req: 0, #queue-req: 0, 
+    [get_topk L0] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=8.6ms TOTAL=8.9ms
+  [forward_extend L0] kv_save=0.1ms topk=9.2ms block_table=3.1ms page_setup=1.6ms flash_attn=9.3ms post=0.0ms TOTAL=23.2ms
+    [get_topk L9] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=8.8ms TOTAL=9.1ms
+  [forward_extend L9] kv_save=0.1ms topk=9.3ms block_table=3.0ms page_setup=1.6ms flash_attn=9.7ms post=0.0ms TOTAL=23.7ms
+    [get_topk L16] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=8.8ms TOTAL=9.0ms
+  [forward_extend L16] kv_save=0.1ms topk=9.2ms block_table=3.0ms page_setup=1.6ms flash_attn=9.8ms post=0.0ms TOTAL=23.6ms
+    [get_topk L17] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=8.8ms TOTAL=9.0ms
+  [forward_extend L17] kv_save=0.1ms topk=9.2ms block_table=3.4ms page_setup=1.6ms flash_attn=9.5ms post=0.0ms TOTAL=23.9ms
+    [get_topk L22] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=8.8ms TOTAL=9.2ms
+  [forward_extend L22] kv_save=0.2ms topk=9.5ms block_table=3.3ms page_setup=1.6ms flash_attn=9.9ms post=0.0ms TOTAL=24.5ms
+    [get_topk L29] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=8.8ms TOTAL=9.1ms
+  [forward_extend L29] kv_save=0.1ms topk=9.3ms block_table=3.0ms page_setup=1.6ms flash_attn=9.7ms post=0.0ms TOTAL=23.7ms
+    [get_topk L30] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=8.8ms TOTAL=9.0ms
+  [forward_extend L30] kv_save=0.1ms topk=9.2ms block_table=3.0ms page_setup=1.6ms flash_attn=9.5ms post=0.0ms TOTAL=23.3ms
+    [get_topk L31] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=8.7ms TOTAL=8.9ms
+  [forward_extend L31] kv_save=0.1ms topk=9.1ms block_table=3.1ms page_setup=1.6ms flash_attn=9.4ms post=0.0ms TOTAL=23.3ms
+[2026-04-01 09:02:50] Prefill batch, #new-seq: 1, #new-token: 8192, #cached-token: 0, full token usage: 0.02, mamba usage: 0.03, #running-req: 0, #queue-req: 0, 
+    [get_topk L0] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=9.1ms TOTAL=9.4ms
+  [forward_extend L0] kv_save=0.1ms topk=9.6ms block_table=4.5ms page_setup=1.6ms flash_attn=9.1ms post=0.0ms TOTAL=25.0ms
+    [get_topk L9] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=9.3ms TOTAL=9.5ms
+  [forward_extend L9] kv_save=0.1ms topk=9.7ms block_table=3.0ms page_setup=1.6ms flash_attn=9.6ms post=0.0ms TOTAL=24.0ms
+    [get_topk L16] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=9.3ms TOTAL=9.5ms
+  [forward_extend L16] kv_save=0.1ms topk=9.7ms block_table=3.0ms page_setup=1.6ms flash_attn=9.9ms post=0.0ms TOTAL=24.3ms
+    [get_topk L17] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=9.2ms TOTAL=9.4ms
+  [forward_extend L17] kv_save=0.1ms topk=9.6ms block_table=3.0ms page_setup=1.6ms flash_attn=9.6ms post=0.0ms TOTAL=24.0ms
+    [get_topk L22] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=9.2ms TOTAL=9.5ms
+  [forward_extend L22] kv_save=0.1ms topk=9.7ms block_table=3.1ms page_setup=1.6ms flash_attn=9.8ms post=0.0ms TOTAL=24.3ms
+    [get_topk L29] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=9.3ms TOTAL=9.5ms
+  [forward_extend L29] kv_save=0.1ms topk=9.7ms block_table=3.5ms page_setup=1.6ms flash_attn=9.8ms post=0.0ms TOTAL=24.7ms
+    [get_topk L30] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=9.2ms TOTAL=9.5ms
+  [forward_extend L30] kv_save=0.1ms topk=9.7ms block_table=3.1ms page_setup=1.6ms flash_attn=9.7ms post=0.1ms TOTAL=24.3ms
+    [get_topk L31] alloc_fill=0.1ms compress_k=0.4ms attn+pool+topk=9.3ms TOTAL=9.7ms
+  [forward_extend L31] kv_save=0.3ms topk=10.2ms block_table=5.0ms page_setup=1.7ms flash_attn=10.0ms post=0.2ms TOTAL=27.4ms
+[2026-04-01 09:02:51] Prefill batch, #new-seq: 1, #new-token: 8192, #cached-token: 0, full token usage: 0.02, mamba usage: 0.03, #running-req: 0, #queue-req: 0, 
+    [get_topk L0] alloc_fill=0.1ms compress_k=0.5ms attn+pool+topk=9.5ms TOTAL=10.1ms
+  [forward_extend L0] kv_save=0.2ms topk=10.6ms block_table=4.9ms page_setup=1.7ms flash_attn=9.1ms post=0.1ms TOTAL=26.6ms
+    [get_topk L9] alloc_fill=0.1ms compress_k=0.4ms attn+pool+topk=9.8ms TOTAL=10.3ms
+  [forward_extend L9] kv_save=0.3ms topk=10.8ms block_table=5.0ms page_setup=1.7ms flash_attn=9.7ms post=0.1ms TOTAL=27.7ms
+    [get_topk L16] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=9.7ms TOTAL=10.1ms
+  [forward_extend L16] kv_save=0.2ms topk=10.4ms block_table=3.2ms page_setup=1.6ms flash_attn=9.8ms post=0.0ms TOTAL=25.2ms
+    [get_topk L17] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=9.7ms TOTAL=10.1ms
+  [forward_extend L17] kv_save=0.2ms topk=10.4ms block_table=3.2ms page_setup=1.6ms flash_attn=9.5ms post=0.0ms TOTAL=25.0ms
+    [get_topk L22] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=9.7ms TOTAL=10.0ms
+  [forward_extend L22] kv_save=0.2ms topk=10.4ms block_table=3.1ms page_setup=1.6ms flash_attn=9.9ms post=0.0ms TOTAL=25.2ms
+    [get_topk L29] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=9.7ms TOTAL=10.0ms
+  [forward_extend L29] kv_save=0.1ms topk=10.3ms block_table=3.0ms page_setup=1.6ms flash_attn=9.7ms post=0.0ms TOTAL=24.7ms
+    [get_topk L30] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=9.6ms TOTAL=9.9ms
+  [forward_extend L30] kv_save=0.1ms topk=10.0ms block_table=3.0ms page_setup=1.6ms flash_attn=9.6ms post=0.0ms TOTAL=24.4ms
+    [get_topk L31] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=9.6ms TOTAL=9.8ms
+  [forward_extend L31] kv_save=0.1ms topk=10.0ms block_table=3.0ms page_setup=1.6ms flash_attn=9.4ms post=0.0ms TOTAL=24.1ms
+[2026-04-01 09:02:51] Prefill batch, #new-seq: 1, #new-token: 8192, #cached-token: 0, full token usage: 0.02, mamba usage: 0.03, #running-req: 0, #queue-req: 0, 
+    [get_topk L0] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=9.9ms TOTAL=10.2ms
+  [forward_extend L0] kv_save=0.1ms topk=10.4ms block_table=3.2ms page_setup=1.6ms flash_attn=9.2ms post=0.0ms TOTAL=24.5ms
+    [get_topk L9] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=10.2ms TOTAL=10.4ms
+  [forward_extend L9] kv_save=0.1ms topk=10.7ms block_table=3.0ms page_setup=1.6ms flash_attn=9.7ms post=0.0ms TOTAL=25.1ms
+    [get_topk L16] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=10.2ms TOTAL=10.4ms
+  [forward_extend L16] kv_save=0.1ms topk=10.6ms block_table=3.0ms page_setup=1.6ms flash_attn=9.8ms post=0.0ms TOTAL=25.1ms
+    [get_topk L17] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=10.1ms TOTAL=10.3ms
+  [forward_extend L17] kv_save=0.1ms topk=10.5ms block_table=3.0ms page_setup=1.6ms flash_attn=9.5ms post=0.0ms TOTAL=24.7ms
+    [get_topk L22] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=10.2ms TOTAL=10.4ms
+  [forward_extend L22] kv_save=0.1ms topk=10.5ms block_table=3.0ms page_setup=1.6ms flash_attn=9.8ms post=0.0ms TOTAL=25.1ms
+    [get_topk L29] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=10.2ms TOTAL=10.5ms
+  [forward_extend L29] kv_save=0.1ms topk=10.7ms block_table=3.1ms page_setup=1.6ms flash_attn=9.7ms post=0.0ms TOTAL=25.3ms
+    [get_topk L30] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=10.1ms TOTAL=10.3ms
+  [forward_extend L30] kv_save=0.1ms topk=10.5ms block_table=3.0ms page_setup=1.6ms flash_attn=9.5ms post=0.0ms TOTAL=24.7ms
+    [get_topk L31] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=10.0ms TOTAL=10.3ms
+  [forward_extend L31] kv_save=0.1ms topk=10.5ms block_table=3.0ms page_setup=1.6ms flash_attn=9.3ms post=0.0ms TOTAL=24.5ms
+[2026-04-01 09:02:52] Prefill batch, #new-seq: 1, #new-token: 8192, #cached-token: 0, full token usage: 0.02, mamba usage: 0.03, #running-req: 0, #queue-req: 0, 
+    [get_topk L0] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=10.6ms TOTAL=10.9ms
+  [forward_extend L0] kv_save=0.1ms topk=11.1ms block_table=3.2ms page_setup=1.6ms flash_attn=9.4ms post=0.0ms TOTAL=25.4ms
+    [get_topk L9] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=10.6ms TOTAL=10.9ms
+  [forward_extend L9] kv_save=0.1ms topk=11.1ms block_table=3.0ms page_setup=1.6ms flash_attn=9.7ms post=0.0ms TOTAL=25.5ms
+    [get_topk L16] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=10.7ms TOTAL=11.0ms
+  [forward_extend L16] kv_save=0.1ms topk=11.2ms block_table=3.5ms page_setup=1.6ms flash_attn=9.9ms post=0.0ms TOTAL=26.4ms
+    [get_topk L17] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=10.6ms TOTAL=10.9ms
+  [forward_extend L17] kv_save=0.1ms topk=11.1ms block_table=3.1ms page_setup=1.6ms flash_attn=9.5ms post=0.0ms TOTAL=25.4ms
+    [get_topk L22] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=10.6ms TOTAL=10.8ms
+  [forward_extend L22] kv_save=0.1ms topk=11.0ms block_table=3.0ms page_setup=1.6ms flash_attn=10.0ms post=0.0ms TOTAL=25.7ms
+    [get_topk L29] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=10.7ms TOTAL=10.9ms
+  [forward_extend L29] kv_save=0.1ms topk=11.1ms block_table=3.1ms page_setup=1.6ms flash_attn=9.7ms post=0.0ms TOTAL=25.6ms
+    [get_topk L30] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=10.6ms TOTAL=10.8ms
+  [forward_extend L30] kv_save=0.1ms topk=11.1ms block_table=3.2ms page_setup=1.6ms flash_attn=9.7ms post=0.0ms TOTAL=25.7ms
+    [get_topk L31] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=10.6ms TOTAL=10.9ms
+  [forward_extend L31] kv_save=0.2ms topk=11.3ms block_table=3.1ms page_setup=1.6ms flash_attn=9.4ms post=0.0ms TOTAL=25.7ms
+[2026-04-01 09:02:53] Prefill batch, #new-seq: 1, #new-token: 8192, #cached-token: 0, full token usage: 0.02, mamba usage: 0.03, #running-req: 0, #queue-req: 0, 
+    [get_topk L0] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=10.9ms TOTAL=11.2ms
+  [forward_extend L0] kv_save=0.1ms topk=11.4ms block_table=3.3ms page_setup=1.6ms flash_attn=9.2ms post=0.0ms TOTAL=25.6ms
+    [get_topk L9] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=11.1ms TOTAL=11.4ms
+  [forward_extend L9] kv_save=0.1ms topk=11.6ms block_table=3.1ms page_setup=1.6ms flash_attn=9.7ms post=0.0ms TOTAL=26.2ms
+    [get_topk L16] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=11.1ms TOTAL=11.4ms
+  [forward_extend L16] kv_save=0.1ms topk=11.5ms block_table=3.1ms page_setup=1.6ms flash_attn=9.8ms post=0.0ms TOTAL=26.1ms
+    [get_topk L17] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=11.0ms TOTAL=11.3ms
+  [forward_extend L17] kv_save=0.1ms topk=11.5ms block_table=3.0ms page_setup=1.6ms flash_attn=9.5ms post=0.0ms TOTAL=25.7ms
+    [get_topk L22] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=11.1ms TOTAL=11.3ms
+  [forward_extend L22] kv_save=0.1ms topk=11.5ms block_table=3.1ms page_setup=1.6ms flash_attn=9.9ms post=0.0ms TOTAL=26.2ms
+    [get_topk L29] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=11.2ms TOTAL=11.5ms
+  [forward_extend L29] kv_save=0.1ms topk=11.7ms block_table=3.1ms page_setup=1.6ms flash_attn=9.8ms post=0.0ms TOTAL=26.3ms
+    [get_topk L30] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=11.1ms TOTAL=11.3ms
+  [forward_extend L30] kv_save=0.1ms topk=11.5ms block_table=3.1ms page_setup=1.6ms flash_attn=9.6ms post=0.0ms TOTAL=25.8ms
+    [get_topk L31] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=11.0ms TOTAL=11.2ms
+  [forward_extend L31] kv_save=0.1ms topk=11.4ms block_table=3.0ms page_setup=1.6ms flash_attn=9.4ms post=0.0ms TOTAL=25.4ms
+[2026-04-01 09:02:54] Prefill batch, #new-seq: 1, #new-token: 8192, #cached-token: 0, full token usage: 0.02, mamba usage: 0.03, #running-req: 0, #queue-req: 0, 
+    [get_topk L0] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=11.3ms TOTAL=11.6ms
+  [forward_extend L0] kv_save=0.1ms topk=11.8ms block_table=3.1ms page_setup=1.6ms flash_attn=9.3ms post=0.0ms TOTAL=25.9ms
+    [get_topk L9] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=11.5ms TOTAL=11.8ms
+  [forward_extend L9] kv_save=0.1ms topk=12.0ms block_table=3.0ms page_setup=1.6ms flash_attn=9.7ms post=0.0ms TOTAL=26.3ms
+    [get_topk L16] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=11.6ms TOTAL=11.8ms
+  [forward_extend L16] kv_save=0.1ms topk=12.0ms block_table=3.0ms page_setup=1.6ms flash_attn=9.8ms post=0.0ms TOTAL=26.5ms
+    [get_topk L17] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=11.6ms TOTAL=11.8ms
+  [forward_extend L17] kv_save=0.1ms topk=11.9ms block_table=2.9ms page_setup=1.6ms flash_attn=9.5ms post=0.0ms TOTAL=26.1ms
+    [get_topk L22] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=11.6ms TOTAL=11.8ms
+  [forward_extend L22] kv_save=0.1ms topk=12.0ms block_table=3.0ms page_setup=1.6ms flash_attn=10.0ms post=0.0ms TOTAL=26.6ms
+    [get_topk L29] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=11.6ms TOTAL=11.9ms
+  [forward_extend L29] kv_save=0.1ms topk=12.1ms block_table=3.1ms page_setup=1.6ms flash_attn=9.8ms post=0.0ms TOTAL=26.7ms
+    [get_topk L30] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=11.5ms TOTAL=11.8ms
+  [forward_extend L30] kv_save=0.1ms topk=12.0ms block_table=3.0ms page_setup=1.6ms flash_attn=9.7ms post=0.0ms TOTAL=26.4ms
+    [get_topk L31] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=11.4ms TOTAL=11.7ms
+  [forward_extend L31] kv_save=0.1ms topk=11.8ms block_table=3.0ms page_setup=1.6ms flash_attn=9.5ms post=0.0ms TOTAL=26.0ms
+[2026-04-01 09:02:54] Prefill batch, #new-seq: 1, #new-token: 8192, #cached-token: 0, full token usage: 0.02, mamba usage: 0.03, #running-req: 0, #queue-req: 0, 
+    [get_topk L0] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=11.7ms TOTAL=12.0ms
+  [forward_extend L0] kv_save=0.1ms topk=12.2ms block_table=3.1ms page_setup=1.6ms flash_attn=9.3ms post=0.0ms TOTAL=26.3ms
+    [get_topk L9] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=12.0ms TOTAL=12.2ms
+  [forward_extend L9] kv_save=0.1ms topk=12.5ms block_table=3.0ms page_setup=1.6ms flash_attn=9.7ms post=0.0ms TOTAL=26.9ms
+    [get_topk L16] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=12.0ms TOTAL=12.3ms
+  [forward_extend L16] kv_save=0.1ms topk=12.4ms block_table=3.0ms page_setup=1.6ms flash_attn=9.9ms post=0.0ms TOTAL=27.1ms
+    [get_topk L17] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=12.0ms TOTAL=12.4ms
+  [forward_extend L17] kv_save=0.1ms topk=12.7ms block_table=3.2ms page_setup=1.6ms flash_attn=9.8ms post=0.0ms TOTAL=27.5ms
+    [get_topk L22] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=12.0ms TOTAL=12.4ms
+  [forward_extend L22] kv_save=0.2ms topk=12.7ms block_table=3.4ms page_setup=1.6ms flash_attn=10.0ms post=0.0ms TOTAL=27.9ms
+    [get_topk L29] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=12.1ms TOTAL=12.4ms
+  [forward_extend L29] kv_save=0.1ms topk=12.6ms block_table=3.1ms page_setup=1.6ms flash_attn=9.9ms post=0.0ms TOTAL=27.4ms
+    [get_topk L30] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=12.0ms TOTAL=12.2ms
+  [forward_extend L30] kv_save=0.1ms topk=12.4ms block_table=3.0ms page_setup=1.6ms flash_attn=9.6ms post=0.0ms TOTAL=26.7ms
+    [get_topk L31] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=11.9ms TOTAL=12.1ms
+  [forward_extend L31] kv_save=0.1ms topk=12.3ms block_table=3.0ms page_setup=1.8ms flash_attn=9.4ms post=0.0ms TOTAL=26.6ms
+[2026-04-01 09:02:55] Prefill batch, #new-seq: 1, #new-token: 8192, #cached-token: 0, full token usage: 0.02, mamba usage: 0.03, #running-req: 0, #queue-req: 0, 
+    [get_topk L0] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=12.2ms TOTAL=12.5ms
+  [forward_extend L0] kv_save=0.1ms topk=12.7ms block_table=3.2ms page_setup=1.6ms flash_attn=9.2ms post=0.0ms TOTAL=26.8ms
+    [get_topk L9] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=12.5ms TOTAL=12.7ms
+  [forward_extend L9] kv_save=0.1ms topk=13.0ms block_table=4.1ms page_setup=1.6ms flash_attn=9.8ms post=0.0ms TOTAL=28.6ms
+    [get_topk L16] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=12.6ms TOTAL=12.8ms
+  [forward_extend L16] kv_save=0.1ms topk=13.0ms block_table=3.1ms page_setup=1.6ms flash_attn=9.9ms post=0.0ms TOTAL=27.7ms
+    [get_topk L17] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=12.5ms TOTAL=12.7ms
+  [forward_extend L17] kv_save=0.1ms topk=12.9ms block_table=3.0ms page_setup=1.6ms flash_attn=9.6ms post=0.0ms TOTAL=27.2ms
+    [get_topk L22] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=12.5ms TOTAL=12.7ms
+  [forward_extend L22] kv_save=0.1ms topk=12.9ms block_table=3.0ms page_setup=1.6ms flash_attn=10.0ms post=0.0ms TOTAL=27.7ms
+    [get_topk L29] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=12.5ms TOTAL=12.8ms
+  [forward_extend L29] kv_save=0.1ms topk=12.9ms block_table=3.0ms page_setup=1.6ms flash_attn=9.8ms post=0.0ms TOTAL=27.5ms
+    [get_topk L30] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=12.5ms TOTAL=12.7ms
+  [forward_extend L30] kv_save=0.1ms topk=12.9ms block_table=3.0ms page_setup=1.6ms flash_attn=9.7ms post=0.0ms TOTAL=27.2ms
+    [get_topk L31] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=12.4ms TOTAL=12.6ms
+  [forward_extend L31] kv_save=0.1ms topk=12.8ms block_table=3.1ms page_setup=1.6ms flash_attn=9.5ms post=0.0ms TOTAL=27.2ms
+[2026-04-01 09:02:56] Prefill batch, #new-seq: 1, #new-token: 8192, #cached-token: 0, full token usage: 0.02, mamba usage: 0.03, #running-req: 0, #queue-req: 0, 
+    [get_topk L0] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=12.6ms TOTAL=12.9ms
+  [forward_extend L0] kv_save=0.1ms topk=13.1ms block_table=3.1ms page_setup=1.6ms flash_attn=9.3ms post=0.0ms TOTAL=27.1ms
+    [get_topk L9] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=13.0ms TOTAL=13.2ms
+  [forward_extend L9] kv_save=0.1ms topk=13.5ms block_table=3.0ms page_setup=1.6ms flash_attn=9.7ms post=0.0ms TOTAL=27.9ms
+    [get_topk L16] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=13.0ms TOTAL=13.2ms
+  [forward_extend L16] kv_save=0.1ms topk=13.4ms block_table=3.0ms page_setup=1.6ms flash_attn=9.9ms post=0.0ms TOTAL=28.0ms
+    [get_topk L17] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=13.0ms TOTAL=13.2ms
+  [forward_extend L17] kv_save=0.1ms topk=13.5ms block_table=3.4ms page_setup=1.6ms flash_attn=9.6ms post=0.0ms TOTAL=28.1ms
+    [get_topk L22] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=13.0ms TOTAL=13.2ms
+  [forward_extend L22] kv_save=0.1ms topk=13.4ms block_table=3.0ms page_setup=1.6ms flash_attn=10.0ms post=0.0ms TOTAL=28.2ms
+    [get_topk L29] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=13.0ms TOTAL=13.3ms
+  [forward_extend L29] kv_save=0.1ms topk=13.5ms block_table=3.1ms page_setup=1.6ms flash_attn=9.9ms post=0.0ms TOTAL=28.2ms
+    [get_topk L30] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=12.9ms TOTAL=13.1ms
+  [forward_extend L30] kv_save=0.1ms topk=13.3ms block_table=3.0ms page_setup=1.6ms flash_attn=9.7ms post=0.0ms TOTAL=27.7ms
+    [get_topk L31] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=12.8ms TOTAL=13.0ms
+  [forward_extend L31] kv_save=0.1ms topk=13.2ms block_table=3.0ms page_setup=1.6ms flash_attn=9.5ms post=0.0ms TOTAL=27.3ms
+[2026-04-01 09:02:57] Prefill batch, #new-seq: 1, #new-token: 8192, #cached-token: 0, full token usage: 0.03, mamba usage: 0.03, #running-req: 0, #queue-req: 0, 
+    [get_topk L0] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=13.2ms TOTAL=13.4ms
+  [forward_extend L0] kv_save=0.1ms topk=13.7ms block_table=3.0ms page_setup=1.6ms flash_attn=9.3ms post=0.0ms TOTAL=27.7ms
+    [get_topk L9] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=13.4ms TOTAL=13.8ms
+  [forward_extend L9] kv_save=0.2ms topk=14.1ms block_table=3.2ms page_setup=1.6ms flash_attn=9.7ms post=0.0ms TOTAL=28.9ms
+    [get_topk L16] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=13.5ms TOTAL=13.8ms
+  [forward_extend L16] kv_save=0.1ms topk=14.0ms block_table=3.5ms page_setup=1.6ms flash_attn=9.8ms post=0.0ms TOTAL=29.0ms
+    [get_topk L17] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=13.4ms TOTAL=13.6ms
+  [forward_extend L17] kv_save=0.1ms topk=13.8ms block_table=3.1ms page_setup=1.6ms flash_attn=9.5ms post=0.0ms TOTAL=28.0ms
+    [get_topk L22] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=13.4ms TOTAL=13.7ms
+  [forward_extend L22] kv_save=0.1ms topk=13.9ms block_table=3.0ms page_setup=1.6ms flash_attn=10.0ms post=0.0ms TOTAL=28.6ms
+    [get_topk L29] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=13.5ms TOTAL=13.8ms
+  [forward_extend L29] kv_save=0.1ms topk=14.0ms block_table=3.0ms page_setup=1.6ms flash_attn=9.8ms post=0.0ms TOTAL=28.6ms
+    [get_topk L30] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=13.4ms TOTAL=13.6ms
+  [forward_extend L30] kv_save=0.1ms topk=13.8ms block_table=3.1ms page_setup=1.6ms flash_attn=9.7ms post=0.0ms TOTAL=28.3ms
+    [get_topk L31] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=13.3ms TOTAL=13.5ms
+  [forward_extend L31] kv_save=0.1ms topk=13.7ms block_table=3.0ms page_setup=1.6ms flash_attn=9.5ms post=0.0ms TOTAL=27.9ms
+[2026-04-01 09:02:57] Prefill batch, #new-seq: 1, #new-token: 8192, #cached-token: 0, full token usage: 0.03, mamba usage: 0.03, #running-req: 0, #queue-req: 0, 
+    [get_topk L0] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=13.5ms TOTAL=13.8ms
+  [forward_extend L0] kv_save=0.1ms topk=14.0ms block_table=3.0ms page_setup=1.6ms flash_attn=9.3ms post=0.0ms TOTAL=28.0ms
+    [get_topk L9] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=13.8ms TOTAL=14.2ms
+  [forward_extend L9] kv_save=0.2ms topk=14.6ms block_table=3.2ms page_setup=1.6ms flash_attn=9.7ms post=0.0ms TOTAL=29.4ms
+    [get_topk L16] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=13.9ms TOTAL=14.2ms
+  [forward_extend L16] kv_save=0.1ms topk=14.4ms block_table=3.2ms page_setup=1.6ms flash_attn=9.9ms post=0.0ms TOTAL=29.2ms
+    [get_topk L17] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=13.8ms TOTAL=14.0ms
+  [forward_extend L17] kv_save=0.1ms topk=14.2ms block_table=3.0ms page_setup=1.6ms flash_attn=9.6ms post=0.0ms TOTAL=28.5ms
+    [get_topk L22] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=13.9ms TOTAL=14.1ms
+  [forward_extend L22] kv_save=0.1ms topk=14.3ms block_table=3.0ms page_setup=1.6ms flash_attn=9.9ms post=0.0ms TOTAL=29.0ms
+    [get_topk L29] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=14.0ms TOTAL=14.2ms
+  [forward_extend L29] kv_save=0.1ms topk=14.4ms block_table=3.1ms page_setup=1.6ms flash_attn=9.8ms post=0.0ms TOTAL=29.1ms
+    [get_topk L30] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=13.9ms TOTAL=14.1ms
+  [forward_extend L30] kv_save=0.1ms topk=14.3ms block_table=3.1ms page_setup=1.6ms flash_attn=9.6ms post=0.0ms TOTAL=28.8ms
+    [get_topk L31] alloc_fill=0.1ms compress_k=0.3ms attn+pool+topk=13.8ms TOTAL=14.1ms
+  [forward_extend L31] kv_save=0.1ms topk=14.4ms block_table=3.2ms page_setup=1.6ms flash_attn=9.6ms post=0.0ms TOTAL=28.9ms
+[2026-04-01 09:02:58] Prefill batch, #new-seq: 1, #new-token: 8192, #cached-token: 0, full token usage: 0.03, mamba usage: 0.03, #running-req: 0, #queue-req: 0, 
+    [get_topk L0] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=14.0ms TOTAL=14.3ms
+  [forward_extend L0] kv_save=0.1ms topk=14.5ms block_table=3.1ms page_setup=1.6ms flash_attn=9.3ms post=0.0ms TOTAL=28.6ms
+    [get_topk L9] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=14.3ms TOTAL=14.6ms
+  [forward_extend L9] kv_save=0.1ms topk=14.8ms block_table=3.0ms page_setup=1.6ms flash_attn=9.7ms post=0.0ms TOTAL=29.2ms
+    [get_topk L16] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=14.4ms TOTAL=14.6ms
+  [forward_extend L16] kv_save=0.1ms topk=14.8ms block_table=3.1ms page_setup=1.6ms flash_attn=9.9ms post=0.0ms TOTAL=29.5ms
+    [get_topk L17] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=14.3ms TOTAL=14.5ms
+  [forward_extend L17] kv_save=0.1ms topk=14.7ms block_table=3.0ms page_setup=1.6ms flash_attn=9.6ms post=0.0ms TOTAL=29.0ms
+    [get_topk L22] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=14.4ms TOTAL=14.6ms
+  [forward_extend L22] kv_save=0.1ms topk=14.8ms block_table=3.0ms page_setup=1.6ms flash_attn=10.1ms post=0.0ms TOTAL=29.5ms
+    [get_topk L29] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=14.4ms TOTAL=14.7ms
+  [forward_extend L29] kv_save=0.1ms topk=14.8ms block_table=3.0ms page_setup=1.6ms flash_attn=9.9ms post=0.0ms TOTAL=29.4ms
+    [get_topk L30] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=14.3ms TOTAL=14.5ms
+  [forward_extend L30] kv_save=0.1ms topk=14.7ms block_table=3.1ms page_setup=1.6ms flash_attn=9.7ms post=0.0ms TOTAL=29.2ms
+    [get_topk L31] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=14.2ms TOTAL=14.4ms
+  [forward_extend L31] kv_save=0.1ms topk=14.6ms block_table=3.0ms page_setup=1.6ms flash_attn=9.5ms post=0.0ms TOTAL=28.7ms
+[2026-04-01 09:02:59] Prefill batch, #new-seq: 1, #new-token: 8092, #cached-token: 0, full token usage: 0.03, mamba usage: 0.03, #running-req: 0, #queue-req: 0, 
+    [get_topk L0] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=14.3ms TOTAL=14.6ms
+  [forward_extend L0] kv_save=0.1ms topk=14.9ms block_table=3.0ms page_setup=1.6ms flash_attn=72.3ms post=0.0ms TOTAL=91.9ms
+    [get_topk L9] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=15.1ms TOTAL=15.4ms
+  [forward_extend L9] kv_save=0.1ms topk=15.6ms block_table=3.0ms page_setup=1.6ms flash_attn=9.6ms post=0.0ms TOTAL=30.0ms
+    [get_topk L16] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=14.7ms TOTAL=14.9ms
+  [forward_extend L16] kv_save=0.1ms topk=15.1ms block_table=2.9ms page_setup=1.6ms flash_attn=9.8ms post=0.0ms TOTAL=29.5ms
+    [get_topk L17] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=14.6ms TOTAL=14.8ms
+  [forward_extend L17] kv_save=0.1ms topk=15.0ms block_table=2.9ms page_setup=1.6ms flash_attn=9.6ms post=0.0ms TOTAL=29.3ms
+    [get_topk L22] alloc_fill=0.1ms compress_k=0.2ms attn+pool+topk=14.7ms TOTAL=14.9ms
+  [forward_extend L22] kv_save=0.1ms topk=15.1ms block_table=3.0ms page_setup=1.6ms flash_attn=9.8ms post=0.0ms TOTAL=29.5ms
+    [get_topk L29] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=14.7ms TOTAL=15.0ms
+  [forward_extend L29] kv_save=0.1ms topk=15.2ms block_table=3.4ms page_setup=1.6ms flash_attn=9.5ms post=0.0ms TOTAL=29.7ms
+    [get_topk L30] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=14.6ms TOTAL=14.9ms
+  [forward_extend L30] kv_save=0.1ms topk=15.0ms block_table=3.0ms page_setup=1.6ms flash_attn=9.5ms post=0.0ms TOTAL=29.2ms
+    [get_topk L31] alloc_fill=0.0ms compress_k=0.2ms attn+pool+topk=14.6ms TOTAL=14.8ms
+  [forward_extend L31] kv_save=0.1ms topk=15.0ms block_table=3.1ms page_setup=1.6ms flash_attn=9.5ms post=0.0ms TOTAL=29.2ms
+[2026-04-01 09:03:00] Decode batch, #running-req: 1, #full token: 229541, full token usage: 0.03, mamba num: 1, mamba usage: 0.03, cuda graph: True, gen throughput (token/s): 1.95, #queue-req: 0, 
+[2026-04-01 09:03:01] Decode batch, #running-req: 1, #full token: 229585, full token usage: 0.03, mamba num: 1, mamba usage: 0.03, cuda graph: True, gen throughput (token/s): 62.85, #queue-req: 0, 
+[2026-04-01 09:03:01] Decode batch, #running-req: 1, #full token: 229627, full token usage: 0.03, mamba num: 1, mamba usage: 0.03, cuda graph: True, gen throughput (token/s): 62.89, #queue-req: 0, 
+[2026-04-01 09:03:02] Decode batch, #running-req: 1, #full token: 229671, full token usage: 0.03, mamba num: 1, mamba usage: 0.03, cuda graph: True, gen throughput (token/s): 62.29, #queue-req: 0, 
+
+
+
+
+
+
+
+
+
+
+
+============ Serving Benchmark Result ============                                           
+Backend:                                 sglang                                                                                        
+Traffic request rate:                    inf                                                                                           
+Max request concurrency:                 not set                                                                                       
+Successful requests:                     64                                                                                            
+Benchmark duration (s):                  802.86                                                                                        
+Total input tokens:                      3885243                                                                                       
+Total input text tokens:                 3885243                                                                                       
+Total generated tokens:                  409876                                                                                        
+Total generated tokens (retokenized):    399679                                                                                        
+Request throughput (req/s):              0.08                                                                                          
+Input token throughput (tok/s):          4839.28                                                                                       
+Output token throughput (tok/s):         510.52                                                                                        
+Peak output token throughput (tok/s):    1453.00                                                                                       
+Peak concurrent requests:                64                                                                                            
+Total token throughput (tok/s):          5349.80                                                                                       
+Concurrency:                             37.83                                                                                         
+----------------End-to-End Latency----------------                                                                                     
+Mean E2E Latency (ms):                   474523.38                                                                                     
+Median E2E Latency (ms):                 400467.18                                                                                     
+P90 E2E Latency (ms):                    721759.56                                                                                     
+P99 E2E Latency (ms):                    795279.65                                                                                     
+---------------Time to First Token----------------                                                                                     
+Mean TTFT (ms):                          106029.67                                                                                     
+Median TTFT (ms):                        57401.55                                                                                      
+P99 TTFT (ms):                           346261.19                                                                                     
+-----Time per Output Token (excl. 1st token)------                                                                                     
+Mean TPOT (ms):                          700.27                                                                                        
+Median TPOT (ms):                        149.88                                                                                        
+P99 TPOT (ms):                           6150.55                                                                                       
+---------------Inter-Token Latency----------------                                                                                     
+Mean ITL (ms):                           57.55                                                                                         
+Median ITL (ms):                         18.33                                                                                         
+P95 ITL (ms):                            34.50                                                                                         
+P99 ITL (ms):                            44.04                                                                                         
+Max ITL (ms):                            348256.19                                                                                     
+==================================================                                                                                     
+
+⏺ Now I can do the full time budget:
+
+  Time Budget: 802.86s total
+
+  ┌─────────┬────────────────────────┬──────┬─────┐
+  │  Phase  │      Calculation       │ Time │  %  │
+  ├─────────┼────────────────────────┼──────┼─────┤
+  │ Prefill │ 151 steps × 2.79s      │ 421s │ 52% │
+  ├─────────┼────────────────────────┼──────┼─────┤
+  │ Decode  │ 38,533 steps × 10.46ms │ 403s │ 50% │
+  └─────────┴────────────────────────┴──────┴─────┘
+
+  Almost exactly 50/50 split between prefill and decode.
+
+  Prefill 421s breakdown
+
+  ┌────────────────────────────┬──────┬──────────────┐
+  │         Component          │ Time │ % of prefill │
+  ├────────────────────────────┼──────┼──────────────┤
+  │ MLP (32 layers)            │ 189s │ 45%          │
+  ├────────────────────────────┼──────┼──────────────┤
+  │ MiniCPM4 attn (8 layers)   │ 134s │ 32%          │
+  ├────────────────────────────┼──────┼──────────────┤
+  │ Lightning attn (24 layers) │ 88s  │ 21%          │
+  ├────────────────────────────┼──────┼──────────────┤
+  │ Other                      │ 10s  │ 2%           │
+  └────────────────────────────┴──────┴──────────────┘
+
+  Decode 403s breakdown
+
+  ┌─────────────────────────┬──────┬─────────────┐
+  │        Component        │ Time │ % of decode │
+  ├─────────────────────────┼──────┼─────────────┤
+  │ CUDA graph replay       │ 377s │ 94%         │
+  ├─────────────────────────┼──────┼─────────────┤
+  │ Overhead (sched+sample) │ 26s  │ 6%          │
+  └─────────────────────────┴──────┴─────────────┘
+
+
+
+
+
+
+
+
+⏺ Summary of All Work Done
+
+  Successfully Implemented (Zero Accuracy Degradation, KL=0.047376)
+
+  ┌─────┬─────────────────┬───────────────────────┬────────────────────────────────────────────────────┬──────────────────────────┐
+  │  #  │  Optimization   │     Files Changed     │                    What It Does                    │     Estimated Impact     │
+  ├─────┼─────────────────┼───────────────────────┼────────────────────────────────────────────────────┼──────────────────────────┤
+  │     │ Fused           │ fused_kernels.py      │ Replaces temp = x * scale; result = residual +     │ 130 kernel launches + 65 │
+  │ 1   │ scaled-add      │ (new), minicpm.py     │ temp (2 PyTorch kernels) with 1 Triton kernel.     │  tensor allocs saved per │
+  │     │ Triton kernel   │                       │ Matches PyTorch's two-rounding bf16 path exactly.  │  forward. ~2-3% decode.  │
+  ├─────┼─────────────────┼───────────────────────┼────────────────────────────────────────────────────┼──────────────────────────┤
+  │     │ Removed         │                       │ Removed 5× torch.cuda.synchronize() per layer that │ 160 sync points          │
+  │ 2   │ profiling syncs │ minicpm.py            │  fired during prefill (>100 tokens). The print was │ eliminated per forward.  │
+  │     │                 │                       │  commented out but syncs weren't.                  │ Significant for prefill. │
+  ├─────┼─────────────────┼───────────────────────┼────────────────────────────────────────────────────┼──────────────────────────┤
+  │     │ Sparse          │                       │ Added per-component timing (topk, block_table,     │ Diagnostic only. Should  │
+  │ 3   │ attention       │ minicpm_backend.py    │ page_setup, flash_attn) to identify bottlenecks.   │ be removed for           │
+  │     │ profiling       │                       │                                                    │ production.              │
+  ├─────┼─────────────────┼───────────────────────┼────────────────────────────────────────────────────┼──────────────────────────┤
+  │     │                 │                       │                                                    │ No measurable            │
+  │ 4   │ block_table     │ minicpm_backend.py    │ Switched prefill block_table kernel from v2        │ improvement — bottleneck │
+  │     │ v2→v3           │                       │ (non-coalesced writes) to v3 (coalesced).          │  was allocation, not     │
+  │     │                 │                       │                                                    │ coalescing.              │
+  └─────┴─────────────────┴───────────────────────┴────────────────────────────────────────────────────┴──────────────────────────┘
+
+  Attempted and Reverted (Caused Accuracy Degradation)
+
+  ┌─────┬───────────────────────────────┬───────────────────────────────────────────────────────────┬──────────────────────────────┐
+  │  #  │         What We Tried         │                       Why It Failed                       │            Lesson            │
+  ├─────┼───────────────────────────────┼───────────────────────────────────────────────────────────┼──────────────────────────────┤
+  │     │                               │ Triton's parallel reduction tree produces different       │ ANY reimplementation of      │
+  │ 1   │ Fused scaled-add + RMSNorm    │ variance values from sgl_kernel.rmsnorm. Error cascades   │ RMSNorm diverges from        │
+  │     │ (custom Triton RMSNorm)       │ through 32 layers via attention softmax.                  │ sgl_kernel and cascades.     │
+  │     │                               │ KL=8.38→5.53→still bad after bf16 rounding fix.           │                              │
+  ├─────┼───────────────────────────────┼───────────────────────────────────────────────────────────┼──────────────────────────────┤
+  │     │ sgl_kernel fused_add_rmsnorm  │ fused_add_rmsnorm may norm the fp32 sum (in registers) vs │ Even using sgl_kernel's OWN  │
+  │ 2   │ (pre-scale + fused add+norm)  │  rmsnorm norming the bf16 value. Same cascading issue.    │ functions in a different     │
+  │     │                               │                                                           │ combination diverges.        │
+  ├─────┼───────────────────────────────┼───────────────────────────────────────────────────────────┼──────────────────────────────┤
+  │     │ Fused QK-norm (JIT qknorm     │ JIT kernel's RMSNorm reduction differs from sgl_kernel.   │ Same root cause — different  │
+  │ 3   │ kernel)                       │ KL=5.34.                                                  │ norm kernel = different      │
+  │     │                               │                                                           │ results.                     │
+  ├─────┼───────────────────────────────┼───────────────────────────────────────────────────────────┼──────────────────────────────┤
+  │ 4   │ --fuse-topk (tilelang fused   │ Produces wrong top-k indices. KL=8.87, model can't find   │ The tilelang kernel has      │
+  │     │ kernel)                       │ needle in haystack, 92s vs 12s (SLOWER).                  │ correctness bugs.            │
+  ├─────┼───────────────────────────────┼───────────────────────────────────────────────────────────┼──────────────────────────────┤
+  │     │ fused_chunk_simple_gla (fla   │ Not numerically identical to chunk_simple_gla. Model      │ Different kernel = different │
+  │ 5   │ fused chunk)                  │ falls into repetition loops during long generation.       │  intermediate values =       │
+  │     │                               │ Official package produces clean output.                   │ broken generation.           │
+  └─────┴───────────────────────────────┴───────────────────────────────────────────────────────────┴──────────────────────────────┘
+
+  Bottlenecks (Highest to Lowest Impact, from profiling data)
+
+  With BF16 model (profiled):
+
+  ┌──────┬─────────────────────────────┬────────────┬────────┬────────────────────────────────────────────────────────────────────┐
+  │      │                             │ Time per   │ % of   │                                                                    │
+  │ Rank │         Bottleneck          │  prefill   │ Total  │                            Can We Fix?                             │
+  │      │                             │    step    │        │                                                                    │
+  ├──────┼─────────────────────────────┼────────────┼────────┼────────────────────────────────────────────────────────────────────┤
+  │ 1    │ MLP GEMMs (32 layers ×      │ 1,253ms    │ 49%    │ No — cuBLAS at memory bandwidth limit. Need weight quantization    │
+  │      │ 39ms)                       │            │        │ (W4A16 Marlin).                                                    │
+  ├──────┼─────────────────────────────┼────────────┼────────┼────────────────────────────────────────────────────────────────────┤
+  │      │ Lightning attention GEMMs + │            │        │ Partially — GEMMs improve with quantization. fla kernel            │
+  │ 2    │  fla kernel (24 layers ×    │ 582ms      │ 23%    │ (17ms/layer) is the hard part. Cannot swap to fused_chunk (causes  │
+  │      │ 24ms)                       │            │        │ repetition).                                                       │
+  ├──────┼─────────────────────────────┼────────────┼────────┼────────────────────────────────────────────────────────────────────┤
+  │      │ MiniCPM4 sparse attention   │            │        │ The paper's Algorithm 1 fusion would help, but --fuse-topk is      │
+  │ 3    │ (8 layers × 28ms at 200K    │ 224ms      │ 9%     │ broken. Sub-breakdown: attn+pool+topk (3-15ms, scales O(n)),       │
+  │      │ ctx)                        │            │        │ flash_attn (9.5ms constant), block_table (3ms constant),           │
+  │      │                             │            │        │ page_setup (1.6ms constant).                                       │
+  ├──────┼─────────────────────────────┼────────────┼────────┼────────────────────────────────────────────────────────────────────┤
+  │ 4    │ MiniCPM4 GEMMs              │ 296ms      │ 12%    │ No — cuBLAS. Would improve with quantization but user keeps        │
+  │      │ (qkv+gate+o_proj, 8 layers) │            │        │ minicpm4 in BF16.                                                  │
+  ├──────┼─────────────────────────────┼────────────┼────────┼────────────────────────────────────────────────────────────────────┤
+  │ 5    │ Overhead (norms, gates,     │ ~200ms     │ 8%     │ Partially addressed by fused_scaled_add. Rest is untouchable       │
+  │      │ kernel launches)            │            │        │ RMSNorm calls.                                                     │
+  └──────┴─────────────────────────────┴────────────┴────────┴────────────────────────────────────────────────────────────────────┘
+
+  With W4A16 Marlin (estimated, production setup):
+
+  ┌──────┬─────────────────────────────────┬───────────────────┬──────────────────────────────────────────────────────────────────┐
+  │ Rank │           Bottleneck            │  Estimated time   │                               Why                                │
+  ├──────┼─────────────────────────────────┼───────────────────┼──────────────────────────────────────────────────────────────────┤
+  │ 1    │ MiniCPM4 layers (BF16, NOT      │ ~1,200ms (58% of  │ User's GPTQ quantizes only lightning layers. MiniCPM4 stays      │
+  │      │ quantized)                      │ prefill)          │ BF16.                                                            │
+  ├──────┼─────────────────────────────────┼───────────────────┼──────────────────────────────────────────────────────────────────┤
+  │ 2    │ fla chunk_simple_gla kernel (24 │ ~408ms (20%)      │ Operates on activations, not weights. Doesn't benefit from       │
+  │      │  layers × 17ms)                 │                   │ quantization. Cannot use fused_chunk (breaks output).            │
+  ├──────┼─────────────────────────────────┼───────────────────┼──────────────────────────────────────────────────────────────────┤
+  │ 3    │ Lightning GEMMs (Marlin INT4)   │ ~48ms (2%)        │ Fast with Marlin.                                                │
+  ├──────┼─────────────────────────────────┼───────────────────┼──────────────────────────────────────────────────────────────────┤
+  │ 4    │ Lightning MLP (Marlin INT4)     │ ~384ms (19%)      │ Faster with Marlin but still significant.                        │
+  └──────┴─────────────────────────────────┴───────────────────┴──────────────────────────────────────────────────────────────────┘
+
+  Key Findings
+
+  1. This model is uniquely sensitive to numerical precision. Any kernel that reimplements RMSNorm, changes attention reduction order,
+  or uses a different chunk fusion strategy produces different intermediate values that cascade through 32 layers. Only operations that
+   are provably bit-exact (like our fused_scaled_add with explicit bf16 rounding) survive.
+  2. The 1.5x gap to competitor is NOT in kernel fusion. The profiling shows the system is near-optimal for BF16 serving (97% bandwidth
+   utilization on decode). The gap likely comes from: quantizing ALL layers (not just lightning), a custom fla kernel that IS
+  numerically identical but faster, or fundamentally different scheduling.
+  3. The official package (sglang-minicpm/python) runs Test 1 in 6.81s vs our cp baseline in 50.80s. There may be optimizations in the
+  official package we're not using. Worth investigating.
+  4. The biggest actionable optimization remaining is quantizing minicpm4 layers to INT4 as well — they account for 58% of W4A16
+  prefill time because they're still BF16.
+
+
+
+
+
+
+⏺ Sparse Attention Profiling Summary (MiniCPM4 Layers at ~229K Context)
+
+  Per-layer breakdown at steady state (8 minicpm4 layers: L0, L9, L16, L17, L22, L29, L30, L31):
+
+  ┌────────────────┬────────┬───────────────────────────────────────────────────────────────────────────────────────────────┬────────────────────┐
+  │   Component    │  Time  │                                         What It Does                                          │    Scales with     │
+  │                │        │                                                                                               │      context?      │
+  ├────────────────┼────────┼───────────────────────────────────────────────────────────────────────────────────────────────┼────────────────────┤
+  │ alloc_fill     │ 0.1ms  │ torch.full(-inf) for compressed K buffers                                                     │ No                 │
+  ├────────────────┼────────┼───────────────────────────────────────────────────────────────────────────────────────────────┼────────────────────┤
+  │ compress_k     │ 0.2ms  │ Mean-pool KV cache → K^{C_1} and K^{C_2}                                                      │ Slightly           │
+  ├────────────────┼────────┼───────────────────────────────────────────────────────────────────────────────────────────────┼────────────────────┤
+  │ attn+pool+topk │ 14.3ms │ infllmv2_attn_stage1 + max_pooling + torch.topk (the paper's S^{cmp} bottleneck)              │ Yes — O(n)         │
+  ├────────────────┼────────┼───────────────────────────────────────────────────────────────────────────────────────────────┼────────────────────┤
+  │ block_table    │ 3.0ms  │ get_block_table_v3 — maps topk indices to page table entries (384MB torch::zeros + kernel)    │ No                 │
+  ├────────────────┼────────┼───────────────────────────────────────────────────────────────────────────────────────────────┼────────────────────┤
+  │ page_setup     │ 1.6ms  │ Compute sparse_cache_seqlens, sparse_cu_seqlens_k, get KV buffers                             │ No                 │
+  ├────────────────┼────────┼───────────────────────────────────────────────────────────────────────────────────────────────┼────────────────────┤
+  │ flash_attn     │ 9.5ms  │ convert_sparse_page_table_to_flashinfer + begin_forward + FlashInfer attention on selected    │ No                 │
+  │                │        │ 6144 tokens                                                                                   │                    │
+  ├────────────────┼────────┼───────────────────────────────────────────────────────────────────────────────────────────────┼────────────────────┤
+  │ TOTAL          │ ~29ms  │                                                                                               │                    │
+  └────────────────┴────────┴───────────────────────────────────────────────────────────────────────────────────────────────┴────────────────────┘
+
+  Per layer × 8 layers = ~232ms per prefill step for sparse attention overhead alone.
+
+  L0 anomaly: First minicpm4 layer shows flash_attn=72ms on the first AND last prefill chunk (FlashInfer JIT warmup / plan recomputation). All other
+  layers: ~9.5ms.
+
+  ---
+  Full 64-Concurrency Benchmark Summary
+
+  ┌─────────────────────┬──────────────────────────────────────────────────┐
+  │       Metric        │                      Value                       │
+  ├─────────────────────┼──────────────────────────────────────────────────┤
+  │ Total duration      │ 802.86s                                          │
+  ├─────────────────────┼──────────────────────────────────────────────────┤
+  │ Total input tokens  │ 3,885,243                                        │
+  ├─────────────────────┼──────────────────────────────────────────────────┤
+  │ Total output tokens │ 409,876                                          │
+  ├─────────────────────┼──────────────────────────────────────────────────┤
+  │ Total throughput    │ 5,349.80 tok/s                                   │
+  ├─────────────────────┼──────────────────────────────────────────────────┤
+  │ Decode throughput   │ 62.3-62.9 tok/s per request (batch=1 CUDA graph) │
+  ├─────────────────────┼──────────────────────────────────────────────────┤
+  │ Mean TTFT           │ 106s (dominated by long-context prefill)         │
+  ├─────────────────────┼──────────────────────────────────────────────────┤
+  │ Median ITL          │ 18.3ms                                           │
+  └─────────────────────┴──────────────────────────────────────────────────┘
+
+  Time budget:
+
+  ┌─────────────────────────────────┬──────┬─────┐
+  │              Phase              │ Time │  %  │
+  ├─────────────────────────────────┼──────┼─────┤
+  │ Prefill (151 steps × 2.79s)     │ 421s │ 52% │
+  ├─────────────────────────────────┼──────┼─────┤
+  │ Decode (38,533 steps × 10.46ms) │ 403s │ 50% │
+  └─────────────────────────────────┴──────┴─────┘
+
+  Prefill 421s breakdown:
+
+  ┌───────────────────────────────┬──────┬─────────────┬─────────────────────────────────────────────────────────────────────────────────────────┐
+  │           Component           │ Time │    % of     │                                      Optimizable?                                       │
+  │                               │      │   prefill   │                                                                                         │
+  ├───────────────────────────────┼──────┼─────────────┼─────────────────────────────────────────────────────────────────────────────────────────┤
+  │ MLP GEMMs (32 layers)         │ 189s │ 45%         │ Only via weight quantization                                                            │
+  ├───────────────────────────────┼──────┼─────────────┼─────────────────────────────────────────────────────────────────────────────────────────┤
+  │ MiniCPM4 sparse attn (8       │ 134s │ 32%         │ Paper's Algorithm 1 fusion or fix --fuse-topk. Sub-bottleneck: attn+pool+topk at        │
+  │ layers)                       │      │             │ 14ms/layer scales O(n).                                                                 │
+  ├───────────────────────────────┼──────┼─────────────┼─────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Lightning attn + GEMMs (24    │ 88s  │ 21%         │ fla kernel (17ms/layer) cannot be swapped to fused_chunk. Need numerically-identical    │
+  │ layers)                       │      │             │ faster kernel.                                                                          │
+  ├───────────────────────────────┼──────┼─────────────┼─────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Other                         │ 10s  │ 2%          │ Already optimized (fused_scaled_add, removed syncs)                                     │
+  └───────────────────────────────┴──────┴─────────────┴─────────────────────────────────────────────────────────────────────────────────────────┘
+
+  Decode 403s breakdown:
+
+  ┌──────────────────────────────────┬────────────────────┬─────────────────────────────────────┐
+  │            Component             │        Time        │             % of decode             │
+  ├──────────────────────────────────┼────────────────────┼─────────────────────────────────────┤
+  │ CUDA graph replay (weight reads) │ 377s (9.78ms/step) │ 94% — at 97% memory bandwidth limit │
+  ├──────────────────────────────────┼────────────────────┼─────────────────────────────────────┤
+  │ Scheduling + sampling overhead   │ 26s (0.68ms/step)  │ 6%                                  │
+  └──────────────────────────────────┴────────────────────┴─────────────────────────────────────┘
+
+
+
+
+
+
+
+⏺ The flag is defined in server_args.py. The logic flows through these files:
+
+  1. server_args.py:533 — defines fuse_topk: bool = False
+
+  2. minicpm_backend.py:254 — reads the flag and AOT-compiles kernels at init:
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ 3. minicpm_backend.py:289-343 — AOT compiles prefill + decode fused kernels per batch-size bucket:
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ 4. minicpm_backend.py:700-710 — the fork point where fused kernel is passed (or None):
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ 5. minicpm_backend.py:898-960 — sparse_get_topk_impl — the actual dispatch logic:
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Here's the complete flow:
+
+  The fork point is sparse_get_topk_impl (line 976):
+
+  if not self.fuse_topk:
+      topk_idx = compressed_attention(...)         # UNFUSED: 3 separate kernels
+  else:
+      topk_idx = compressed_attention_tilelang(...)  # FUSED: 1 tilelang kernel
+
+  Unfused path (compressed_attention in minicpm_sparse_utils.py):
+  1. infllmv2_attn_stage1(Q, K1, K2) → S^{shared} scores to HBM
+  2. max_pooling_1d_varlen(S^{shared}) → block-level scores
+  3. torch.topk() → top-k indices
+
+  Fused path (compressed_attention_tilelang in minicpm_sparse_utils.py):
+  - Calls the tilelang kernel from minicpm_fuse_kernel.py
+  - Takes pre-compressed K1 (NOT K2 — ignores LSE approximation)
+  - Does Q×K1 two-pass (pass 1: LSE, pass 2: normalize + pool + bitonic sort top-k)
+  - All in one kernel, no intermediate HBM writes
+
+  The kernel itself: minicpm_fuse_kernel.py — fused_attn_pooling_online_topk_prefill() (lines 25-355) which we read earlier.
+
+  The bug is in this tilelang kernel — it produces wrong top-k indices. The compressed_attention (unfused) path produces correct results. Both should output the same
+  topk_idx tensor, but they don't.
+
+
+
+
+
+  Optimization Directions Ranked by Impact
+
+  ┌──────┬─────────────────────────────────────────────────────────┬───────────┬───────────┬─────────────────────────────────────────┬──────────────────────────────┐
+  │ Rank │                        Direction                        │   Saves   │   % of    │               Difficulty                │             Risk             │
+  │      │                                                         │           │   Total   │                                         │                              │
+  ├──────┼─────────────────────────────────────────────────────────┼───────────┼───────────┼─────────────────────────────────────────┼──────────────────────────────┤
+  │ 1    │ Serve with W4A16 Marlin GPTQ (your existing quantized   │ ~340s     │ 42%       │ Easy — just switch --model path         │ Already validated            │
+  │      │ model)                                                  │           │           │                                         │                              │
+  ├──────┼─────────────────────────────────────────────────────────┼───────────┼───────────┼─────────────────────────────────────────┼──────────────────────────────┤
+  │ 2    │ Speculative decoding (draft model for decode)           │ ~200-270s │ 25-33%    │ High — need compatible draft model      │ Requires draft model         │
+  ├──────┼─────────────────────────────────────────────────────────┼───────────┼───────────┼─────────────────────────────────────────┼──────────────────────────────┤
+  │ 3    │ Quantize minicpm4 layers to INT4 too (currently         │ ~138s     │ 17%       │ Medium — extend GPTQ script             │ Accuracy risk for sparse     │
+  │      │ BF16-only)                                              │           │           │                                         │ attention layers             │
+  ├──────┼─────────────────────────────────────────────────────────┼───────────┼───────────┼─────────────────────────────────────────┼──────────────────────────────┤
+  │ 4    │ Custom numerically-identical fla kernel (faster         │ ~20s      │ 2.6%      │ Very High — rewrite Triton kernel that  │ High correctness risk        │
+  │      │ chunk_simple_gla)                                       │           │           │ must be bit-exact                       │                              │
+  ├──────┼─────────────────────────────────────────────────────────┼───────────┼───────────┼─────────────────────────────────────────┼──────────────────────────────┤
+  │ 5    │ Reduce decode scheduling overhead (0.68ms→0.2ms/step)   │ ~18s      │ 2.3%      │ Medium — scheduler-level changes        │ Low                          │
+  ├──────┼─────────────────────────────────────────────────────────┼───────────┼───────────┼─────────────────────────────────────────┼──────────────────────────────┤
+  │ 6    │ Fix --fuse-topk tilelang kernel (correct the bug)       │ ~5-7s     │ 0.7-0.9%  │ Medium — debug existing kernel          │ Must match unfused output    │
+  │      │                                                         │           │           │                                         │ exactly                      │
+  ├──────┼─────────────────────────────────────────────────────────┼───────────┼───────────┼─────────────────────────────────────────┼──────────────────────────────┤
+  │ 7    │ Cache FlashInfer begin_forward plan across layers       │ ~6s       │ 0.7%      │ Medium — need to understand FlashInfer  │ Low                          │
+  │      │                                                         │           │           │ internals                               │                              │
+  ├──────┼─────────────────────────────────────────────────────────┼───────────┼───────────┼─────────────────────────────────────────┼──────────────────────────────┤
+  │ 8    │ Full paper Algorithm 1 fusion (K compression + Q×K +    │ ~7s       │ 0.9%      │ Very High — 500-line CUDA kernel        │ Must match exactly           │
+  │      │ pool + topk from paged KV)                              │           │           │                                         │                              │
+  ├──────┼─────────────────────────────────────────────────────────┼───────────┼───────────┼─────────────────────────────────────────┼──────────────────────────────┤
+  │ 9    │ torch.compile for MLP epilogue fusion                   │ ~5s       │ 0.6%      │ Medium — may conflict with CUDA graphs  │ Low                          │
+  ├──────┼─────────────────────────────────────────────────────────┼───────────┼───────────┼─────────────────────────────────────────┼──────────────────────────────┤
+  │ 10   │ Pre-allocate block_table output (modify CUDA extension) │ ~2.4s     │ 0.3%      │ Medium — rebuild C++ extension          │ Zero                         │
+  ├──────┼─────────────────────────────────────────────────────────┼───────────┼───────────┼─────────────────────────────────────────┼──────────────────────────────┤
+  │ 11   │ Increase fla chunk_size (64→128)                        │ ~4-8s     │ 0.5-1%    │ Easy — one constant change              │ May break numerical results  │
+  └──────┴─────────────────────────────────────────────────────────┴───────────┴───────────┴─────────────────────────────────────────┴──────────────────────────────┘
+
+  Already Implemented (in sglang_sala_fuse)
+
+  ┌─────────────────────────────────────────┬─────────────────────────────────────┬───────┐
+  │                  What                   │                Saves                │   %   │
+  ├─────────────────────────────────────────┼─────────────────────────────────────┼───────┤
+  │ Fused scaled-add (Triton, bit-exact)    │ ~2-3s decode + prefill sync removal │ ~2-3% │
+  ├─────────────────────────────────────────┼─────────────────────────────────────┼───────┤
+  │ Removed profiling syncs (160/forward)   │ Included above                      │       │
+  ├─────────────────────────────────────────┼─────────────────────────────────────┼───────┤
+  │ Sparse attention profiling (diagnostic) │ 0 (diagnostic only)                 │       │
+  └─────────────────────────────────────────┴─────────────────────────────────────┴───────┘
+
+  The Real Picture
+
+  If you're comparing against competitor WITH same W4A16 Marlin:
+  - Directions 1-3 don't apply (both already use quantization)
+  - Remaining optimizations: #4 through #11 sum to ~70s max = ~9%
+  - Your competitor's 1.5x (33% improvement) cannot come from kernel optimization alone
+
+  If you're competing on the BF16 benchmark:
+  - Direction #1 (serve with Marlin) alone gives 42%
+  - Combined with #6 and #7: ~44%
+
+  Bottom line: On the same W4A16 Marlin setup, all remaining kernel-level optimizations combined give ~9% max. The 1.5x gap likely comes from something architectural —
+  different model serving strategy, different attention backend, or a custom fla kernel that the competitor wrote specifically for this model.
+
+
+
+
+
+
+
+
+
+⏺ Complete Diff Summary: sglang_sala_fuse vs Official Package
+
+  ┌─────┬────────────────────────────────────────────┬───────────────────────────────────────────────────────────────────────────────────┬────────────────────────────────────────┬────────────────────────────┐
+  │  #  │                    File                    │                                      Change                                       │                 Impact                 │    Improvement Estimate    │
+  ├─────┼────────────────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────┼────────────────────────────────────────┼────────────────────────────┤
+  │     │ minicpm.py — Fused scaled-add Triton       │ Replaces temp = x * scale; result = residual + temp (2 PyTorch kernels) with 1    │ 130 kernel launches + 65 tensor allocs │                            │
+  │ 1   │ kernel                                     │ Triton kernel matching bf16 two-rounding path. Restructured forward to carry      │  eliminated per forward.               │ ~2-3% decode, ~1% prefill  │
+  │     │                                            │ residual between layers.                                                          │                                        │                            │
+  ├─────┼────────────────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────┼────────────────────────────────────────┼────────────────────────────┤
+  │ 2   │ minicpm.py — Removed profiling syncs       │ Removed 5× torch.cuda.synchronize() per layer that fired during prefill (>100     │ 160 GPU pipeline stalls eliminated per │ ~3-5% prefill (for chunked │
+  │     │                                            │ tokens). Prints were commented out but syncs weren't.                             │  forward.                              │  prefill with >100 tokens) │
+  ├─────┼────────────────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────┼────────────────────────────────────────┼────────────────────────────┤
+  │ 3   │ minicpm.py — Moved gate projections early  │ o_gate (minicpm4) and z_proj (lightning) computed before attention instead of     │ Moves gate GEMM off critical path.     │ <0.5% (marginal L2         │
+  │     │                                            │ after. Same input hidden_states, L2 cache locality.                               │                                        │ benefit)                   │
+  ├─────┼────────────────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────┼────────────────────────────────────────┼────────────────────────────┤
+  │ 4   │ fused_kernels.py — New file                │ Triton kernel _fused_scaled_add_kernel with explicit bf16 intermediate rounding + │ Supports change #1.                    │ (included in #1)           │
+  │     │                                            │  int64 index for overflow safety.                                                 │                                        │                            │
+  ├─────┼────────────────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────┼────────────────────────────────────────┼────────────────────────────┤
+  │ 5   │ hybrid_linear_attn_backend.py — Added      │ Import only, NOT used (reverted due to repetition bug).                           │ None currently.                        │ 0%                         │
+  │     │ fused_chunk_simple_gla import              │                                                                                   │                                        │                            │
+  ├─────┼────────────────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────┼────────────────────────────────────────┼────────────────────────────┤
+  │ 6   │ minicpm_backend.py — get_block_table_v2 →  │ Switched prefill block_table kernel from v2 to v3 (coalesced writes).             │ No measurable improvement — bottleneck │ ~0%                        │
+  │     │ v3                                         │                                                                                   │  was allocation not coalescing.        │                            │
+  ├─────┼────────────────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────┼────────────────────────────────────────┼────────────────────────────┤
+  │     │ minicpm_backend.py — Sparse attention      │ Uncommented + extended profiling for forward_extend and get_topk_for_sparse. Adds │ Diagnostic only. SHOULD BE REMOVED for │                            │
+  │ 7   │ profiling                                  │  torch.cuda.synchronize() timing probes.                                          │  production — adds sync overhead       │ Negative (adds overhead)   │
+  │     │                                            │                                                                                   │ during prefill.                        │                            │
+  └─────┴────────────────────────────────────────────┴───────────────────────────────────────────────────────────────────────────────────┴────────────────────────────────────────┴────────────────────────────┘
+
+  Net Impact (production, with profiling removed)
+
+  ┌────────────────────────────────────┬──────────────────────────────────────────┐
+  │               Metric               │                 Estimate                 │
+  ├────────────────────────────────────┼──────────────────────────────────────────┤
+  │ Decode improvement                 │ ~2-3% (fused scaled-add)                 │
+  ├────────────────────────────────────┼──────────────────────────────────────────┤
+  │ Prefill improvement                │ ~4-6% (fused scaled-add + removed syncs) │
+  ├────────────────────────────────────┼──────────────────────────────────────────┤
+  │ Overall (64-concurrency benchmark) │ ~3-5%                                    │
+  ├────────────────────────────────────┼──────────────────────────────────────────┤
+  │ Accuracy impact                    │ Zero (KL=0.047376, bit-exact match)      │
+  └────────────────────────────────────┴──────────────────────────────────────────┘
+
+  Warning: Change #7 (profiling) is currently ACTIVE and adds torch.cuda.synchronize() overhead during prefill. For production benchmarks, it should be disabled or removed.
