@@ -1,0 +1,29 @@
+================================================================================
+GPU SM & MEMORY UTILIZATION (nvidia-smi dmon)
+================================================================================
+
+  Samples:       275
+  Avg SM%:       97.9%
+  Avg Mem%:      58.0%
+  Max SM%:       100%
+  Min SM%:       0%
+
+  SM Distribution:
+    >= 95%:       269 samples (98%) -- GPU fully busy
+    50-95%:         1 samples (0%) -- partial utilization
+    1-50%:          0 samples (0%) -- low utilization
+    0%:             5 samples (2%) -- idle
+
+  Time Phases:
+    Early:  SM=96%  Mem=46%
+      Mid:  SM=100%  Mem=65%
+     Late:  SM=98%  Mem=63%
+
+================================================================================
+GPU MEMORY USAGE OVER TIME
+================================================================================
+  Samples:     139
+  Peak:        85141 MiB
+  Min:         80761 MiB
+  Avg:         85075 MiB
+  Range:       4380 MiB

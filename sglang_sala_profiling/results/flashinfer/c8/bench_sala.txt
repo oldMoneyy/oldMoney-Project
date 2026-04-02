@@ -1,0 +1,46 @@
+benchmark_args=Namespace(backend='sglang', base_url=None, host='127.0.0.1', port=31333, dataset_name='custom', dataset_path='/opt/oldMoney-Project/bench/competition_bench_64.jsonl', model=None, served_model_name=None, tokenizer=None, num_prompts=16, sharegpt_output_len=None, sharegpt_context_len=None, random_input_len=1024, random_output_len=1024, random_range_ratio=0.0, image_count=1, image_resolution='1080p', random_image_count=False, image_format='jpeg', image_content='random', request_rate=inf, use_trace_timestamps=False, max_concurrency=8, output_file=None, output_details=False, print_requests=False, disable_tqdm=False, disable_stream=False, return_logprob=False, return_routed_experts=False, seed=1, disable_ignore_eos=False, extra_request_body=None, apply_chat_template=False, profile=False, plot_throughput=False, profile_activities=['CPU', 'GPU'], profile_num_steps=None, profile_by_stage=False, profile_stages=None, lora_name=None, lora_request_distribution='uniform', lora_zipf_alpha=1.5, prompt_suffix='', pd_separated=False, profile_prefill_url=None, profile_decode_url=None, flush_cache=True, warmup_requests=1, tokenize_prompt=False, gsp_num_groups=64, gsp_prompts_per_group=16, gsp_system_prompt_len=2048, gsp_question_len=128, gsp_output_len=256, gsp_range_ratio=1.0, gsp_fast_prepare=False, gsp_send_routing_key=False, gsp_num_turns=1, gsp_ordered=False, mooncake_slowdown_factor=1.0, mooncake_num_rounds=1, mooncake_workload='conversation', tag=None, header=None)
+Namespace(backend='sglang', base_url=None, host='127.0.0.1', port=31333, dataset_name='custom', dataset_path='/opt/oldMoney-Project/bench/competition_bench_64.jsonl', model='/opt/model_gptq_int4_dense_smooth', served_model_name=None, tokenizer=None, num_prompts=16, sharegpt_output_len=None, sharegpt_context_len=None, random_input_len=1024, random_output_len=1024, random_range_ratio=0.0, image_count=1, image_resolution='1080p', random_image_count=False, image_format='jpeg', image_content='random', request_rate=inf, use_trace_timestamps=False, max_concurrency=8, output_file=None, output_details=False, print_requests=False, disable_tqdm=False, disable_stream=False, return_logprob=False, return_routed_experts=False, seed=1, disable_ignore_eos=False, extra_request_body=None, apply_chat_template=False, profile=False, plot_throughput=False, profile_activities=['CPU', 'GPU'], profile_num_steps=None, profile_by_stage=False, profile_stages=None, lora_name=None, lora_request_distribution='uniform', lora_zipf_alpha=1.5, prompt_suffix='', pd_separated=False, profile_prefill_url=None, profile_decode_url=None, flush_cache=True, warmup_requests=1, tokenize_prompt=False, gsp_num_groups=64, gsp_prompts_per_group=16, gsp_system_prompt_len=2048, gsp_question_len=128, gsp_output_len=256, gsp_range_ratio=1.0, gsp_fast_prepare=False, gsp_send_routing_key=False, gsp_num_turns=1, gsp_ordered=False, mooncake_slowdown_factor=1.0, mooncake_num_rounds=1, mooncake_workload='conversation', tag=None, header=None)
+
+#Input tokens: 1084924
+#Output tokens: 67175
+Starting warmup with 1 sequences...
+Warmup completed with 1 sequences. Starting main benchmark run...
+  0%|                                                                                                                                                                 | 0/16 [00:00<?, ?it/s]  6%|█████████▌                                                                                                                                               | 1/16 [01:04<16:12, 64.83s/it] 12%|███████████████████▏                                                                                                                                     | 2/16 [01:25<09:01, 38.70s/it] 19%|████████████████████████████▋                                                                                                                            | 3/16 [01:42<06:17, 29.08s/it] 25%|██████████████████████████████████████▎                                                                                                                  | 4/16 [02:02<05:04, 25.34s/it] 31%|███████████████████████████████████████████████▊                                                                                                         | 5/16 [02:25<04:30, 24.60s/it] 38%|█████████████████████████████████████████████████████████▍                                                                                               | 6/16 [02:26<02:45, 16.57s/it] 44%|██████████████████████████████████████████████████████████████████▉                                                                                      | 7/16 [02:38<02:13, 14.87s/it] 50%|████████████████████████████████████████████████████████████████████████████▌                                                                            | 8/16 [02:40<01:27, 10.88s/it] 62%|███████████████████████████████████████████████████████████████████████████████████████████████                                                         | 10/16 [02:40<00:34,  5.81s/it] 69%|████████████████████████████████████████████████████████████████████████████████████████████████████████▌                                               | 11/16 [02:41<00:22,  4.59s/it] 75%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████                                      | 12/16 [02:43<00:15,  3.82s/it] 81%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████▌                            | 13/16 [03:53<01:06, 22.06s/it] 88%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████                   | 14/16 [03:55<00:32, 16.25s/it] 94%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████▌         | 15/16 [04:30<00:21, 21.71s/it]100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 16/16 [05:00<00:00, 24.03s/it]100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 16/16 [05:00<00:00, 18.76s/it]
+
+============ Serving Benchmark Result ============
+Backend:                                 sglang    
+Traffic request rate:                    inf       
+Max request concurrency:                 8         
+Successful requests:                     16        
+Benchmark duration (s):                  300.11    
+Total input tokens:                      1084924   
+Total input text tokens:                 1084924   
+Total generated tokens:                  67175     
+Total generated tokens (retokenized):    66722     
+Request throughput (req/s):              0.05      
+Input token throughput (tok/s):          3615.03   
+Output token throughput (tok/s):         223.83    
+Peak output token throughput (tok/s):    960.00    
+Peak concurrent requests:                9         
+Total token throughput (tok/s):          3838.86   
+Concurrency:                             5.62      
+----------------End-to-End Latency----------------
+Mean E2E Latency (ms):                   105398.23 
+Median E2E Latency (ms):                 86576.64  
+P90 E2E Latency (ms):                    215448.31 
+P99 E2E Latency (ms):                    295653.56 
+---------------Time to First Token----------------
+Mean TTFT (ms):                          19293.01  
+Median TTFT (ms):                        17857.89  
+P99 TTFT (ms):                           62359.88  
+-----Time per Output Token (excl. 1st token)------
+Mean TPOT (ms):                          86.89     
+Median TPOT (ms):                        74.68     
+P99 TPOT (ms):                           292.55    
+---------------Inter-Token Latency----------------
+Mean ITL (ms):                           20.51     
+Median ITL (ms):                         6.96      
+P95 ITL (ms):                            8.51      
+P99 ITL (ms):                            8.94      
+Max ITL (ms):                            60731.01  
+==================================================

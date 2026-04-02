@@ -1,0 +1,27 @@
+================================================================================
+SCHEDULING ANALYSIS
+================================================================================
+
+  Prefill/extend steps:  127
+  Decode steps:          0
+  Prefill ratio:         100.0%
+  Decode ratio:          0.0%
+
+  Batch size stats (from #running-req):
+    Samples:  877
+    Avg:      17.5
+    Max:      63
+    Min:      0
+    Distribution:
+           0:    5 (1%)
+         1-8:  330 (38%)
+        9-32:  412 (47%)
+       33-64:  130 (15%)
+
+  Memory warnings (2):
+    [2026-04-02 10:16:40] server_args=ServerArgs(model_path='/opt/model_gptq_int4_dense_smooth', tokenizer_path='/opt/model_gptq_int4_dense_smooth', token
+    [2026-04-02 10:16:45] Memory pool end. avail mem=16.63 GB
+
+  Errors (2):
+    [2026-04-02 10:16:44] Ignore import error when loading sglang.srt.models.minicpmo: No module named 'sglang.srt.models.idefics2'
+    [2026-04-02 10:16:44] Ignore import error when loading sglang.srt.models.minicpmv: No module named 'sglang.srt.models.idefics2'
