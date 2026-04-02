@@ -42,15 +42,15 @@ def extract_bench_metrics(filepath):
         return metrics
 
     patterns = {
-        "total_duration_s": r"[Tt]otal\s+duration[:\s]+([0-9.]+)",
-        "input_throughput": r"[Ii]nput\s+throughput[:\s]+([0-9.]+)",
-        "output_throughput": r"[Oo]utput\s+throughput[:\s]+([0-9.]+)",
-        "avg_ttft_ms": r"(?:[Aa]vg|[Mm]ean)\s+TTFT[:\s]+([0-9.]+)",
-        "p99_ttft_ms": r"P99\s+TTFT[:\s]+([0-9.]+)",
-        "avg_itl_ms": r"(?:[Aa]vg|[Mm]ean)\s+ITL[:\s]+([0-9.]+)",
-        "p99_itl_ms": r"P99\s+ITL[:\s]+([0-9.]+)",
-        "avg_tpot_ms": r"(?:[Aa]vg|[Mm]ean)\s+TPOT[:\s]+([0-9.]+)",
-        "completed_requests": r"(?:[Cc]ompleted|[Ss]uccessful)\s+requests[:\s]+(\d+)",
+        "total_duration_s": r"[Bb]enchmark\s+duration\s*\(s\)[:\s]+([0-9.]+)",
+        "input_throughput": r"[Ii]nput\s+token\s+throughput\s*\(tok/s\)[:\s]+([0-9.]+)",
+        "output_throughput": r"[Oo]utput\s+token\s+throughput\s*\(tok/s\)[:\s]+([0-9.]+)",
+        "avg_ttft_ms": r"[Mm]ean\s+TTFT\s*\(ms\)[:\s]+([0-9.]+)",
+        "p99_ttft_ms": r"P99\s+TTFT\s*\(ms\)[:\s]+([0-9.]+)",
+        "avg_itl_ms": r"[Mm]ean\s+ITL\s*\(ms\)[:\s]+([0-9.]+)",
+        "p99_itl_ms": r"P99\s+ITL\s*\(ms\)[:\s]+([0-9.]+)",
+        "avg_tpot_ms": r"[Mm]ean\s+TPOT\s*\(ms\)[:\s]+([0-9.]+)",
+        "completed_requests": r"[Ss]uccessful\s+requests[:\s]+(\d+)",
     }
     for key, pattern in patterns.items():
         m = re.search(pattern, text, re.I)
