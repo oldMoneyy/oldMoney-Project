@@ -143,6 +143,10 @@ def step_completed(mode: str = "unknown", num_tokens: int = 0):
     if not _ENABLED:
         return
 
+    # Don't touch CUDA events during graph capture
+    if torch.cuda.is_current_stream_capturing():
+        return
+
     _flush_pending()
     _step_count += 1
 
