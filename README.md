@@ -2,6 +2,7 @@
 
 Team **oldMoney** — SOAR Competition: MiniCPM-SALA optimization on NVIDIA Blackwell.
 
+Homepage: https://oldmoneyy.github.io/soar/
 
 ## Server Setup
 
