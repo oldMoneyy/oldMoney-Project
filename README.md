@@ -306,7 +306,7 @@ Dense:
 fuser -k -9 31333/tcp
 # uv pip install --no-deps -e /opt/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python
 # uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
-uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_flashinfer
+uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_profiling
 # uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_opt
 # export SGLANG_SALA_PROFILE=1
 export PYTORCH_ALLOC_CONF=expandable_segments:True
