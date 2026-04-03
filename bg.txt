@@ -50,6 +50,32 @@ MODEL: MiniCPM-SALA (~9.48B params)
 - See SALA_paper.md for the InfLLM-V2 paper
 
 ================================================================================
+MODEL CONFIG (both original and quantized model have identical sparse_config)
+================================================================================
+Both /opt/model/config.json and /opt/model_gptq_int4_dense_smooth/config.json
+contain the SAME sparse_config. It is NOT missing. Do NOT assume defaults.
+
+  "sparse_config": {
+    "kernel_size": 32,
+    "kernel_stride": 16,
+    "init_blocks": 1,
+    "block_size": 64,
+    "window_size": 2048,
+    "topk": 64,
+    "use_nope": false,
+    "dense_len": 8192
+  }
+
+Quantized model additionally has:
+  "quantization_config": {"bits": 4, "group_size": 128, "desc_act": false,
+                          "sym": true, "quant_method": "gptq"}
+  "gptq_layer_bits": all 32 layers = 4 bits
+
+Model paths on remote server:
+  /opt/model                        <- original bf16 model
+  /opt/model_gptq_int4_dense_smooth <- W4A16 GPTQ quantized model (used in production)
+
+================================================================================
 CURRENT SETUP
 ================================================================================
 - Backend: flashinfer (NOT minicpm_flashinfer)

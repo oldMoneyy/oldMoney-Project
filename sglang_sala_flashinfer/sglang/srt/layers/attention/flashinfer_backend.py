@@ -957,40 +957,68 @@ class FlashInferAttnBackend(AttentionBackend):
         """Run sparse paged attention for the ragged+paged merge path.
 
         Returns (output, lse) for merging with the ragged self-attention.
+        Builds filtered kv_indices directly from req_to_token without
+        redundant Triton kernel calls.
         """
-        from sglang.srt.layers.attention.sparse_prefill import (
-            build_filtered_kv_indices,
-        )
-
         updater = self.indices_updater_prefill
         req_to_token = updater.req_to_token
         req_pool_indices = forward_batch.req_pool_indices
         bs = forward_batch.batch_size
+        device = q.device
 
-        # For the ragged+paged path, paged_kernel_lens = prefix_lens
-        prefix_lens = forward_batch.extend_prefix_lens
-        if prefix_lens is None:
-            prefix_lens = torch.zeros(bs, dtype=torch.int32, device=q.device)
-        paged_kernel_lens = prefix_lens
+        sparse_block_indices = sparse_meta["sparse_block_indices"]
+        block_size = sparse_meta["block_size"]
+        prefix_lens = sparse_meta["prefix_lens"]
+        dense_len = sparse_meta["dense_len"]
 
-        # Build original kv_indices for prefix
-        kv_indptr_orig = torch.zeros(bs + 1, dtype=torch.int32, device=q.device)
-        kv_indptr_orig[1:bs + 1] = torch.cumsum(paged_kernel_lens, dim=0)[:bs]
-        total_kv = kv_indptr_orig[bs].item()
+        # Build filtered kv_indices directly from req_to_token
+        all_phys = []
+        filtered_lens = []
+        for b in range(bs):
+            req_idx = req_pool_indices[b].item()
+            plen = prefix_lens[b]
 
-        kv_indices_orig = torch.empty(total_kv + 256, dtype=torch.int32, device=q.device)
-        kv_start_idx = torch.zeros(bs, dtype=torch.int32, device=q.device)
-        create_flashinfer_kv_indices_triton[(bs,)](
-            req_to_token, req_pool_indices, paged_kernel_lens,
-            kv_indptr_orig, kv_start_idx, kv_indices_orig,
-            req_to_token.shape[1],
-        )
+            if plen >= dense_len and sparse_block_indices[b] is not None:
+                # Sparse: gather only selected block tokens
+                all_blocks = torch.cat(sparse_block_indices[b], dim=0).unique()
+                all_blocks = all_blocks[all_blocks >= 0].sort().values
 
-        filtered_kv_indices, filtered_kv_indptr = build_filtered_kv_indices(
-            sparse_meta, req_to_token, req_pool_indices,
-            paged_kernel_lens, kv_start_idx,
-            kv_indices_orig, kv_indptr_orig, q.device,
-        )
+                block_starts = all_blocks.long() * block_size
+                block_ends = torch.clamp(block_starts + block_size, max=plen)
+                valid_mask = block_starts < plen
+
+                if valid_mask.any():
+                    valid_starts = block_starts[valid_mask]
+                    valid_ends = block_ends[valid_mask]
+                    token_positions = torch.cat([
+                        torch.arange(s.item(), e.item(), device=device)
+                        for s, e in zip(valid_starts, valid_ends)
+                    ])
+                    phys = req_to_token[req_idx, token_positions]
+                    all_phys.append(phys)
+                    filtered_lens.append(len(phys))
+                else:
+                    filtered_lens.append(0)
+            elif plen > 0:
+                # Dense: include all prefix tokens
+                phys = req_to_token[req_idx, :plen]
+                all_phys.append(phys)
+                filtered_lens.append(plen)
+            else:
+                filtered_lens.append(0)
+
+        # Build indptr
+        filtered_kv_indptr = torch.zeros(bs + 1, dtype=torch.int32, device=device)
+        for b in range(bs):
+            filtered_kv_indptr[b + 1] = filtered_kv_indptr[b] + filtered_lens[b]
+
+        # Concatenate indices
+        if all_phys:
+            filtered_kv_indices = torch.cat(all_phys, dim=0).to(torch.int32)
+            pad = torch.zeros(256, dtype=torch.int32, device=device)
+            filtered_kv_indices = torch.cat([filtered_kv_indices, pad])
+        else:
+            filtered_kv_indices = torch.zeros(256, dtype=torch.int32, device=device)
 
         # Create temporary wrapper
         sparse_wrapper = BatchPrefillWithPagedKVCacheWrapper(
@@ -1000,10 +1028,10 @@ class FlashInferAttnBackend(AttentionBackend):
         extend_seq_lens = forward_batch.extend_seq_lens
         if extend_seq_lens is None:
             extend_seq_lens = forward_batch.seq_lens
-        qo_indptr = torch.zeros(bs + 1, dtype=torch.int32, device=q.device)
+        qo_indptr = torch.zeros(bs + 1, dtype=torch.int32, device=device)
         qo_indptr[1:bs + 1] = torch.cumsum(extend_seq_lens, dim=0)[:bs]
 
-        kv_last_page_len = torch.ones(bs, dtype=torch.int32, device=q.device)
+        kv_last_page_len = torch.ones(bs, dtype=torch.int32, device=device)
 
         sparse_wrapper.begin_forward(
             qo_indptr[:bs + 1],
