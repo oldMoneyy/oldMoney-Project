@@ -45,6 +45,7 @@ BASE_SERVER_ARGS=(
     --mem-fraction-static 0.82
     --max-mamba-cache-size 64
     --log-level info
+    --disable-cuda-graph
 )
 
 get_server_args() {
