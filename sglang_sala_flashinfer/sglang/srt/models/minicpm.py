@@ -34,6 +34,7 @@ from sglang.srt.layers.attention.minicpm_sparse_utils import (
 )
 from sglang.srt.layers.attention.sparse_prefill import (
     compute_sparse_prefill_metadata,
+    clear_kc1_cache,
     SPARSE_PREFILL_ENABLED,
 )
 from sglang.srt.layers.layernorm import RMSNorm
@@ -712,6 +713,13 @@ class MiniCPMForCausalLM(nn.Module):
         forward_batch: ForwardBatch,
         input_embeds: torch.Tensor = None,
     ) -> torch.Tensor:
+        # Clean up incremental KC1 cache for finished requests
+        if SPARSE_PREFILL_ENABLED:
+            if not forward_batch.forward_mode.is_extend():
+                clear_kc1_cache()  # Decode mode: no prefill, clear all
+            else:
+                active = set(forward_batch.req_pool_indices.tolist())
+                clear_kc1_cache(active)
         if input_embeds is not None:
             input_embeds = input_embeds * self.config.scale_emb
         hidden_states = self.model(input_ids, positions, forward_batch, input_embeds)
