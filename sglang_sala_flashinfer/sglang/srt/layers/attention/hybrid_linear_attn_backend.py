@@ -1562,65 +1562,71 @@ class SimpleGLAAttnBackend(MambaAttnBackendBase):
 
         num_heads = q.shape[2]
         head_dim = q.shape[3]
-        is_decode = forward_batch.forward_mode.is_decode()
+        if forward_batch.forward_mode.is_decode():
+            seq_len = 1
+        else:
+            seq_len = torch.max(forward_batch.extend_seq_lens)
 
         mamba_indices = self._get_mamba_indices(forward_batch)
-
-        # Load initial state.
-        # Short-circuit is_decode to avoid .any() GPU sync on the hot path.
         initial_state = None
-        need_state = is_decode or (
-            forward_batch.extend_prefix_lens is not None
-            and (forward_batch.extend_prefix_lens > 0).any()
-        )
-        cache_idx = self.req_to_token_pool.mamba_map.get(layer_id)
-        if need_state:
+        has_initial_state = forward_batch.extend_prefix_lens is not None and forward_batch.extend_prefix_lens > 0
+        if forward_batch.forward_mode.is_decode() or has_initial_state.any():
+            cache_idx = self.req_to_token_pool.mamba_map.get(layer_id)
             if cache_idx is not None:
                 layer_cache = self.req_to_token_pool.mamba_pool.mamba2_layer_cache(cache_idx)
                 initial_state = layer_cache.temporal[mamba_indices, :].contiguous()
             else:
                 raise RuntimeError(
                     f"SimpleGLAAttnBackend layer {layer_id} is missing from mamba_map. "
+                    f"This indicates a misconfiguration - lightning layers must be registered in cache_params.layers. "
                     f"Available layers: {list(self.req_to_token_pool.mamba_map.keys())}"
                 )
 
-        # Dispatch: decode always uses fused_recurrent; prefill uses chunk for long seqs
-        if is_decode:
+        scale = self.scale
+
+        g_gamma = self.g_gamma
+
+        mode = "fused_recurrent" if seq_len < 64 else "chunk"
+        if forward_batch.forward_mode.is_decode() or mode == "fused_recurrent":
             o, final_state = fused_recurrent_simple_gla(
-                q=q, k=k, v=v,
-                g_gamma=self.g_gamma,
-                scale=self.scale,
+                q=q,
+                k=k,
+                v=v,
+                g_gamma=g_gamma,
+                scale=scale,
                 initial_state=initial_state,
                 output_final_state=True,
                 cu_seqlens=self.forward_metadata.query_start_loc,
             )
         else:
-            seq_len = torch.max(forward_batch.extend_seq_lens)
-            if seq_len < 64:
-                o, final_state = fused_recurrent_simple_gla(
-                    q=q, k=k, v=v,
-                    g_gamma=self.g_gamma,
-                    scale=self.scale,
-                    initial_state=initial_state,
-                    output_final_state=True,
-                    cu_seqlens=self.forward_metadata.query_start_loc,
-                )
+            o, final_state = chunk_simple_gla(
+                q=q,
+                k=k,
+                v=v,
+                g_gamma=g_gamma,
+                initial_state=initial_state,
+                output_final_state=True,
+                scale=scale,
+                cu_seqlens=self.forward_metadata.query_start_loc,
+            )
+
+        if final_state is not None:
+            mamba_indices = self._get_mamba_indices(forward_batch)
+            cache_idx = self.req_to_token_pool.mamba_map.get(layer_id)
+
+            if cache_idx is not None:
+                layer_cache = self.req_to_token_pool.mamba_pool.mamba2_layer_cache(cache_idx)
+                layer_cache.temporal[mamba_indices, :] = final_state
             else:
-                o, final_state = chunk_simple_gla(
-                    q=q, k=k, v=v,
-                    g_gamma=self.g_gamma,
-                    initial_state=initial_state,
-                    output_final_state=True,
-                    scale=self.scale,
-                    cu_seqlens=self.forward_metadata.query_start_loc,
+                raise RuntimeError(
+                    f"SimpleGLAAttnBackend layer {layer_id} is missing from mamba_map. "
+                    f"Cannot save state - layer must be registered in cache_params.layers. "
+                    f"Available layers: {list(self.req_to_token_pool.mamba_map.keys())}"
                 )
 
-        # Save state — reuse cache_idx and mamba_indices (no redundant lookups)
-        if final_state is not None and cache_idx is not None:
-            layer_cache = self.req_to_token_pool.mamba_pool.mamba2_layer_cache(cache_idx)
-            layer_cache.temporal[mamba_indices, :] = final_state
+        o = o.reshape(-1, num_heads * head_dim)
 
-        return o.reshape(-1, num_heads * head_dim)
+        return o
 
     def forward_decode(
         self,

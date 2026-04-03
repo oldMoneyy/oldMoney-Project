@@ -534,6 +534,7 @@ class ServerArgs:
     split_stage1: bool = False
     dense_as_sparse: bool = False
     force_dense_minicpm: bool = False
+    sparse_topk_override: Optional[int] = None
     enable_profile_cuda_graph: bool = False
     enable_cudagraph_gc: bool = False
     enable_layerwise_nvtx_marker: bool = False
@@ -4023,6 +4024,12 @@ class ServerArgs:
             "--force-dense-minicpm",
             action="store_true",
             help="Force dense attention in minicpm",
+        )
+        parser.add_argument(
+            "--sparse-topk-override",
+            type=int,
+            default=None,
+            help="Override sparse_topk for minicpm4 layers (default: use model config)",
         )
         parser.add_argument(
             "--enable-profile-cuda-graph",

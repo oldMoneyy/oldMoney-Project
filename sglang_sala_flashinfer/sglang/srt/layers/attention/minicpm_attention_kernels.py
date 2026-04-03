@@ -174,6 +174,21 @@ class FlashInferKernel(AttentionKernel):
     def __init__(self, model_runner):
         self.device = model_runner.device
         self.page_size = model_runner.page_size
+        self.model_dtype = model_runner.dtype  # dotv
+
+        # dotv
+        # Plan caching for sparse extend path (skip redundant begin_forward)
+        self._cached_plan_kv_indptr = None
+        self._cached_kv_indptr = None
+        self._cached_kv_indices = None
+        self._cached_kv_last_page_len = None
+        # FA2 prefill doesn't support FP8 KV, FA3 needs SM90+
+        # Fall back to flash_attn for prefill with FP8 KV on non-Hopper GPUs
+        self.is_fp8_kv = "fp8" in model_runner.server_args.kv_cache_dtype.lower()
+        # if self.is_fp8_kv:
+        #     from sgl_kernel.flash_attn import flash_attn_with_kvcache
+        #     self.flash_attn_prefill = flash_attn_with_kvcache
+        ################################################
 
         # KV cache attributes
         self.kv_cache_dtype = model_runner.kv_cache_dtype
@@ -234,12 +249,40 @@ class FlashInferKernel(AttentionKernel):
         if self.prefill_wrapper is None:
             from flashinfer import BatchPrefillWithPagedKVCacheWrapper
 
+            # dotv ###########################################################
+            # FA2 doesn't support FP8 KV cache, use FA3 instead
+            # is_fp8 = "fp8" in str(self.kv_cache_dtype).lower() or self.kv_cache_dtype in (
+            #     torch.float8_e5m2, torch.float8_e4m3fn
+            # )
+            # backend = "fa3" if is_fp8 else "fa2"
+
+            # self.prefill_wrapper = BatchPrefillWithPagedKVCacheWrapper(
+            #     self.prefill_workspace,
+            #     self.kv_layout,
+            #     backend=backend,
+            # )
             self.prefill_wrapper = BatchPrefillWithPagedKVCacheWrapper(
                 self.prefill_workspace,
                 self.kv_layout,
                 backend="fa2",
             )
+            ####################################################################
         return self.prefill_wrapper
+        
+    def _safe_resize_flashinfer_buffers(self, wrapper, num_seqs, num_qo, num_kv_indices):
+        """Safely resizes FlashInfer's internal buffers when handling huge sparse batches"""
+        for buf_name, req_size in [
+            ("_kv_lens_buffer", num_seqs),
+            ("_paged_kv_indptr_buf", num_seqs + 1),
+            ("_paged_kv_last_page_len_buf", num_seqs),
+            ("_qo_indptr_buf", num_qo + 1),
+            ("_paged_kv_indices_buf", num_kv_indices),
+        ]:
+            if hasattr(wrapper, buf_name) and getattr(wrapper, buf_name) is not None:
+                t = getattr(wrapper, buf_name)
+                if t.shape[0] < req_size:
+                    # resize_ modifies tensor inplace without risking property setter complications
+                    t.resize_(int(req_size * 1.2) + 1024)
 
     def plan_decode_wrapper(
         self,
@@ -260,6 +303,14 @@ class FlashInferKernel(AttentionKernel):
         """
         self.decode_wrapper_planned = False
         self._get_or_create_decode_wrapper()
+        
+        self._safe_resize_flashinfer_buffers(
+            self.decode_wrapper,
+            num_seqs=kv_indptr.shape[0] - 1,
+            num_qo=kv_indptr.shape[0] - 1,
+            num_kv_indices=kv_indices.shape[0]
+        )
+        
         self.decode_wrapper.begin_forward(
             kv_indptr,
             kv_indices,
@@ -297,16 +348,27 @@ class FlashInferKernel(AttentionKernel):
         """
         self.prefill_wrapper_planned = False
         self._get_or_create_prefill_wrapper()
+        valid_pages = kv_indptr[-1].item()
+        kv_indices_valid = kv_indices[:valid_pages]
+        
+        self._safe_resize_flashinfer_buffers(
+            self.prefill_wrapper,
+            num_seqs=kv_indptr.shape[0] - 1,
+            num_qo=qo_indptr.shape[0] - 1,
+            num_kv_indices=valid_pages
+        )
+        
         self.prefill_wrapper.begin_forward(
             qo_indptr,
             kv_indptr,
-            kv_indices,
+            kv_indices_valid,
             kv_last_page_len,
             self.num_qo_heads,
             self.num_kv_heads,
             self.head_dim,
             self.page_size,
-            q_data_type=self.q_data_type,
+            # q_data_type=self.q_data_type,
+            q_data_type=self.model_dtype,
             kv_data_type=self.data_type,
             non_blocking=True,
             causal=causal,
@@ -321,6 +383,105 @@ class FlashInferKernel(AttentionKernel):
         """Perform attention computation using flashinfer."""
         # Determine if this is prefill or decode based on max_seqlen_q
         is_prefill = params.max_seqlen_q > 1
+
+        # dotv #############################################
+        # 针对 FP8 且是 Prefill 阶段：
+        if is_prefill and self.is_fp8_kv:
+            wrapper = self._get_or_create_prefill_wrapper()
+            bs = params.cache_seqlens.shape[0]
+            max_sparse_tokens = params.page_table.shape[1]
+            
+            kv_indptr = torch.zeros(bs + 1, dtype=torch.int32, device=params.page_table.device)
+            kv_indices = torch.zeros(bs * max_sparse_tokens, dtype=torch.int32, device=params.page_table.device)
+            kv_last_page_len = torch.zeros(bs, dtype=torch.int32, device=params.page_table.device)
+            
+            kv_indptr, kv_indices, kv_last_page_len = convert_sparse_page_table_to_flashinfer(
+                params.page_table, params.cache_seqlens, kv_indptr, kv_indices, kv_last_page_len,
+            )
+            
+            # Truncate to valid elements to avoid FlashInfer buffer overflow with padded zeros
+            valid_pages = kv_indptr[-1].item()
+            kv_indices_valid = kv_indices[:valid_pages]
+
+            # --- 【动态 Mini-Pool 提取与精度修复】 ---
+            # 1. 找出当前 batch 实际引用的 KV 页，避免 64GB 显存 OOM
+            used_pages, new_kv_indices = torch.unique(kv_indices_valid, return_inverse=True)
+            new_kv_indices = new_kv_indices.to(torch.int32)
+            
+            # 2. 提取并转换（仅转换用到的几十MB数据）
+            mini_k_cache = params.k_cache[used_pages].to(self.model_dtype)
+            mini_v_cache = params.v_cache[used_pages].to(self.model_dtype)
+            
+            # 3. [精度修复] 如果存在反量化 Scale，必须乘回去才能还原真实的浮点值！
+            if params.k_descale is not None:
+                mini_k_cache = mini_k_cache * params.k_descale
+            if params.v_descale is not None:
+                mini_v_cache = mini_v_cache * params.v_descale
+            # ----------------------------------------
+            
+            self._safe_resize_flashinfer_buffers(
+                wrapper,
+                num_seqs=kv_indptr.shape[0] - 1,
+                num_qo=params.cu_seqlens_q.shape[0] - 1,
+                num_kv_indices=new_kv_indices.shape[0]
+            )
+
+            wrapper.begin_forward(
+                params.cu_seqlens_q,
+                kv_indptr, new_kv_indices, kv_last_page_len,  # 传入重新映射的紧凑索引
+                self.num_qo_heads, self.num_kv_heads,
+                self.head_dim, self.page_size,
+                q_data_type=self.model_dtype,
+                kv_data_type=self.model_dtype,   # Mini-pool 已经是 BF16 了
+                non_blocking=True,
+                causal=params.causal,
+            )
+            return wrapper.forward(
+                params.q,
+                (mini_k_cache, mini_v_cache),    # 传入 Mini-pool
+                causal=params.causal,
+                sm_scale=params.softmax_scale,
+                window_left=params.window_size[0] if params.window_size[0] != -1 else -1,
+                logits_soft_cap=params.softcap if params.softcap > 0 else None,
+            )
+        # dotv #############################################
+        # import time
+        # do_profile = (not torch.cuda.is_current_stream_capturing()) and params.cache_seqlens.shape[0] > 100
+
+        # FP8 KV + prefill: flashinfer FA2 doesn't support FP8, FA3 needs SM90+
+        # Fall back to flash_attn which handles FP8 KV with k_descale/v_descale
+        # if is_prefill and self.is_fp8_kv:
+        #     from sgl_kernel.flash_attn import flash_attn_with_kvcache
+            
+        #     wrapper = self._get_or_create_prefill_wrapper()
+        #     bs = params.cache_seqlens.shape[0]
+        #     max_sparse_tokens = params.page_table.shape[1]
+        #     kv_indptr = torch.zeros(bs + 1, dtype=torch.int32, device=params.page_table.device)
+        #     kv_indices = torch.zeros(bs * max_sparse_tokens, dtype=torch.int32, device=params.page_table.device)
+        #     kv_last_page_len = torch.zeros(bs, dtype=torch.int32, device=params.page_table.device)
+        #     kv_indptr, kv_indices, kv_last_page_len = convert_sparse_page_table_to_flashinfer(
+        #         params.page_table, params.cache_seqlens, kv_indptr, kv_indices, kv_last_page_len,
+        #     )
+        #     wrapper.begin_forward(
+        #         params.cu_seqlens_q,
+        #         kv_indptr, kv_indices, kv_last_page_len,
+        #         self.num_qo_heads, self.num_kv_heads,
+        #         self.head_dim, self.page_size,
+        #         q_data_type=self.model_dtype,
+        #         kv_data_type=self.model_dtype,
+        #         non_blocking=True,
+        #         causal=params.causal,
+        #     )
+        #     return wrapper.forward(
+        #         params.q,
+        #         (params.k_cache.to(self.model_dtype), params.v_cache.to(self.model_dtype)),
+        #         causal=params.causal,
+        #         sm_scale=params.softmax_scale,
+        #         window_left=params.window_size[0] if params.window_size[0] != -1 else -1,
+        #         logits_soft_cap=params.softcap if params.softcap > 0 else None,
+        #     )
+        # dotv #############################################
+
 
         # CUDA graph mode: use the pre-configured wrapper from params
         if params.decode_wrapper is not None and not is_prefill:
@@ -375,40 +536,42 @@ class FlashInferKernel(AttentionKernel):
             #wrapper._paged_kv_indices_buf.copy_(kv_indices)
             #wrapper._paged_kv_last_page_len_buf.copy_(kv_last_page_len)
         else:
-            # Non-CUDA graph mode: create wrapper and convert on-the-fly
             if is_prefill:
                 wrapper = self._get_or_create_prefill_wrapper()
             else:
                 wrapper = self._get_or_create_decode_wrapper()
-
-            # Convert page table format for flashinfer
-            # Use pre-converted tensors if available (for CUDA graph compatibility),
-            # otherwise convert on-the-fly (for non-CUDA graph mode)
+            
             if (
                 params.flashinfer_kv_indptr is not None
                 and params.flashinfer_kv_indices is not None
                 and params.flashinfer_kv_last_page_len is not None
+                and params.flashinfer_kv_indptr.shape[0] == params.cache_seqlens.shape[0] + 1
             ):
-                # Use pre-converted tensors (CUDA graph safe)
                 kv_indptr = params.flashinfer_kv_indptr
                 kv_indices = params.flashinfer_kv_indices
                 kv_last_page_len = params.flashinfer_kv_last_page_len
+                using_preconverted = True
             else:
+                using_preconverted = False
                 bs = params.cache_seqlens.shape[0]
                 max_sparse_tokens = params.page_table.shape[1]
 
-                kv_indptr = torch.zeros(
-                    bs + 1, dtype=torch.int32, device=params.page_table.device
-                )
-                kv_indices = torch.zeros(
-                    bs * max_sparse_tokens,
-                    dtype=torch.int32,
-                    device=params.page_table.device,
-                )
-                kv_last_page_len = torch.zeros(
-                    bs, dtype=torch.int32, device=params.page_table.device
-                )
+                # Reuse pre-allocated buffers if correctly sized
+                if (self._cached_kv_indptr is not None
+                    and self._cached_kv_indptr.shape[0] == bs + 1
+                    and self._cached_kv_indices.shape[0] >= bs * max_sparse_tokens):
+                    kv_indptr = self._cached_kv_indptr
+                    kv_indices = self._cached_kv_indices
+                    kv_last_page_len = self._cached_kv_last_page_len
+                else:
+                    kv_indptr = torch.zeros(bs + 1, dtype=torch.int32, device=params.page_table.device)
+                    kv_indices = torch.zeros(bs * max_sparse_tokens, dtype=torch.int32, device=params.page_table.device)
+                    kv_last_page_len = torch.zeros(bs, dtype=torch.int32, device=params.page_table.device)
+                    self._cached_kv_indptr = kv_indptr
+                    self._cached_kv_indices = kv_indices
+                    self._cached_kv_last_page_len = kv_last_page_len
 
+                # Convert page table — updates kv_indptr, kv_indices, kv_last_page_len in-place
                 kv_indptr, kv_indices, kv_last_page_len = (
                     convert_sparse_page_table_to_flashinfer(
                         params.page_table,
@@ -419,44 +582,99 @@ class FlashInferKernel(AttentionKernel):
                     )
                 )
 
-            # Call begin_forward to set up the attention plan
-            # This is required by flashinfer to cache data types and metadata
-            # Skip only if we're using pre-converted tensors that match the plan
-            using_preconverted = params.flashinfer_kv_indptr is not None
-            if is_prefill:
-                if not using_preconverted:
-                    # Prefill wrapper requires qo_indptr (query indptr)
+                # Check if we can skip begin_forward (same batch structure as previous call)
+                # kv_indptr encodes the ragged batch structure — if it matches, the plan is reusable
+                # FlashInfer holds kv_indices by reference, so in-place updates are visible
+                can_reuse_plan = False
+                if (not is_prefill
+                    and self._cached_plan_kv_indptr is not None
+                    and self._cached_plan_kv_indptr.shape == kv_indptr.shape
+                    and torch.equal(self._cached_plan_kv_indptr, kv_indptr)):
+                    can_reuse_plan = True
+
+                if not can_reuse_plan:
+                    if is_prefill:
+                        valid_pages = kv_indptr[-1].item()
+                        kv_indices_valid = kv_indices[:valid_pages]
+                        qo_indptr = params.cu_seqlens_q
+                        
+                        self._safe_resize_flashinfer_buffers(
+                            wrapper,
+                            num_seqs=kv_indptr.shape[0] - 1,
+                            num_qo=qo_indptr.shape[0] - 1,
+                            num_kv_indices=valid_pages
+                        )
+                        
+                        wrapper.begin_forward(
+                            qo_indptr,
+                            kv_indptr, kv_indices_valid, kv_last_page_len,
+                            self.num_qo_heads, self.num_kv_heads,
+                            self.head_dim, self.page_size,
+                            q_data_type=self.model_dtype,
+                            kv_data_type=self.data_type,
+                            non_blocking=True,
+                            causal=params.causal,
+                        )
+                    else:
+                        self._safe_resize_flashinfer_buffers(
+                            wrapper,
+                            num_seqs=kv_indptr.shape[0] - 1,
+                            num_qo=kv_indptr.shape[0] - 1,
+                            num_kv_indices=kv_indices.shape[0]
+                        )
+                        wrapper.begin_forward(
+                            kv_indptr, kv_indices, kv_last_page_len,
+                            self.num_qo_heads, self.num_kv_heads,
+                            self.head_dim, self.page_size,
+                            q_data_type=self.model_dtype,
+                            kv_data_type=self.data_type,
+                            non_blocking=True,
+                        )
+                        # Cache the plan structure for reuse
+                        self._cached_plan_kv_indptr = kv_indptr.clone()
+
+            if not using_preconverted and not is_prefill:
+                pass  # plan already handled above
+            elif using_preconverted:
+                if is_prefill:
+                    valid_pages = kv_indptr[-1].item()
+                    kv_indices_valid = kv_indices[:valid_pages]
                     qo_indptr = params.cu_seqlens_q
+                    
+                    self._safe_resize_flashinfer_buffers(
+                        wrapper,
+                        num_seqs=kv_indptr.shape[0] - 1,
+                        num_qo=qo_indptr.shape[0] - 1,
+                        num_kv_indices=valid_pages
+                    )
+                    
                     wrapper.begin_forward(
                         qo_indptr,
-                        kv_indptr,
-                        kv_indices,
-                        kv_last_page_len,
-                        self.num_qo_heads,
-                        self.num_kv_heads,
-                        self.head_dim,
-                        self.page_size,
-                        q_data_type=self.q_data_type,
+                        kv_indptr, kv_indices_valid, kv_last_page_len,
+                        self.num_qo_heads, self.num_kv_heads,
+                        self.head_dim, self.page_size,
+                        q_data_type=self.model_dtype,
                         kv_data_type=self.data_type,
                         non_blocking=True,
                         causal=params.causal,
                     )
-            else:
-                if not using_preconverted:
-                    # Decode wrapper uses indptr, indices
+                else:
+                    self._safe_resize_flashinfer_buffers(
+                        wrapper,
+                        num_seqs=kv_indptr.shape[0] - 1,
+                        num_qo=kv_indptr.shape[0] - 1,
+                        num_kv_indices=kv_indices.shape[0]
+                    )
+                    
                     wrapper.begin_forward(
-                        kv_indptr,
-                        kv_indices,
-                        kv_last_page_len,
-                        self.num_qo_heads,
-                        self.num_kv_heads,
-                        self.head_dim,
-                        self.page_size,
-                        q_data_type=self.q_data_type,
+                        kv_indptr, kv_indices, kv_last_page_len,
+                        self.num_qo_heads, self.num_kv_heads,
+                        self.head_dim, self.page_size,
+                        q_data_type=self.model_dtype,
                         kv_data_type=self.data_type,
                         non_blocking=True,
                     )
-
+        
         # Perform attention
         q_data = params.q
         k_data = (params.k_cache, params.v_cache)
@@ -481,8 +699,17 @@ class FlashInferKernel(AttentionKernel):
                 k_data,
                 sm_scale=params.softmax_scale,
                 logits_soft_cap=params.softcap if params.softcap > 0 else None,
+                k_scale=params.k_descale if self.is_fp8_kv else None,  # dotv
+                v_scale=params.v_descale if self.is_fp8_kv else None,  # dotv
             )
 
+        # dotv
+        # if do_profile:
+        #     torch.cuda.synchronize()
+        #     _t4 = time.perf_counter()
+            # print(f"    [FlashInfer] alloc={1000*(_t1-_t0):.1f}ms convert={1000*(_t2-_t1):.1f}ms plan={1000*(_t3-_t2):.1f}ms forward={1000*(_t4-_t3):.1f}ms bs={params.cache_seqlens.shape[0]} is_prefill={is_prefill}", flush=True)
+        # dotv
+        
         return o
 
     def init_metadata(

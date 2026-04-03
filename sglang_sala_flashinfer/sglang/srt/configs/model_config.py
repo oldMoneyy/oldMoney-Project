@@ -234,15 +234,8 @@ class ModelConfig:
 
     @property
     def has_sparse_attention(self):
-        """Flashinfer-optimized: always False.
-
-        The flashinfer backend uses dense attention for minicpm4 layers,
-        so all sparse metadata computation in the scheduler is pure waste.
-        Eliminating it removes per-step GPU->CPU syncs from Python-loop
-        tensor indexing (seq_lens_next[i]) and ~100 lines of CPU-side
-        metadata computation that runs every decode step.
-        """
-        return False
+        """Check if model has sparse attention (accesses hf_config.has_sparse_attention)."""
+        return getattr(self.hf_config, "has_sparse_attention", False) if not self.force_dense_minicpm else False
 
     @property
     def has_lightning_layers(self):
@@ -251,8 +244,8 @@ class ModelConfig:
 
     @property
     def sparse_layer_ids(self):
-        """Flashinfer-optimized: always empty — no sparse attention layers."""
-        return []
+        """Get layer IDs with sparse attention (accesses hf_config.sparse_layer_ids)."""
+        return getattr(self.hf_config, "sparse_layer_ids", []) if not self.force_dense_minicpm else []
 
     @property
     def lightning_layer_ids(self):

@@ -1,3 +1,6 @@
+# Uncommented version is for NVFP4 Lightning Attn + FP16 Minicpm Attn Architecture
+# Also supports Full NVFP4 and Late-Layer Protected BF16 dynamically!
+
 # Copyright 2023-2024 SGLang Team
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,7 +32,6 @@ from sglang.srt.layers.attention.minicpm_sparse_utils import (
     SparseMetadata,
     SparseMetadataBuilder,
 )
-from sglang.srt.layers.fused_kernels import fused_scaled_add
 from sglang.srt.layers.layernorm import RMSNorm
 from sglang.srt.layers.linear import (
     ColumnParallelLinear,
@@ -111,8 +113,12 @@ class MiniCPMAttention(nn.Module):
         self.num_heads = self.total_num_heads // tp_size
         self.total_num_kv_heads = num_kv_heads
         if self.total_num_kv_heads >= tp_size:
+            # Number of KV heads is greater than TP size, so we partition
+            # the KV heads across multiple tensor parallel GPUs.
             assert self.total_num_kv_heads % tp_size == 0
         else:
+            # Number of KV heads is less than TP size, so we replicate
+            # the KV heads across multiple tensor parallel GPUs.
             assert tp_size % self.total_num_kv_heads == 0
         self.num_kv_heads = max(1, self.total_num_kv_heads // tp_size)
         self.head_dim = hidden_size // self.total_num_heads
@@ -179,10 +185,6 @@ class MiniCPMAttention(nn.Module):
         qkv, _ = self.qkv_proj(hidden_states)
         q, k, v = qkv.split([self.q_size, self.kv_size, self.kv_size], dim=-1)
 
-        # Compute gate BEFORE attention — hidden_states still in L2 from qkv_proj
-        if self.use_output_gate:
-            o_gate_output, _ = self.o_gate(hidden_states)
-
         if self.attn_use_rope:
             orig_dtype = q.dtype
             q, k = q.float(), k.float()
@@ -192,6 +194,7 @@ class MiniCPMAttention(nn.Module):
         attn_output = self.attn(q, k, v, forward_batch)
 
         if self.use_output_gate:
+            o_gate_output, _ = self.o_gate(hidden_states)
             attn_output = attn_output * F.sigmoid(o_gate_output)
 
         output, _ = self.o_proj(attn_output)
@@ -199,7 +202,12 @@ class MiniCPMAttention(nn.Module):
 
 
 class MiniCPMLightningMixer(nn.Module):
-    """Lightning attention mixer that uses SimpleGLAAttnBackend."""
+    """Lightning attention mixer that uses SimpleGLAAttnBackend.
+
+    This is a wrapper that prepares inputs for the backend and handles
+    the QKV projection, normalization, RoPE, and output processing,
+    while delegating the Simple GLA kernel calls to SimpleGLAAttnBackend.
+    """
 
     def __init__(
         self,
@@ -312,10 +320,6 @@ class MiniCPMLightningMixer(nn.Module):
         qkv, _ = self.qkv_proj(hidden_states)
         q, k, v = qkv.split([self.q_size, self.kv_size, self.kv_size], dim=-1)
 
-        # Compute z BEFORE attention — hidden_states still in L2 from qkv_proj
-        if self.use_output_gate:
-            z, _ = self.z_proj(hidden_states)
-
         if self.qk_norm:
             q = self.q_norm(q.reshape(-1, self.head_dim))
             k = self.k_norm(k.reshape(-1, self.head_dim))
@@ -332,10 +336,12 @@ class MiniCPMLightningMixer(nn.Module):
         k = k.reshape(-1, self.num_kv_heads, self.head_dim)
         v = v.reshape(-1, self.num_kv_heads, self.head_dim)
 
-        q = q.unsqueeze(0)
+        # ALWAYS unsqueeze to (1, total_tokens, h, d)
+        q = q.unsqueeze(0)  # (1, total_tokens, num_heads, head_dim)
         k = k.unsqueeze(0)
         v = v.unsqueeze(0)
 
+        # Get backend from forward batch
         attn_backend = forward_batch.attn_backend
         if not hasattr(attn_backend, "linear_attn_backend"):
             raise RuntimeError(
@@ -350,6 +356,9 @@ class MiniCPMLightningMixer(nn.Module):
                 f"Expected SimpleGLAAttnBackend but got {type(linear_attn_backend).__name__}"
             )
 
+        # Prepare backend inputs
+        # Backend expects q, k, v, forward_batch, layer_id
+        # It will handle state loading/saving internally
         o = linear_attn_backend.forward(
             q=q,
             k=k,
@@ -365,6 +374,7 @@ class MiniCPMLightningMixer(nn.Module):
             o = self.o_norm(o)
 
         if self.use_output_gate:
+            z, _ = self.z_proj(hidden_states)
             o = o * F.sigmoid(z)
 
         y, _ = self.o_proj(o)
@@ -380,6 +390,9 @@ class MiniCPMDecoderLayer(nn.Module):
         prefix: str = "",
     ) -> None:
         super().__init__()
+        if quant_config is not None and layer_id == 0:
+            print(f"quant_config type={type(quant_config).__name__}, get_name={quant_config.get_name() if hasattr(quant_config, 'get_name') else 'NO METHOD'}")
+        
         self.config = config
         self.layer_id = layer_id
         self.hidden_size = config.hidden_size
@@ -391,6 +404,61 @@ class MiniCPMDecoderLayer(nn.Module):
         rope_theta = getattr(config, "rope_theta", 10000)
         rope_scaling = getattr(config, "rope_scaling", None)
         max_position_embeddings = getattr(config, "max_position_embeddings", 8192)
+
+        # ------------------------------------------------------------------------
+        # DYNAMIC QUANTIZATION ROUTING:
+        # Reads `exclude_modules` from the config to automatically support BOTH:
+        # 1. Fully NVFP4 quantized models
+        # 2. Mixed-precision models (e.g., NVFP4 MLP + BF16 Attention)
+        # 3. Layer-protected models (e.g., keeping layers 26-28 entirely in BF16)
+        # ------------------------------------------------------------------------
+        attn_quant_config = quant_config
+        mlp_quant_config = quant_config
+
+        if quant_config is not None:
+            # Safely extract exclude_modules from the model config
+            exclude_modules = []
+            if hasattr(config, "quantization_config"):
+                q_cfg = config.quantization_config
+                if isinstance(q_cfg, dict):
+                    exclude_modules = q_cfg.get("exclude_modules", [])
+                elif hasattr(q_cfg, "exclude_modules"):
+                    exclude_modules = q_cfg.exclude_modules
+                    
+            if not exclude_modules and hasattr(config, "hf_quant_config"):
+                h_cfg = config.hf_quant_config
+                if isinstance(h_cfg, dict):
+                    exclude_modules = h_cfg.get("exclude_modules", [])
+                elif hasattr(h_cfg, "exclude_modules"):
+                    exclude_modules = h_cfg.exclude_modules
+
+            # Helper to check if a block (attn or mlp) is excluded.
+            def is_excluded(target_prefix: str) -> bool:
+                for ex in exclude_modules:
+                    ex_clean = ex.replace(".*", "")
+                    # Case 1: Broad exclusion (e.g., ex="model.layers.26", target="model.layers.26.self_attn")
+                    if target_prefix.startswith(ex_clean):
+                        return True
+                    # Case 2: Narrow exclusion covering the target (e.g., ex="model.layers.0.self_attn.q_proj", target="model.layers.0.self_attn")
+                    if ex_clean.startswith(target_prefix):
+                        return True
+                return False
+
+            layer_prefix = f"model.layers.{layer_id}"
+            
+            # Check if Attention or MLP specifically are excluded
+            if is_excluded(f"{layer_prefix}.self_attn"):
+                attn_quant_config = None
+            if is_excluded(f"{layer_prefix}.mlp"):
+                mlp_quant_config = None
+
+            # Legacy GPTQ override removed. It unconditionally un-excluded GPTQ modules 
+            # and prevented dynamic routing logic for Late-Layer protection setups.
+            # if hasattr(quant_config, "get_name") and quant_config.get_name().startswith("gptq"):
+            #     attn_quant_config = quant_config
+            #     mlp_quant_config = quant_config
+        # ------------------------------------------------------------------------
+
         if self.mixer_type == "minicpm4":
             self.self_attn = MiniCPMAttention(
                 hidden_size=self.hidden_size,
@@ -400,7 +468,7 @@ class MiniCPMDecoderLayer(nn.Module):
                 rope_theta=rope_theta,
                 rope_scaling=rope_scaling,
                 max_position_embeddings=max_position_embeddings,
-                quant_config=quant_config,
+                quant_config=attn_quant_config,
                 attn_use_rope=(
                     config.attn_use_rope if hasattr(config, "attn_use_rope") else True
                 ),
@@ -424,7 +492,7 @@ class MiniCPMDecoderLayer(nn.Module):
                 rope_theta=rope_theta,
                 rope_scaling=rope_scaling,
                 max_position_embeddings=max_position_embeddings,
-                quant_config=quant_config,
+                quant_config=attn_quant_config,
                 use_rope=config.lightning_use_rope,
                 use_output_gate=config.use_output_gate,
                 attention_bias=config.attention_bias,
@@ -436,23 +504,40 @@ class MiniCPMDecoderLayer(nn.Module):
             )
         else:
             raise ValueError(f"Unsupported mixer type: {self.mixer_type}")
+            
         self.mlp = MiniCPMMLP(
             hidden_size=self.hidden_size,
             intermediate_size=config.intermediate_size,
             hidden_act=config.hidden_act,
-            quant_config=quant_config,
+            quant_config=mlp_quant_config,
             prefix=add_prefix("mlp", prefix),
         )
         self.input_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.post_attention_layernorm = RMSNorm(
             config.hidden_size, eps=config.rms_norm_eps
         )
+
     def _compute_topk(self, forward_batch, base_metadata, sparse_metadata):
+        """Compute TopK indices for sparse attention.
+
+        For decode mode, TopK is simple: just use the precomputed sparse_page_table.
+        For prefill mode, we need to compute TopK using kernel calls (deferred for now).
+
+        Args:
+            forward_batch: Forward batch
+            base_metadata: Base metadata
+            sparse_metadata: SparseMetadata to update with topk_indices
+        """
         if forward_batch.forward_mode.is_decode_or_idle():
+            # Decode path: TopK is just the precomputed page table
             sparse_metadata.topk_indices = base_metadata.sparse_page_table
         else:
+            # Prefill path: Complex - needs kernel calls with compressed K1/K2
+            # For now, leave topk_indices as None, backend will compute it
+            # TODO: Implement full TopK computation in prefill mode
             pass
 
+    # dotv ######################################################################
     def forward(
         self,
         positions: torch.Tensor,
@@ -460,28 +545,60 @@ class MiniCPMDecoderLayer(nn.Module):
         forward_batch: ForwardBatch,
         residual: Optional[torch.Tensor],
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        # Identical to official but uses fused_scaled_add (2 kernels → 1)
+        import time
+        
+        # Only profile during real forward, not CUDA graph capture
+        do_profile = (hidden_states.shape[0] > 100) and not torch.cuda.is_current_stream_capturing()
+
+        if do_profile:
+            torch.cuda.synchronize()
+            t0 = time.perf_counter()
+        
         residual = hidden_states
         hidden_states = self.input_layernorm(hidden_states)
+
+        if do_profile:
+            torch.cuda.synchronize()
+            t1 = time.perf_counter()
+        
         hidden_states = self.self_attn(
             positions=positions,
             hidden_states=hidden_states,
             forward_batch=forward_batch,
         )
-        hidden_states = fused_scaled_add(
-            hidden_states, residual,
-            self.config.scale_depth / math.sqrt(self.config.num_hidden_layers),
-        )
 
+        if do_profile:
+            torch.cuda.synchronize()
+            t2 = time.perf_counter()
+        
+        hidden_states = residual + hidden_states * (
+            self.config.scale_depth / math.sqrt(self.config.num_hidden_layers)
+        )
         residual = hidden_states
         hidden_states = self.post_attention_layernorm(hidden_states)
+
+        if do_profile:
+            torch.cuda.synchronize()
+            t3 = time.perf_counter()
+        
         hidden_states = self.mlp(hidden_states)
-        hidden_states = fused_scaled_add(
-            hidden_states, residual,
-            self.config.scale_depth / math.sqrt(self.config.num_hidden_layers),
+
+        if do_profile:
+            torch.cuda.synchronize()
+            t4 = time.perf_counter()
+        
+        hidden_states = residual + hidden_states * (
+            self.config.scale_depth / math.sqrt(self.config.num_hidden_layers)
         )
 
+        # PROFILE
+        # if do_profile:
+        #     attn_ms = (t2 - t1) * 1000
+        #     mlp_ms = (t4 - t3) * 1000
+        #     print(f"[Layer {self.layer_id}] type={self.mixer_type} attn={attn_ms:.1f}ms mlp={mlp_ms:.1f}ms tokens={hidden_states.shape[0]}", flush=True)
+        
         return hidden_states, None
+    # dotv ######################################################################
 
 
 class MiniCPMModel(nn.Module):
@@ -554,6 +671,7 @@ class MiniCPMForCausalLM(nn.Module):
         self.model = MiniCPMModel(
             config, quant_config=quant_config, prefix=add_prefix("model", prefix)
         )
+        # self.lm_head = ParallelLMHead(config.vocab_size, config.hidden_size)
         if not self.config.tie_word_embeddings:
             self.lm_head = ParallelLMHead(
                 config.vocab_size,
@@ -586,6 +704,7 @@ class MiniCPMForCausalLM(nn.Module):
 
     def load_weights(self, weights: Iterable[Tuple[str, torch.Tensor]]):
         stacked_params_mapping = [
+            # (param_name, shard_name, shard_id)
             ("qkv_proj", "q_proj", "q"),
             ("qkv_proj", "k_proj", "k"),
             ("qkv_proj", "v_proj", "v"),
@@ -593,6 +712,7 @@ class MiniCPMForCausalLM(nn.Module):
             ("gate_up_proj", "up_proj", 1),
         ]
         expert_params_mapping = [
+            # (param_name, weight_name, expert_id)
             (
                 "ws" if weight_name in ["w1", "w3"] else "w2s",
                 f"experts.{expert_id}.{weight_name}.weight",
@@ -606,6 +726,8 @@ class MiniCPMForCausalLM(nn.Module):
             if "rotary_emb.inv_freq" in name:
                 continue
             if "rotary_emb.cos_cached" in name or "rotary_emb.sin_cached" in name:
+                # Models trained using ColossalAI may include these tensors in
+                # the checkpoint. Skip them.
                 continue
             if self.config.tie_word_embeddings and "lm_head.weight" in name:
                 continue
@@ -614,17 +736,50 @@ class MiniCPMForCausalLM(nn.Module):
                 if weight_name not in name:
                     continue
                 name = name.replace(weight_name, param_name)
+                # Skip loading extra bias for GPTQ models.
                 if name.endswith(".bias") and name not in params_dict:
                     continue
+                
+                # Prevent missing key crashes from unmapped/dummy tensors in mixed configurations
+                if name not in params_dict:
+                    continue
+
                 param = params_dict[name]
-                weight_loader = param.weight_loader
-                weight_loader(param, loaded_weight, shard_id)
+
+                # ====================================================================
+                # [NVFP4 Ultimate Fix]: 捕获 SGLang 合并层的底层切片 Bug，手动填入显存
+                # ====================================================================
+                try:
+                    weight_loader = getattr(param, "weight_loader", default_weight_loader)
+                    weight_loader(param, loaded_weight, shard_id)
+                except AssertionError as e:
+                    # 如果 SGLang 报形状不匹配崩溃了，我们直接接管！
+                    if param.data.numel() == 1:
+                        # 处理标量 (如 input_scale / weight_scale_2)
+                        lw = loaded_weight.to(param.data.device).reshape(param.data.shape)
+                        if param.data.item() == 0.0 or param.data.item() == 1.0:
+                            param.data.copy_(lw)
+                        else:
+                            param.data.copy_(torch.max(param.data, lw))
+                    else:
+                        # 处理张量 (如 weight_scale)，手动拼接 gate 和 up
+                        if isinstance(shard_id, int):
+                            dim0 = loaded_weight.shape[0]
+                            param.data[shard_id * dim0 : (shard_id + 1) * dim0].copy_(loaded_weight)
+                        else:
+                            # 理论上只有 gate_up_proj 会进这里，如果是 QKV 崩溃则抛出
+                            raise e
+                # ====================================================================
                 break
             else:
                 for param_name, weight_name, expert_id in expert_params_mapping:
                     if weight_name not in name:
                         continue
                     name = name.replace(weight_name, param_name)
+                    
+                    if name not in params_dict:
+                        continue
+
                     param = params_dict[name]
                     weight_loader = param.weight_loader
                     weight_loader(
@@ -632,8 +787,14 @@ class MiniCPMForCausalLM(nn.Module):
                     )
                     break
                 else:
+                    # Skip loading extra bias for GPTQ models.
                     if name.endswith(".bias") and name not in params_dict:
                         continue
+                    
+                    # Prevent missing key crashes from unmapped/dummy tensors
+                    if name not in params_dict:
+                        continue
+
                     param = params_dict[name]
                     weight_loader = getattr(
                         param, "weight_loader", default_weight_loader

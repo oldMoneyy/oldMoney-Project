@@ -1,203 +1,69 @@
 ================================================================================
-SOAR 2026 Competition Background Summary
+SOAR 2026 Competition -- Background & Context
+================================================================================
+This file has two sections:
+  PART 1: FACTS -- ground truth about setup, profiling, scores, what's been tried
+  PART 2: AI OPINIONS -- collected analyses from multiple AI sessions, labeled
+          as opinions for future AI to read and form their own judgment.
+
+Future AI: read BOTH parts. The opinions may contain errors or disagreements.
+Use the facts to validate opinions. Think independently about what's promising.
+Do NOT limit yourself to angles already explored.
+
+================================================================================
+================================================================================
+                          PART 1: FACTS (GROUND TRUTH)
+================================================================================
 ================================================================================
 
-COMPETITION: SOAR 2026 (Sparse Operator Acceleration Race)
+================================================================================
+COMPETITION
+================================================================================
+SOAR 2026 (Sparse Operator Acceleration Race)
 Organized by OpenBMB + SGLang + NVIDIA communities
 Deadline: April 8, 2026, 12:00 CST (UTC+8)
 Stage: Semifinal
 
-OBJECTIVE:
 Optimize inference performance of MiniCPM-SALA on a single NVIDIA RTX PRO GPU.
 Metric: benchmark_duration (wall-clock time), lower is better.
 Scored across 3 concurrency levels: S1 (40%), S8 (30%), S_inf (30%).
 Correctness must stay >97% or score = 0.
-
 Bounty targets: S1=420s, S8=420s, S_inf=720s.
 
+Score formula: Final = Performance_Score * Correctness_C
+  Performance = S1*40% + S8*30% + Sinf*30%
+  S_N = (Duration_best / Duration_player) * 100
+  C: <=97% -> 0, (97-98%] -> 0.92, (98-99%] -> 0.96, (99-100%] -> 1.0
+
 ================================================================================
-MODEL: MiniCPM-SALA (~9.48B params, bf16)
+MODEL: MiniCPM-SALA (~9.48B params)
 ================================================================================
-- Hybrid architecture: 8 minicpm4 layers (sparse softmax attention, GQA 16:1)
+- Hybrid: 8 minicpm4 layers (sparse softmax attention, GQA 16:1)
   + 24 lightning-attn layers (linear attention, full MHA)
-- minicpm4 layers at positions: 0, 9, 16, 17, 22, 29, 30, 31
-- lightning-attn layers: all other positions
-- Sparse attention config: window_size=2048, topk=64 blocks, dense_len=8192
-- MLP dominates params: 67.98%, attention: 25.67%, embeddings: 6.35%
+- minicpm4 at positions: 0, 9, 16, 17, 22, 29, 30, 31
+- lightning-attn: all other positions
+- Native sparse config: window=2048, topk=64, dense_len=8192, block_size=64
+- KC1: kernel_size=32, stride=16 (fine compression)
+- KC2: kernel_size=128, stride=64 (coarse compression for LSE approx)
+- MLP: 67.98% of params, Attention: 25.67%, Embeddings: 6.35%
 - Max context: 524,288 tokens (512K)
+- See model_info.txt for full architecture details
+- See SALA_paper.md for the InfLLM-V2 paper
 
 ================================================================================
-CURRENT OPTIMIZATION STATUS (What has been tried)
+CURRENT SETUP
 ================================================================================
+- Backend: flashinfer (NOT minicpm_flashinfer)
+- Quantization: W4A16 GPTQ Marlin (all layers INT4, only norm/lm_head/embed bf16)
+- KV cache: FP8 (--kv-cache-dtype fp8_e5m2)
+- All competitors use same flashinfer backend + same W4A16 quantization
+- Leader confirmed using same GPTQ W4A16
 
-1. QUANTIZATION (DONE, at limit)
-   - W4A16 GPTQ for all possible layers (INT4)
-   - Only norm, lm_head, embedding kept at bf16
-   - This is quantized to its practical limit
-
-2. SPECULATIVE DECODING (TRIED, negligible gain)
-   - Helped very little, not worth pursuing further
-
-3. KERNEL FUSION (TRIED, negligible gain)
-   - Profiled extensively (see profiling_reference.txt)
-   - Only found scale+add+residual kernel fusion, saved ~0.5s on long requests
-   - MiniCPM and SGLang experts reviewed profiling, confirmed not much room
-     left on the fusion side
-
-4. FLASHINFER vs MINICPM_FLASHINFER BACKEND
-   - flashinfer backend: faster on S1 and S8
-   - minicpm_flashinfer backend: faster on S64 (high concurrency)
-   - BUT minicpm_flashinfer has redundant implementation and CANNOT work with
-     INT4 quantization -- accuracy degrades catastrophically
-   - Even with dense_len=655360 hack (forcing all inputs to dense attention
-     branch), minicpm_flashinfer still cannot maintain accuracy with INT4
-   - Lightning MLP INT4 + all other params bf16 = still bad accuracy
-   - Decision: ABANDONED minicpm_flashinfer, using flashinfer backend
-
-5. SGLANG ARGS TUNING (TRIED, negligible gain)
-   - chunked_prefill_size, torch_compile, max_running_req, etc.
-   - Marginal improvements only
-
-================================================================================
-PROFILING DATA (W4A16 quantized model, all layers INT4, 64-concurrency bench)
-================================================================================
-NOTE: profiling_reference.txt was profiled with the ACTUAL W4A16 quantized model
-      (all layers INT4, only norm/lm_head/embedding bf16). NOT bf16.
-NOTE: ALL competitors use the same flashinfer backend + same W4A16 quantization.
-      The performance gap comes from algo/system differences, not quant/backend.
-
-Total benchmark: 802.86s (64 requests, 3.88M input tokens, 410K output tokens)
-
-  Prefill: 421s (52%) -- 151 steps x 2.79s/step
-  Decode:  403s (48%) -- 38,533 steps x 10.46ms/step
-
-  Prefill 421s breakdown:
-    MLP (32 layers):              189s  (45% of prefill)
-    MiniCPM4 attn (8 layers):     134s  (32% of prefill)
-    Lightning attn (24 layers):    88s  (21% of prefill)
-    Other:                         10s  ( 2% of prefill)
-
-  Decode 403s breakdown:
-    CUDA graph replay:            377s  (94% of decode)
-    Overhead (sched+sample):       26s  ( 6% of decode)
-
-  Per-step prefill bottleneck ranking (W4A16 quantized):
-    #1 MLP GEMMs (32 layers x 39ms):        1253ms/step  (49%)
-    #2 Lightning GEMMs + fla (24 x 24ms):    582ms/step  (23%)
-       (fla kernel alone: 17ms/layer, does NOT benefit from quantization)
-    #3 MiniCPM4 GEMMs (qkv+gate+o, 8 layers): 296ms/step (12%)
-    #4 MiniCPM4 sparse attn (8 x 28ms):      224ms/step  ( 9%)
-    #5 Overhead (norms, gates, launches):    ~200ms/step  ( 8%)
-
-  Sparse attention per-layer breakdown at ~229K context:
-    alloc_fill:      0.1ms  (torch.full for compressed K buffers)
-    compress_k:      0.2ms  (mean-pool KV -> KC1 and KC2)
-    attn+pool+topk: 14.3ms  (infllmv2_attn_stage1 + max_pool + topk, O(n))
-    block_table:     3.0ms  (get_block_table_v3, constant)
-    page_setup:      1.6ms  (compute seqlens, get KV buffers, constant)
-    flash_attn:      9.5ms  (FlashInfer on selected 6144 tokens, constant)
-    TOTAL:          ~29ms/layer x 8 layers = 232ms/step
-
-  Decode throughput: ~62.85 tokens/s (~15.9ms per token)
-
-================================================================================
-KEY INSIGHT FROM EXPERT MEETING (2026-04-03)
-================================================================================
-After 1 month of optimization focused on system-level optimizations (fusion,
-quantization, backends, args), the MiniCPM expert pointed out:
-
-"We are limiting our imagination because we didn't think about modifying the
-algorithm itself."
-
-Suggested direction: ALGORITHMIC MODIFICATIONS to the sparse attention mechanism:
-- More aggressive topk (e.g., reducing KC1, KC2 values)
-- Topk approximation methods
-- Other algorithmic changes to reduce computation while maintaining accuracy
-
-IMPORTANT CONSTRAINT: All competitors use the same flashinfer backend and same
-W4A16 quantization. The 35% gap to leader MUST come from algo/system differences.
-
-Sparse attention (134s = 32% of prefill = 17% of total) is NOT the only target.
-Even eliminating it entirely only saves 17%. The gap is 35%.
-
-Other potential targets:
-- fla kernel for lightning attn: 88s (21% of prefill), non-GEMM, can't be quantized
-- MLP GEMMs: 189s (45% of prefill), already W4A16 Marlin -- same for everyone
-- Decode phase: 403s (48% of total), mostly CUDA graph replay
-
-================================================================================
-KEY FILE LOCATIONS (project root = /Users/chen.zhe/code/oldMoney-Project)
-================================================================================
-
---- SGLang Codebases (multiple copies for different experiments) ---
-sglang_sala_flashinfer/   <- PRIMARY: flashinfer backend (currently used)
-sglang_sala_opt/          <- optimization experiments
-sglang_sala_fuse/         <- kernel fusion experiments
-sglang_sala_cp/           <- chunked prefill experiments
-sglang_sala_profiling/    <- profiling instrumented version
-
---- Model Definition (SALA hybrid model, same structure in each sglang copy) ---
-sglang_sala_flashinfer/sglang/srt/models/minicpm.py       <- SALA model (MiniCPMSALAForCausalLM)
-sglang_sala_flashinfer/sglang/srt/configs/minicpm.py       <- SALA config (sparse_config, etc.)
-sglang_sala_flashinfer/sglang/srt/server_args.py           <- server launch args
-
---- Sparse Attention (minicpm4 layers -- the optimization target) ---
-sglang_sala_flashinfer/sglang/srt/layers/attention/minicpm_backend.py          <- minicpm_flashinfer attention backend
-sglang_sala_flashinfer/sglang/srt/layers/attention/minicpm_sparse_kernels.py   <- sparse attention CUDA kernels
-sglang_sala_flashinfer/sglang/srt/layers/attention/minicpm_sparse_utils.py     <- topk selection, block table utils
-sglang_sala_flashinfer/sglang/srt/layers/attention/minicpm_attention_kernels.py <- attention kernels
-sglang_sala_flashinfer/sglang/srt/layers/attention/minicpm_fuse_kernel.py      <- fused kernel (scale+add+residual)
-
---- Lightning Attention (linear attention layers) ---
-(handled by flashinfer backend via hybrid_linear_attn_backend, fla/ directory)
-
---- Quantization Scripts ---
-quantization/GPTQ_int4_flashinfer_dense_gpu.py                    <- MAIN: W4A16 GPTQ for flashinfer backend
-quantization/GPTQ_int4_minicpm_flashinfer_sparse_gpu.py           <- GPTQ for minicpm_flashinfer (abandoned)
-quantization/GPTQ_int4_minicpm_flashinfer_sparse_smoothing_gpu.py <- smoothing variant (abandoned)
-quantization/GPTQ_int4_flashinfer_dense_smoothing_gpu.py          <- smoothing for flashinfer
-quantization/GPTQ_int4_mlp_only_minicpm_attn_bf16.py              <- MLP-only INT4 experiment
-quantization/GPTQ_int4_lightning_only_minicpm4_bf16.py             <- lightning-only INT4 experiment
-quantization/GPTQ_NVFP4.py                                        <- NVFP4 experiment
-quantization/AWQ_L_4_Mini_16_smoothed.py                           <- AWQ experiment
-quantization/fast_eval.py                                          <- quick eval after quantization
-quantization/calibration/                                          <- calibration data scripts
-
---- Profiling ---
-sglang_sala_profiling/profiling_reference.txt    <- detailed per-layer profiling output
-sglang_sala_profiling/compare_backends.py        <- flashinfer vs minicpm_flashinfer comparison
-sglang_sala_profiling/sglang/srt/sala_profiler.py <- profiling instrumentation
-
---- Evaluation & Benchmarking ---
-SOAR-Toolkit/bench_serving.sh          <- official speed benchmark script
-SOAR-Toolkit/eval_model.py             <- official correctness evaluation script
-SOAR-Toolkit/sglang_0330_64_custom.jsonl <- eval dataset
-
---- Past Submissions ---
-submissions/20260322/    <- submission from March 22
-submissions/20260329/    <- submission from March 29
-
---- Reference Documents ---
-model_info.txt           <- model architecture summary (9.48B params, layer layout)
-SALA_paper.md            <- SALA paper
-bg.txt                   <- this file
-_official_pkgs/sglang-minicpm/  <- official sglang-minicpm package (reference)
-
---- Dense Mode Hack (for testing) ---
-quantization/GPTQ_int4_flashinfer_dense_gpu.py:415-417:
-    # Force all inputs to dense attention (bypass sparse):
-    config.sparse_config["dense_len"] = 655360
-
-================================================================================
-FRAMEWORK & ENVIRONMENT
-================================================================================
-- Inference framework: SGLang
-- Hardware: single NVIDIA RTX PRO GPU
-- Base image: soar-toolkit (Docker)
-- Submission: prepare_env.sh + prepare_model.sh + custom sglang source
-- Prefix cache disabled during eval
-- Total submission size limit: 2GB
-- Quantization + evaluation must finish within 5 hours
+CRITICAL FACT: With flashinfer backend, minicpm4 layers do DENSE attention
+(no topk, no sparse block selection). MiniCPMAttention uses RadixAttention
+-> standard FlashInfer dense attention. The sparse attention code
+(minicpm_backend.py, minicpm_sparse_utils.py) is ONLY used by the abandoned
+minicpm_flashinfer backend.
 
 ================================================================================
 CURRENT SCORES (as of 2026-04-03)
@@ -206,24 +72,332 @@ CURRENT SCORES (as of 2026-04-03)
   S8  (--max-concurrent 8):  557.30s
   Smax (no limit):          1036.11s
   Score: 65.43
-  Leader: 100.00 (i.e., leader is ~1.53x faster overall)
+  Leader: 100.00
 
-Implied leader durations (from score formula S_N = best/player * 100):
-  Leader S1:   ~397.99 * 0.6543 = ~260.4s
-  Leader S8:   ~557.30 * 0.6543 = ~364.7s
-  Leader Smax: ~1036.11 * 0.6543 = ~677.9s
+  Bounty reference:
+    Us:     85% of bounty target score
+    Leader: 129% of bounty target score
+    Leader's individual S1/S8/Smax unknown -- only overall score visible.
 
-Gap to close: need ~35% speed improvement across the board to match leader.
+  Sub-score breakdown:
+    S1:   420/398 = 1.055  -> weighted: 0.422 (above bounty)
+    S8:   420/557 = 0.754  -> weighted: 0.226 (below bounty)
+    Smax: 720/1036 = 0.695 -> weighted: 0.209 (below bounty)
+    Total: 0.857 (85.7% of bounty)
 
-Bounty targets: S1=420s (ALREADY BEAT), S8=420s (need ~25% faster), Smax=720s (need ~30% faster)
+  S8 and Smax are the weak points. S1 already beats bounty target.
 
 ================================================================================
-WHAT NEEDS TO HAPPEN NEXT
+WHAT HAS BEEN TRIED (all exhausted)
 ================================================================================
-Focus on algorithmic modifications to sparse attention:
-1. Reduce topk from 64 to something smaller -- profile accuracy vs speed tradeoff
-2. Explore KC1/KC2 approximation strategies
-3. Possibly reduce window_size or dense_len
-4. Any other algorithmic shortcuts in the sparse attention path that trade
-   marginal accuracy for significant speed
-5. Must keep overall accuracy >97% (ideally >99% for C=1.0)
+1. QUANTIZATION -- W4A16 GPTQ all layers INT4, at practical limit
+2. SPECULATIVE DECODING -- negligible gain
+3. KERNEL FUSION -- only scale+add+residual, ~0.5s gain. Experts confirmed
+   not much room left
+4. MINICPM_FLASHINFER BACKEND -- has sparse attention but CANNOT work with INT4
+   (accuracy degrades catastrophically even with dense_len=655360 hack).
+   Abandoned in favor of flashinfer.
+5. SGLANG ARGS -- chunked_prefill_size, torch_compile, max_running_req, etc.
+   Marginal improvements only.
+
+================================================================================
+PROFILING DATA -- FLASHINFER BACKEND (actual current setup, 2026-04-03)
+================================================================================
+Source: sglang_sala_profiling/results/flashinfer/c64/
+Method: --disable-cuda-graph + SGLANG_SALA_PROFILE=1
+Dataset: bench/competition_bench_64.jsonl (actual competition distribution)
+  3.88M input tokens, 410K output tokens, 64 requests
+
+Benchmark duration (no CUDA graph): 1,815.86s
+  (Production with CUDA graph: ~1,036s for Smax)
+125 prefill steps, 30,055 decode steps
+
+--- PER-STEP DECODE BREAKDOWN (the key data) ---
+
+  Lightning (24 layers) per decode step:
+    fla_kernel:           0.222ms * 24 = 5.33ms
+    fused_recurrent_gla:  0.102ms * 24 = 2.45ms
+    fla_state_load:       0.049ms * 24 = 1.17ms
+    sigmoid_gate:         0.046ms * 24 = 1.10ms
+    fla_state_save:       0.042ms * 24 = 1.00ms
+    rope:                 0.041ms * 24 = 0.99ms
+    qkv_proj:             0.037ms * 24 = 0.88ms
+    qk_norm:              0.034ms * 24 = 0.82ms
+    o_proj:               0.035ms * 24 = 0.85ms
+    o_norm:               0.023ms * 24 = 0.56ms
+    Lightning decode TOTAL:              15.15ms/step (72% of decode)
+
+  MiniCPM4 (8 layers) per decode step:
+    attn_kernel:          0.388ms * 8 = 3.11ms  (dense attention!)
+    attn overhead:        0.091ms * 8 = 0.73ms  (FlashInfer setup)
+    mlp:                  0.093ms * 8 = 0.74ms
+    qkv/o_proj/o_gate:    ~0.076ms * 8 = 0.61ms
+    norms:                ~0.018ms * 8 = 0.14ms
+    MiniCPM4 decode TOTAL:               5.33ms/step (25% of decode)
+
+  Other: logits 0.43ms + embed 0.06ms = 0.49ms/step (3%)
+
+  TOTAL DECODE PER STEP (no CUDA graph): ~21ms
+  (With CUDA graph in production: estimated ~12ms based on 1816s/1036s ratio)
+
+--- MINICPM4 ATTENTION TOTALS (the sparse attention target) ---
+
+  attn_kernel (prefill): 150,110ms  (avg 145ms/step, max 389ms on long seq)
+  attn_kernel (decode):   93,385ms  (avg 0.388ms/layer/step * 8 layers)
+  Total:                 243,495ms  = 12.2% of total layer time
+
+--- LIGHTNING ATTENTION TOTALS (largest decode component) ---
+
+  fla_kernel (decode):          160,311ms
+  fused_recurrent_gla (decode):  73,633ms
+  fla_state_load (decode):       35,195ms
+  fla_state_save (decode):       29,992ms
+  Lightning decode total:       ~455,000ms = 22.7% of total layer time
+
+--- MLP TOTALS (same for all competitors) ---
+
+  MLP prefill (32 layers):     ~268,000ms
+  MLP decode (32 layers):       ~90,000ms
+  MLP total:                   ~358,000ms = 17.9% of total layer time
+
+--- OVERALL LAYER TIME: ~2,000,000ms across all components ---
+
+================================================================================
+PROFILING DATA -- MINICPM_FLASHINFER BACKEND (old, for reference only)
+================================================================================
+Source: sglang_sala_profiling/profiling_reference.txt
+WARNING: This is from minicpm_flashinfer backend with W4A16, NOT current setup.
+The sparse attention numbers (topk, block_table, compress_k) only apply to
+minicpm_flashinfer backend.
+
+Total: 802.86s (with CUDA graph), Prefill: 421s, Decode: 403s
+Sparse attention per-layer at ~229K context:
+  attn+pool+topk: 14.3ms (O(n), scales with context length)
+  flash_attn: 9.5ms (on selected 6144 tokens, constant)
+  block_table: 3.0ms, page_setup: 1.6ms
+  TOTAL: ~29ms/layer * 8 layers = 232ms/step
+
+================================================================================
+EXPERT INPUT (2026-04-03)
+================================================================================
+MiniCPM expert (meeting): "We are limiting our imagination because we didn't
+think about modifying the algorithm itself." Suggested more aggressive topk,
+KC1/KC2 approximation, algorithmic changes beyond system-level optimization.
+
+================================================================================
+KEY FILE LOCATIONS (project root = /Users/chen.zhe/code/oldMoney-Project)
+================================================================================
+
+--- SGLang Codebases ---
+sglang_sala_flashinfer/   <- PRIMARY: flashinfer backend (currently used)
+sglang_sala_cp/           <- chunked prefill experiments (base for flashinfer copy)
+sglang_sala_opt/          <- optimization experiments
+sglang_sala_fuse/         <- kernel fusion experiments
+sglang_sala_profiling/    <- profiling instrumented version
+
+--- Model Definition ---
+sglang_sala_flashinfer/sglang/srt/models/minicpm.py       <- SALA model
+  MiniCPMAttention: uses RadixAttention (dense FlashInfer, NO sparse)
+  MiniCPMLightningMixer: uses SimpleGLAAttnBackend (linear attention)
+  MiniCPMDecoderLayer: dispatches between the two based on mixer_type
+sglang_sala_flashinfer/sglang/srt/configs/minicpm.py       <- SALA config
+sglang_sala_flashinfer/sglang/srt/server_args.py           <- server args
+
+--- Sparse Attention (minicpm_flashinfer backend ONLY, reference code) ---
+minicpm_backend.py          <- MiniCPMSparseBackend, full sparse pipeline
+minicpm_sparse_utils.py     <- compressed_attention(), topk selection, KC1/KC2
+minicpm_sparse_kernels.py   <- Triton kernels for compress_k
+minicpm_attention_kernels.py <- attention kernel wrappers
+minicpm_fuse_kernel.py      <- tilelang fused topk kernel (has bugs)
+(all under sglang_sala_flashinfer/sglang/srt/layers/attention/)
+
+--- Lightning Attention ---
+hybrid_linear_attn_backend.py <- SimpleGLAAttnBackend
+fla/ directory                <- chunk_simple_gla, fused_recurrent kernels
+
+--- Quantization ---
+quantization/GPTQ_int4_flashinfer_dense_gpu.py <- MAIN quantization script
+quantization/fast_eval.py                      <- quick eval after quantization
+
+--- Profiling ---
+sglang_sala_profiling/results/flashinfer/c64/  <- CURRENT flashinfer profiling
+  sala_summary.txt.gz, sala_timings.csv, bench_sala.txt
+sglang_sala_profiling/profiling_reference.txt  <- OLD minicpm_flashinfer profiling
+sglang_sala_profiling/run_profile.sh           <- profiling runner
+sglang_sala_profiling/sglang/srt/sala_profiler.py <- instrumentation
+
+--- Evaluation & Benchmarking ---
+SOAR-Toolkit/bench_serving.sh, eval_model.py
+bench/competition_bench_64.jsonl
+
+--- Submissions ---
+submissions/20260322/, submissions/20260329/
+
+--- Reference ---
+model_info.txt, SALA_paper.md, _official_pkgs/sglang-minicpm/
+
+================================================================================
+FRAMEWORK & ENVIRONMENT
+================================================================================
+- SGLang inference framework
+- NVIDIA RTX PRO 6000 Black (96GB VRAM, ~1.7TB/s bandwidth, ~330 TFLOPS bf16)
+- Docker base image: soar-toolkit
+- Submission: prepare_env.sh + prepare_model.sh + custom sglang source
+- Prefix cache disabled, total submission < 2GB, quant+eval < 5 hours
+
+
+================================================================================
+================================================================================
+                    PART 2: AI OPINIONS (for future AI to evaluate)
+================================================================================
+================================================================================
+
+Read these critically. They contain insights AND errors. Use PART 1 facts to
+validate. Think about what's actually promising given the codebase and timeline.
+
+================================================================================
+OPINION A: "Sparse attention on flashinfer path" (multiple AI sessions)
+================================================================================
+Claim: Adding sparse block selection to MiniCPMAttention.forward() on the
+flashinfer path is the #1 actionable optimization.
+
+Arguments:
+- minicpm4 dense attn_kernel = 243,495ms (12.2% of total layer time)
+- At 160K context, L00 prefill attn_kernel = 145ms avg, 389ms max per step
+- Sparse attention would reduce this to ~10ms (attending to 6144 vs 160K tokens)
+- Keep FlashInfer as backend (preserves W4A16 Marlin compatibility)
+- Modify MiniCPMAttention.forward() to build filtered page table
+
+Estimated savings: 80-100s on Smax (8-10%)
+
+Concerns raised:
+- Engineering complexity: how to actually make FlashInfer attend to subset of
+  KV pages? Need to build filtered page table or bypass RadixAttention.
+- minicpm_backend.py solves this with custom sparse_page_table + FlashInfer
+  begin_forward, but that's a full backend replacement.
+
+================================================================================
+OPINION B: "Naive sparse attention is net-negative on decode"
+================================================================================
+Claim: Standard sparse attention scoring (compress_k -> Q*KC1 -> topk) reads
+the ENTIRE KV cache to compute KC1. This costs as much bandwidth as dense
+attention itself. On decode, where dense attention only costs 3.1ms/step for
+8 layers, adding scoring overhead of ~30ms/step makes it WORSE.
+
+This is why minicpm_flashinfer (even ignoring INT4 issue) isn't faster than
+flashinfer on S1/S8 -- the scoring overhead dominates.
+
+Proposed algorithmic fixes:
+1. INCREMENTAL KC1: Only update 1-2 KC1 entries per decode step (not recompute
+   all). Each new token affects at most 2 sliding windows. Cost drops from
+   7.7MB to 4KB per layer per step (~2000x reduction).
+2. CACHE TOPK ACROSS STEPS: Recompute every N=4-8 steps. Topk blocks barely
+   change between consecutive tokens. Saves 75-87% of scoring.
+3. SHARE TOPK ACROSS LAYERS: Compute at layer 0, reuse for layers 9-31.
+   Important blocks are correlated across layers. Saves 7/8 of scoring.
+4. REDUCE TOPK (64 -> 32 or 16): Model was trained with topk=64, but inference
+   can be more aggressive. Must test accuracy stays >97%.
+5. SKIP KC2: Only use KC1 for scoring. At 160K, KC1 is ~10K entries -- manageable.
+
+NOTE: The incremental KC1 concept is sound but minicpm_backend already has
+infrastructure for this (history_compress_token_nums, new_compress_token_nums).
+However, that infrastructure is in minicpm_backend.py which is NOT used with
+the flashinfer backend -- would need to be reimplemented.
+
+================================================================================
+OPINION C: "minicpm_flashinfer + bf16 is dead"
+================================================================================
+Claim: minicpm_flashinfer uses bf16 weights (INT4 breaks accuracy). MLP is
+memory-bandwidth bound, so bf16 weights = 4x more memory reads than INT4.
+
+Math:
+  MLP with INT4 Marlin: ~204s of 1036s on Smax
+  MLP with bf16:        ~816s (4x weight reads)
+  Penalty:              +612s
+  Max sparse attn save: ~139s
+  Net:                  +473s SLOWER
+
+Conclusion: minicpm_flashinfer + bf16 cannot overcome the 4x MLP penalty.
+Only viable path is sparse attention ON flashinfer with INT4.
+
+Status: We created 20260330_8333_minicpm_flashinfer.tar.gz to test
+minicpm_flashinfer + INT4 speed (ignoring accuracy) to validate whether
+sparse attention gives real speed gains on this workload.
+
+================================================================================
+OPINION D: "Lightning decode is the real bottleneck" (72% of decode time)
+================================================================================
+Claim: Lightning attention decode costs 15.15ms/step vs minicpm4's 5.33ms/step.
+Lightning is 72% of decode time. Everyone is focused on minicpm4 sparse attention
+(14% of decode) while ignoring the bigger target.
+
+Breakdown:
+  fla_kernel:           5.33ms/step (24 layers)
+  fused_recurrent_gla:  2.45ms/step
+  state load/save:      2.17ms/step
+  sigmoid/rope/qk_norm: 2.91ms/step
+  qkv/o_proj:           1.73ms/step
+  o_norm:               0.56ms/step
+
+Proposed optimizations:
+1. Fuse all 24 lightning layers into one kernel (load all states, run all
+   recurrences, save all states)
+2. State FP8 quantization (halve I/O)
+3. Low-rank state compression (128x128 -> rank-32)
+
+COUNTERARGUMENTS (from another AI session):
+- Fusing 24 layers is architecturally impossible: layers aren't consecutive,
+  each has MLP + norms between them. You can't skip the MLP.
+- Low-rank state changes model computation, accuracy risk is very high
+- State FP8 accumulation errors compound over thousands of decode steps
+- CUDA graph already eliminates kernel launch overhead in production, so
+  the absolute per-kernel overhead is smaller than profiling suggests
+- These are research ideas, not competition-viable in 4 days
+
+VALIDATION NEEDED: The 72% number is from profiling WITHOUT CUDA graph.
+In production with CUDA graph, the relative proportions may differ because
+Python dispatch overhead (which inflates lightning's small-kernel count) is
+eliminated. The fla_kernel itself (5.33ms) is real compute, but the many
+0.03-0.05ms small ops may be much cheaper with CUDA graph.
+
+================================================================================
+OPINION E: "Score economics -- focus on S8 and Smax"
+================================================================================
+S1 is already above bounty (1.055). S8 (0.754) and Smax (0.695) are drowning.
+Even making S1 10% slower is acceptable if S8/Smax improve significantly.
+
+Any optimization that helps high-concurrency (S8/Smax) more than single-request
+(S1) is strategically valuable. Sparse attention fits this because long-context
+requests (which benefit most from sparsity) dominate at high concurrency.
+
+================================================================================
+OPINION F: "5 bugs in naive sparse attention implementation"
+================================================================================
+An AI attempted to implement sparse decode in MiniCPMAttention.forward() and
+another AI found these bugs:
+
+1. CUDA graph guard (`not torch.cuda.is_current_stream_capturing()`) disables
+   sparse path during CUDA graph capture AND replay -- dead code in production.
+2. Gathers ALL keys to decide which keys to read -- same bandwidth as dense.
+3. Uses per-block-64 mean instead of strided sliding-window (kernel_size=32,
+   stride=16) -- wrong compressed keys, accuracy degrades.
+4. Materializes full attention matrix with einsum instead of using FlashAttention.
+5. GQA handling assumes num_kv_heads=1, breaks on other configs.
+
+Lesson: implementing sparse attention correctly requires understanding the
+exact KC1 compression algorithm and FlashInfer's paged KV cache API.
+
+================================================================================
+OPEN QUESTIONS FOR FUTURE AI
+================================================================================
+1. The leader is 129% of bounty with same W4A16. What are they doing differently?
+   We don't know their S1/S8/Smax breakdown.
+2. Is there a way to make FlashInfer attend to a subset of KV pages without
+   replacing the backend? (filtered page table? block-sparse mask?)
+3. Can minicpm_flashinfer's INT4 accuracy issue be fixed? (calibration? mixed
+   precision for specific layers? different quantization for sparse attn layers?)
+4. Are there scheduling/batching optimizations that help S8/Smax specifically?
+5. What chunked_prefill_size works best for this workload distribution?
+6. Can the fused_recurrent_gla kernel be optimized without changing the algorithm?
+7. Is the minicpm_flashinfer + INT4 speed test (accuracy ignored) faster than
+   flashinfer + INT4? This would validate the sparse attention direction.
