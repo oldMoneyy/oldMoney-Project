@@ -673,6 +673,8 @@ Modified: sglang/srt/models/minicpm.py
 
 Known limitations (as of 2026-04-03):
   1. KC1 recomputed from scratch every chunk (not incremental like minicpm_backend)
+     UPDATE: Incremental KC1 cache implemented (2026-04-03 evening). Now only
+     reads ~16 boundary tokens from KV cache per chunk instead of full prefix.
   2. Temporary FlashInfer wrapper created per layer per chunk (8 wrappers/chunk)
   3. No sparse decode -- decode still uses dense attention on all prefix tokens
   4. chunked_prefill_size must be >= 32768 for accuracy; 8192 causes error
@@ -680,6 +682,52 @@ Known limitations (as of 2026-04-03):
   5. compress_keys_simple uses torch unfold (not Triton kernel) -- may differ
      slightly from original compress_k_complete_kernel_new on edge cases
   6. No speedup measured yet -- KC1 overhead offsets attention savings
+     UPDATE: Incremental KC1 should reduce overhead. Speed benchmark pending.
+
+================================================================================
+OPINION D3: "sglang_sala_flashinfer vs minicpm_flashinfer" (2026-04-03)
+================================================================================
+Why minicpm_flashinfer + INT4 breaks but sglang_sala_flashinfer + INT4 works:
+
+  minicpm_flashinfer backend (BROKEN with INT4):
+  - Replaces the ENTIRE attention backend (both prefill and decode)
+  - ALL attention (prefill + decode) goes through sparse pipeline
+  - Reshapes KV cache by head groups: view(-1, page_size, tp_k_head_num//2, head_dim)
+  - Page indices multiplied by 2 + head_group_idx for per-head-group addressing
+  - Uses FlashAttention (sgl_kernel.flash_attn) for the actual attention, not FlashInfer
+  - Sparse decode on every token → accumulated precision errors over 1000s of steps
+  - Custom C++ extension (sparse_kernel_extension) for block table construction
+  - Has its own memory pool (MiniCPMReqToTokenPool) with compressed key slots
+  - Bottom line: deep custom plumbing that interacts badly with INT4 Marlin
+
+  sglang_sala_flashinfer (WORKS with INT4):
+  - Uses the STANDARD FlashInfer backend (FlashInferAttnBackend) for everything
+  - Only intercepts the PAGED attention during PREFILL (forward_extend ragged+paged)
+  - KV cache layout is UNCHANGED from dense FlashInfer (no head-group reshaping)
+  - Decode is 100% dense (standard FlashInfer decode wrapper, no sparse)
+  - Model weights go through the SAME Marlin INT4 dequant path as dense
+  - Standard memory pool (no compressed key slots in KV pool)
+  - Sparse metadata passed via kwargs through RadixAttention → attn_backend.forward()
+  - Temporary BatchPrefillWithPagedKVCacheWrapper for sparse paged attention
+  - Bottom line: minimal invasive changes, everything else is standard FlashInfer
+
+  Key architectural differences:
+  1. SCOPE: minicpm_flashinfer = full backend replacement. sala_flashinfer = prefill-only overlay.
+  2. DECODE: minicpm_flashinfer = sparse decode. sala_flashinfer = dense decode.
+  3. KV CACHE: minicpm_flashinfer = custom layout with head-group split.
+     sala_flashinfer = standard FlashInfer layout.
+  4. ATTENTION KERNEL: minicpm_flashinfer = FlashAttention. sala_flashinfer = FlashInfer.
+  5. KC1 STORAGE: minicpm_flashinfer = persisted in KV cache pool (Triton kernel writes back).
+     sala_flashinfer = module-level Python dict cache (separate from KV pool).
+  6. BLOCK TABLE: minicpm_flashinfer = C++ extension (get_block_table_v2).
+     sala_flashinfer = Python + torch operations to build filtered kv_indices.
+
+  Why INT4 accuracy is preserved in sala_flashinfer:
+  - Dense decode means no accumulated sparse errors over decode steps
+  - Standard KV cache layout means no interaction with Marlin dequant
+  - The sparse prefill only affects which SUBSET of KV tokens are attended to,
+    not HOW the attention is computed (same FlashInfer kernel, same numerics)
+  - First dense_len (8192) tokens always included → baseline context preserved
 
 ================================================================================
 ================================================================================
