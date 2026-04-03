@@ -978,27 +978,34 @@ class FlashInferAttnBackend(AttentionBackend):
             req_idx = req_pool_indices[b].item()
             plen = prefix_lens[b]
 
-            if plen >= dense_len and sparse_block_indices[b] is not None:
-                # Sparse: gather only selected block tokens
+            if plen > dense_len and sparse_block_indices[b] is not None:
+                # Sparse: always include first dense_len tokens (dense region)
+                # + topk-selected blocks beyond dense_len
+                dense_positions = torch.arange(0, min(dense_len, plen), device=device)
+
+                # Gather sparse block tokens BEYOND dense_len only
                 all_blocks = torch.cat(sparse_block_indices[b], dim=0).unique()
                 all_blocks = all_blocks[all_blocks >= 0].sort().values
 
                 block_starts = all_blocks.long() * block_size
                 block_ends = torch.clamp(block_starts + block_size, max=plen)
-                valid_mask = block_starts < plen
+                # Only include blocks that start at or beyond dense_len
+                sparse_mask = (block_starts >= dense_len) & (block_starts < plen)
 
-                if valid_mask.any():
-                    valid_starts = block_starts[valid_mask]
-                    valid_ends = block_ends[valid_mask]
-                    token_positions = torch.cat([
+                if sparse_mask.any():
+                    sparse_starts = block_starts[sparse_mask]
+                    sparse_ends = block_ends[sparse_mask]
+                    sparse_positions = torch.cat([
                         torch.arange(s.item(), e.item(), device=device)
-                        for s, e in zip(valid_starts, valid_ends)
+                        for s, e in zip(sparse_starts, sparse_ends)
                     ])
-                    phys = req_to_token[req_idx, token_positions]
-                    all_phys.append(phys)
-                    filtered_lens.append(len(phys))
+                    token_positions = torch.cat([dense_positions, sparse_positions])
                 else:
-                    filtered_lens.append(0)
+                    token_positions = dense_positions
+
+                phys = req_to_token[req_idx, token_positions]
+                all_phys.append(phys)
+                filtered_lens.append(len(phys))
             elif plen > 0:
                 # Dense: include all prefix tokens
                 phys = req_to_token[req_idx, :plen]

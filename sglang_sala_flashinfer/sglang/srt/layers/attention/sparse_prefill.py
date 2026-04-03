@@ -122,8 +122,8 @@ def compute_sparse_prefill_metadata(
     extend_seq_lens_cpu = forward_batch.extend_seq_lens_cpu if forward_batch.extend_seq_lens_cpu is not None else seq_lens_cpu
 
     max_prefix = max(prefix_lens_cpu)
-    if max_prefix < dense_len:
-        return None  # No prefix long enough for sparse
+    if max_prefix <= dense_len:
+        return None  # No prefix long enough for sparse (must exceed dense_len)
 
     batch_size = len(seq_lens_cpu)
     device = q.device
@@ -144,7 +144,7 @@ def compute_sparse_prefill_metadata(
         prefix_len = prefix_lens_cpu[b]
         extend_len = extend_seq_lens_cpu[b]
 
-        if prefix_len < dense_len:
+        if prefix_len <= dense_len:
             # This request doesn't need sparse -- skip KC1 computation
             # We'll put empty KC1/KC2 entries, and the topk will be unused
             # because build_filtered_kv_indices checks prefix_len < dense_len
@@ -304,35 +304,36 @@ def build_filtered_kv_indices(
     filtered_lens = []
 
     for b in range(batch_size):
-        if prefix_lens[b] >= dense_len and sparse_block_indices[b] is not None:
-            # Sparse: gather tokens from selected blocks (union across heads)
-            all_blocks = torch.cat(sparse_block_indices[b], dim=0).unique()
-            all_blocks = all_blocks[all_blocks >= 0].sort().values
-
-            # Vectorized: compute all token positions from selected blocks
+        if prefix_lens[b] > dense_len and sparse_block_indices[b] is not None:
+            # Sparse: always include first dense_len tokens + topk blocks beyond
             req_idx = req_pool_indices[b].item()
             prefix_len = prefix_lens[b]
 
-            # Build token positions from blocks
-            block_starts = all_blocks.long() * block_size  # (num_blocks,)
+            # Dense region: first dense_len tokens always included
+            dense_positions = torch.arange(0, min(dense_len, prefix_len), device=device)
+
+            # Sparse blocks beyond dense_len
+            all_blocks = torch.cat(sparse_block_indices[b], dim=0).unique()
+            all_blocks = all_blocks[all_blocks >= 0].sort().values
+
+            block_starts = all_blocks.long() * block_size
             block_ends = torch.clamp(block_starts + block_size, max=prefix_len)
-            valid_mask = block_starts < prefix_len
+            sparse_mask = (block_starts >= dense_len) & (block_starts < prefix_len)
 
-            if valid_mask.any():
-                valid_starts = block_starts[valid_mask]
-                valid_ends = block_ends[valid_mask]
-                block_lens = valid_ends - valid_starts
-
-                # Gather physical indices for all valid blocks
-                token_positions = torch.cat([
+            if sparse_mask.any():
+                sparse_starts = block_starts[sparse_mask]
+                sparse_ends = block_ends[sparse_mask]
+                sparse_positions = torch.cat([
                     torch.arange(s.item(), e.item(), device=device)
-                    for s, e in zip(valid_starts, valid_ends)
+                    for s, e in zip(sparse_starts, sparse_ends)
                 ])
-                phys = req_to_token[req_idx, token_positions]
-                all_phys_indices.append(phys)
-                filtered_lens.append(len(phys))
+                token_positions = torch.cat([dense_positions, sparse_positions])
             else:
-                filtered_lens.append(0)
+                token_positions = dense_positions
+
+            phys = req_to_token[req_idx, token_positions]
+            all_phys_indices.append(phys)
+            filtered_lens.append(len(phys))
         else:
             # Dense: copy original indices
             orig_start = original_kv_indptr[b].item()
