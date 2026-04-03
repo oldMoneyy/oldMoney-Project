@@ -21,7 +21,6 @@ COMPETITION
 ================================================================================
 SOAR 2026 (Sparse Operator Acceleration Race)
 Organized by OpenBMB + SGLang + NVIDIA communities
-Deadline: April 8, 2026, 12:00 CST (UTC+8)
 Stage: Semifinal
 
 Optimize inference performance of MiniCPM-SALA on a single NVIDIA RTX PRO GPU.
@@ -184,16 +183,22 @@ MiniCPM expert (meeting): "We are limiting our imagination because we didn't
 think about modifying the algorithm itself." Suggested more aggressive topk,
 KC1/KC2 approximation, algorithmic changes beyond system-level optimization.
 
+SGLang expert (meeting, same day): Reviewed our flame graph. Confirmed there is
+NOT much room to improve on the scheduling/batching/framework side. The overhead
+is already near-optimal. Gains must come from the model/algorithm level.
+
 ================================================================================
 KEY FILE LOCATIONS (project root = /Users/chen.zhe/code/oldMoney-Project)
 ================================================================================
 
 --- SGLang Codebases ---
-sglang_sala_flashinfer/   <- PRIMARY: flashinfer backend (currently used)
-sglang_sala_cp/           <- chunked prefill experiments (base for flashinfer copy)
-sglang_sala_opt/          <- optimization experiments
-sglang_sala_fuse/         <- kernel fusion experiments
-sglang_sala_profiling/    <- profiling instrumented version
+_official_pkgs/sglang-minicpm/   <- Official SGLang package (unmodified reference)
+sglang_sala_cp/           <- Our working codebase: supports minicpm_flashinfer +
+                             flashinfer backends, W4A16 quantization, FP8 KV cache,
+                             no accuracy degradation. This is the base for submissions.
+sglang_sala_flashinfer/   <- Copied from sglang_sala_cp for sparse attention experiments
+sglang_sala_profiling/    <- Copied from official pkg, added profiling instrumentation
+                             for both minicpm_flashinfer and flashinfer backends
 
 --- Model Definition ---
 sglang_sala_flashinfer/sglang/srt/models/minicpm.py       <- SALA model
@@ -245,6 +250,60 @@ FRAMEWORK & ENVIRONMENT
 - Submission: prepare_env.sh + prepare_model.sh + custom sglang source
 - Prefix cache disabled, total submission < 2GB, quant+eval < 5 hours
 
+================================================================================
+DEVELOPMENT & TESTING WORKFLOW
+================================================================================
+Development codebase: sglang_sala_flashinfer/
+Base codebase (proven working): sglang_sala_cp/
+
+To test on remote machine:
+  1. Install: uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_flashinfer
+  2. Launch server with flashinfer backend (see server launch command below)
+
+Server launch:
+  fuser -k -9 31333/tcp
+  export PYTORCH_ALLOC_CONF=expandable_segments:True
+  export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+  nohup python3 -m sglang.launch_server \
+      --model-path /opt/model_gptq_int4_dense_smooth \
+      --port 31333 \
+      --quantization gptq_marlin \
+      --kv-cache-dtype fp8_e5m2 \
+      --dtype bfloat16 \
+      --disable-radix-cache \
+      --max-running-requests 64 \
+      --attention-backend flashinfer \
+      --chunked-prefill-size 32768 \
+      --mem-fraction-static 0.82 \
+      --max-mamba-cache-size 64 \
+      --log-level info \
+      > /opt/server.log 2>&1 &
+
+Validation (ALL must pass before submission):
+
+  Test 1: Long context test cases (4 cases, must all pass)
+    python /opt/oldMoney-Project/bench/long_context_test_case.py
+
+  Test 2: KL divergence (must be near 0.000, catches precision bugs)
+    cd /opt/oldMoney-Project/quantization
+    python fast_eval_quantization.py --mode eval --api-base http://127.0.0.1:31333
+
+  Test 3: ACCURACY (MOST IMPORTANT -- competition requirement > 97%)
+    cd /opt/oldMoney-Project/SOAR-Toolkit
+    python3 eval_model.py \
+      --api_base http://127.0.0.1:31333 \
+      --model_path /opt/model_gptq_int4_dense_smooth \
+      --data_path eval_dataset/perf_public_set.jsonl \
+      --concurrency 64 \
+      --num_samples 150 \
+      --verbose
+    Result: overall_accuracy must be > 97% (relative to baseline 80)
+    NOTE: minicpm_flashinfer + INT4 failed here catastrophically (< 70%)
+
+  Test 4: Speed benchmark
+    export SPEED_DATA_SMAX=/opt/oldMoney-Project/bench/competition_bench_64.jsonl
+    bash /opt/oldMoney-Project/SOAR-Toolkit/bench_serving.sh http://127.0.0.1:31333
+
 
 ================================================================================
 ================================================================================
@@ -254,6 +313,27 @@ FRAMEWORK & ENVIRONMENT
 
 Read these critically. They contain insights AND errors. Use PART 1 facts to
 validate. Think about what's actually promising given the codebase and timeline.
+
+IMPORTANT CORRECTIONS (multiple AI sessions got these wrong):
+  - The leader is at 129% of bounty target, NOT 100 points. Our score is 65.43
+    points which is 85% of bounty. The gap is significant but the scoring is
+    RELATIVE to best performer, not absolute.
+  - There is NO deadline pressure for this analysis. Focus on finding the
+    RIGHT solution with maximum depth. Do not let timeline anxiety reduce
+    the quality of your thinking or cause you to propose shallow solutions.
+  - Do NOT be afraid of complexity. The problems worth solving ARE complex.
+    "This is too hard" or "too risky for the timeline" is not acceptable.
+    Decompose, trace, quantify, implement. Push through difficulty.
+  - Do NOT hallucinate numbers. If you don't have profiling data for a specific
+    scenario, say so. Don't fabricate savings estimates.
+  - CRITICAL: Do NOT just evaluate whether an opinion or theory SOUNDS reasonable.
+    You MUST verify against the ACTUAL codebase. Read the actual code, trace the
+    actual execution path, check what functions actually do. Multiple AI sessions
+    made confident claims that were wrong because they didn't read the code.
+    Examples: claiming flashinfer does sparse attention (it doesn't -- it does
+    dense), citing minicpm_flashinfer profiling numbers as if they apply to
+    flashinfer, proposing to "fuse 24 lightning layers" without checking that
+    MLP/norms exist between them. Always verify in code before claiming.
 
 ================================================================================
 OPINION A: "Sparse attention on flashinfer path" (multiple AI sessions)
@@ -388,6 +468,110 @@ Lesson: implementing sparse attention correctly requires understanding the
 exact KC1 compression algorithm and FlashInfer's paged KV cache API.
 
 ================================================================================
+OPINION G: "Sparse prefill only, skip decode" (AI session 4, 2026-04-03)
+================================================================================
+Claim: Focus on sparse prefill ONLY. Decode sparse attention is much harder
+(KC1 scoring overhead, CUDA graph compatibility) and lower ROI. Prefill
+attn_kernel = 150s total, and during prefill KC1 is computed once from the
+full sequence -- no incremental update complexity.
+
+This AI also noted scheduling/batching might help S8/Smax, but SGLang experts
+confirmed (same day meeting) there's not much room on the framework side.
+
+================================================================================
+OPINION H: "Implementation plan for sparse prefill on flashinfer" (AI session 4)
+================================================================================
+Approved plan being implemented in sglang_sala_flashinfer/:
+
+Architecture:
+  MiniCPMAttention.forward() [minicpm.py]
+    -> compute KC1 (compress_k Triton kernel) + KC2
+    -> score via infllmv2_attn_stage1(q, kc1, kc2) -> topk block indices
+    -> attach topk_idx to forward_batch
+    -> call self.attn() as normal
+
+  FlashInferAttnBackend.forward_extend() [flashinfer_backend.py]
+    -> detect minicpm4 layer (layer_id in {0,9,16,17,22,29,30,31})
+    -> if sparse metadata present: build filtered kv_indices from topk blocks
+    -> use pre-allocated sparse BatchPrefillWithPagedKVCacheWrapper
+    -> call begin_forward() with filtered indices, then forward(), end_forward()
+    -> else: use normal dense wrapper (for lightning layers + short sequences)
+
+Key design decisions:
+  - Prefill only, no decode changes
+  - Only for sequences > dense_len (8192 tokens)
+  - Reuses existing compressed_attention() from minicpm_sparse_utils.py
+  - Pure torch/Triton block-to-page mapping (no C++ extension dependency)
+  - Pre-allocate sparse wrapper in __init__() to avoid per-call overhead
+  - Per-query-token topk (each query token picks its own topk blocks)
+  - Start with topk=64 (model default), tune down if accuracy holds
+
+Code path traced (confirmed feasible):
+  MiniCPMAttention.forward() -> self.attn() -> RadixAttention.forward()
+  -> forward_batch.attn_backend.forward() -> FlashInferAttnBackend.forward_extend()
+  -> prefill_wrapper_paged.forward(q, kv_buffer)
+
+  Insertion points:
+  1. minicpm.py: before self.attn() call (~line 194)
+  2. flashinfer_backend.py: in forward_extend() (~line 772), between
+     kv_indices construction (line 1376) and begin_forward (line 1427)
+
+Concerns flagged:
+  - KV cache save/read: plan says "save k,v to cache first, read back" --
+    may cause double write if self.attn() also saves KV internally. Need to
+    verify RadixAttention's KV save behavior.
+  - Sparse wrapper overhead: FlashInfer begin_forward() has non-trivial cost
+    (~0.091ms/layer from profiling). Pre-allocation helps but per-call
+    begin_forward still needed with different kv_indices each time.
+  - GQA handling: 32 Q heads / 2 KV heads = 16:1 ratio. topk computed per
+    KV head group. Must handle correctly.
+
+Files being modified:
+  sglang_sala_flashinfer/sglang/srt/models/minicpm.py
+  sglang_sala_flashinfer/sglang/srt/layers/attention/flashinfer_backend.py
+
+Files reused as reference:
+  minicpm_sparse_utils.py: compressed_attention(), compress_k_core_new()
+  minicpm_sparse_kernels.py: compress_k_complete_kernel_new (Triton)
+  minicpm_backend.py: sparse page table construction
+================================================================================
+OPINION I: "Lightning attention is the underexplored elephant" (AI session 5)
+================================================================================
+Claim: Lightning decode is 72% of decode time (~210s production estimate for
+Smax). Everyone is focused on minicpm4 sparse attention (25% of decode).
+Even a 20% improvement to lightning decode saves more than eliminating
+minicpm4 attention entirely.
+
+Proposed investigations:
+1. Profile fla_kernel (fused_recurrent_simple_gla from fla library) -- is it
+   hitting memory bandwidth limit or is there wasted compute?
+2. Check if newer FLA library version has faster kernels
+3. Test FP8 lightning states -- state is (16, 128, 128) bf16 = 512KB per layer
+   per request. FP8 halves state I/O. Quick experiment.
+4. Compare against theoretical peak for the recurrence computation
+
+Key observation: "Same W4A16, same flashinfer, yet leader is ~2x faster on
+Smax. That's not a 10% tweak — it's a fundamental difference."
+
+Ranking: sparse prefill first (already underway), then investigate lightning
+kernels, then sparse decode with cached topk.
+
+COUNTERARGUMENTS:
+- fused_recurrent_simple_gla comes from fla library. Previous attempt to use
+  fused_chunk_simple_gla (also from fla) broke accuracy due to numerical
+  differences. Modifying the kernel risks the same.
+- FP8 state accumulation (state = g * state + k^T @ v) compounds errors over
+  thousands of decode steps. Accuracy risk is high.
+- His production time estimates (600s prefill, 360s decode) are extrapolated,
+  not measured. We only have no-CUDA-graph profiling data.
+
+VERIFICATION NEEDED:
+- Actually profile fused_recurrent_simple_gla kernel to check if it's at
+  memory bandwidth limit. If it IS at bandwidth limit, no kernel optimization
+  will help -- only reducing I/O (FP8 state, state compression) can help.
+- Check fla library version installed vs latest available.
+
+================================================================================
 OPEN QUESTIONS FOR FUTURE AI
 ================================================================================
 1. The leader is 129% of bounty with same W4A16. What are they doing differently?
@@ -401,3 +585,21 @@ OPEN QUESTIONS FOR FUTURE AI
 6. Can the fused_recurrent_gla kernel be optimized without changing the algorithm?
 7. Is the minicpm_flashinfer + INT4 speed test (accuracy ignored) faster than
    flashinfer + INT4? This would validate the sparse attention direction.
+8. IMPORTANT: Compare sglang_sala_flashinfer/ (our new sparse prefill
+   implementation) against the ORIGINAL minicpm_flashinfer backend code in
+   _official_pkgs/sglang-minicpm/ and sglang_sala_cp/. Does our new approach
+   deliver better PERFORMANCE (lower benchmark_duration across S1/S8/Smax)
+   than the original minicpm_flashinfer? Don't reinvent a slower version of
+   existing code. Study what minicpm_backend.py does well, what it does
+   poorly, and whether our flashinfer-path sparse attention genuinely runs
+   faster end-to-end -- considering INT4 Marlin compatibility (which
+   minicpm_flashinfer lacks), sparse attention overhead, page table
+   management, and the scoring pipeline cost.
+
+NOTE: If you need related papers (FlashInfer, InfLLM-V2/SALA, NSA, GLA/lightning
+attention, GPTQ, Marlin, block-sparse attention, etc.), ask the user to download
+them for you. SALA_paper.md is already available in the project root.
+
+NOTE: Read claude_persona in the project root for the expected engineering
+mindset. TL;DR: decompose complexity, trace before proposing, quantify
+everything, ship complete code, don't hedge or retreat from hard problems.

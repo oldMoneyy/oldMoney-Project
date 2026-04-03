@@ -32,6 +32,10 @@ from sglang.srt.layers.attention.minicpm_sparse_utils import (
     SparseMetadata,
     SparseMetadataBuilder,
 )
+from sglang.srt.layers.attention.sparse_prefill import (
+    compute_sparse_prefill_metadata,
+    SPARSE_PREFILL_ENABLED,
+)
 from sglang.srt.layers.layernorm import RMSNorm
 from sglang.srt.layers.linear import (
     ColumnParallelLinear,
@@ -191,7 +195,20 @@ class MiniCPMAttention(nn.Module):
             q, k = self.rotary_emb(positions, q, k)
             q, k = q.to(orig_dtype), k.to(orig_dtype)
 
-        attn_output = self.attn(q, k, v, forward_batch)
+        # Sparse prefill: compute topk blocks for paged prefix attention
+        kwargs = {}
+        if (
+            SPARSE_PREFILL_ENABLED
+            and forward_batch.forward_mode.is_extend()
+            and hasattr(self, '_sparse_config')
+        ):
+            sparse_meta = compute_sparse_prefill_metadata(
+                q, k, forward_batch, self.attn, self._sparse_config,
+            )
+            if sparse_meta is not None:
+                kwargs["sparse_prefill_metadata"] = sparse_meta
+
+        attn_output = self.attn(q, k, v, forward_batch, **kwargs)
 
         if self.use_output_gate:
             o_gate_output, _ = self.o_gate(hidden_states)
@@ -479,6 +496,9 @@ class MiniCPMDecoderLayer(nn.Module):
                 ),
                 prefix=add_prefix("self_attn", prefix),
             )
+            # Attach sparse config for sparse prefill
+            if SPARSE_PREFILL_ENABLED and hasattr(config, 'sparse_dense_len'):
+                self.self_attn._sparse_config = config
         elif self.mixer_type in ["lightning", "lightning_attn", "lightning-attn"]:
             assert (
                 config.head_dim is not False

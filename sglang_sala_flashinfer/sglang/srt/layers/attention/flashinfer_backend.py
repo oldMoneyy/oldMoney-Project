@@ -38,6 +38,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# MiniCPM4 layer IDs (for sparse prefill)
+_MINICPM4_LAYERS = {0, 9, 16, 17, 22, 29, 30, 31}
+
 if envs.SGLANG_ENABLE_TORCH_COMPILE.get():
     torch._logging.set_logs(dynamo=logging.ERROR)
     torch._dynamo.config.suppress_errors = True
@@ -748,6 +751,7 @@ class FlashInferAttnBackend(AttentionBackend):
         layer: RadixAttention,
         forward_batch: ForwardBatch,
         save_kv_cache=True,
+        **kwargs,
     ):
         prefill_wrapper_paged = self.forward_metadata.prefill_wrappers[
             self._get_wrapper_idx(layer)
@@ -769,30 +773,32 @@ class FlashInferAttnBackend(AttentionBackend):
                         layer, cache_loc, k, v, layer.k_scale, layer.v_scale
                     )
 
-            o = prefill_wrapper_paged.forward(
-                q.view(-1, layer.tp_q_head_num, layer.head_dim),
-                forward_batch.token_to_kv_pool.get_kv_buffer(layer.layer_id),
-                causal=not layer.is_cross_attention,
-                sm_scale=layer.scaling,
-                # Disable sliding window attention for multi-item scoring:
-                # - Sliding window could cut across item boundaries, breaking semantic coherence
-                # - Multi-item sequences need full attention to properly handle delimiter tokens
-                # - Specialized multi-item parameters (prefix_len_ptr, token_pos_in_items_ptr)
-                #   provide more precise attention control than simple sliding windows
-                # - Item-aware masking takes precedence over window-based masking
-                window_left=(
-                    layer.sliding_window_size
-                    if not (
-                        self.forward_metadata.multi_item_params
-                        and self.forward_metadata.multi_item_params.is_enabled()
-                    )
-                    else -1
-                ),
-                logits_soft_cap=logits_soft_cap,
-                # Must use _float to avoid device-to-host copy that breaks cuda graph capture.
-                k_scale=layer.k_scale_float,
-                v_scale=layer.v_scale_float,
-            )
+            # Check for sparse prefill metadata
+            # NOTE: Sparse paged attention in non-ragged mode has causal masking issues
+            # because filtered kv_indices break position ordering. Only enable in ragged path.
+            sparse_meta = kwargs.get("sparse_prefill_metadata")
+            if False and sparse_meta is not None and layer.layer_id in _MINICPM4_LAYERS:
+                o = self._forward_extend_sparse_paged(
+                    q, layer, forward_batch, prefill_wrapper_paged, sparse_meta, logits_soft_cap,
+                )
+            else:
+                o = prefill_wrapper_paged.forward(
+                    q.view(-1, layer.tp_q_head_num, layer.head_dim),
+                    forward_batch.token_to_kv_pool.get_kv_buffer(layer.layer_id),
+                    causal=not layer.is_cross_attention,
+                    sm_scale=layer.scaling,
+                    window_left=(
+                        layer.sliding_window_size
+                        if not (
+                            self.forward_metadata.multi_item_params
+                            and self.forward_metadata.multi_item_params.is_enabled()
+                        )
+                        else -1
+                    ),
+                    logits_soft_cap=logits_soft_cap,
+                    k_scale=layer.k_scale_float,
+                    v_scale=layer.v_scale_float,
+                )
         else:
             causal = True
             if (
@@ -804,9 +810,6 @@ class FlashInferAttnBackend(AttentionBackend):
                 save_kv_cache = False
 
             if self.forward_metadata.extend_no_prefix:
-                # NOTE: FlashInfer currently has limitations with head_dim = 32 or other dimensions
-                # The FlashInfer head_dim limitation itself is tracked here:
-                # https://github.com/flashinfer-ai/flashinfer/issues/1048
                 o = self.prefill_wrapper_ragged.forward(
                     q.view(-1, layer.tp_q_head_num, layer.head_dim),
                     k.view(-1, layer.tp_k_head_num, layer.head_dim),
@@ -818,8 +821,6 @@ class FlashInferAttnBackend(AttentionBackend):
 
             else:
                 if not self.is_dllm_model:
-                    # TODO: design a better interface
-                    # For other models, use causal attention for the ragged part as previously
                     causal = True
 
                 o1, s1 = self.prefill_wrapper_ragged.forward_return_lse(
@@ -830,13 +831,21 @@ class FlashInferAttnBackend(AttentionBackend):
                     sm_scale=layer.scaling,
                     logits_soft_cap=logits_soft_cap,
                 )
-                o2, s2 = prefill_wrapper_paged.forward_return_lse(
-                    q.view(-1, layer.tp_q_head_num, layer.head_dim),
-                    forward_batch.token_to_kv_pool.get_kv_buffer(layer.layer_id),
-                    causal=False,
-                    sm_scale=layer.scaling,
-                    logits_soft_cap=logits_soft_cap,
-                )
+
+                # Check for sparse prefill: use filtered paged wrapper
+                sparse_meta = kwargs.get("sparse_prefill_metadata")
+                if sparse_meta is not None and layer.layer_id in _MINICPM4_LAYERS:
+                    o2, s2 = self._forward_extend_sparse_paged_lse(
+                        q, layer, forward_batch, sparse_meta, logits_soft_cap,
+                    )
+                else:
+                    o2, s2 = prefill_wrapper_paged.forward_return_lse(
+                        q.view(-1, layer.tp_q_head_num, layer.head_dim),
+                        forward_batch.token_to_kv_pool.get_kv_buffer(layer.layer_id),
+                        causal=False,
+                        sm_scale=layer.scaling,
+                        logits_soft_cap=logits_soft_cap,
+                    )
 
                 o, _ = merge_state(o1, s1, o2, s2)
 
@@ -846,6 +855,179 @@ class FlashInferAttnBackend(AttentionBackend):
                 )
 
         return o.view(-1, layer.tp_q_head_num * layer.head_dim)
+
+    def _forward_extend_sparse_paged(
+        self,
+        q: torch.Tensor,
+        layer: RadixAttention,
+        forward_batch: ForwardBatch,
+        original_wrapper: "BatchPrefillWithPagedKVCacheWrapper",
+        sparse_meta: dict,
+        logits_soft_cap: float,
+    ) -> torch.Tensor:
+        """Run sparse paged attention (non-ragged path, full paged).
+
+        Creates a temporary FlashInfer wrapper with filtered kv_indices
+        containing only the selected sparse blocks.
+        """
+        from sglang.srt.layers.attention.sparse_prefill import (
+            build_filtered_kv_indices,
+            MINICPM4_LAYERS,
+        )
+
+        updater = self.indices_updater_prefill
+        wrapper_idx = self._get_wrapper_idx(layer)
+
+        # Get the original kv_indices and kv_indptr that were computed in init_forward_metadata
+        # We need to rebuild with filtered indices
+        req_to_token = updater.req_to_token
+        req_pool_indices = forward_batch.req_pool_indices
+        paged_kernel_lens = forward_batch.seq_lens  # full seq lens for non-ragged
+
+        # Build filtered indices
+        # First, get original kv_indices by re-running the Triton kernel conceptually.
+        # Actually, we need the original indices. Let's compute them fresh.
+        bs = forward_batch.batch_size
+        kv_indptr_orig = torch.zeros(bs + 1, dtype=torch.int32, device=q.device)
+        kv_indptr_orig[1:bs + 1] = torch.cumsum(paged_kernel_lens, dim=0)[:bs]
+        total_kv = kv_indptr_orig[bs].item()
+
+        kv_indices_orig = torch.empty(total_kv + 256, dtype=torch.int32, device=q.device)
+        kv_start_idx = torch.zeros(bs, dtype=torch.int32, device=q.device)
+        create_flashinfer_kv_indices_triton[(bs,)](
+            req_to_token, req_pool_indices, paged_kernel_lens,
+            kv_indptr_orig, kv_start_idx, kv_indices_orig,
+            req_to_token.shape[1],
+        )
+
+        filtered_kv_indices, filtered_kv_indptr = build_filtered_kv_indices(
+            sparse_meta, req_to_token, req_pool_indices,
+            paged_kernel_lens, kv_start_idx,
+            kv_indices_orig, kv_indptr_orig, q.device,
+        )
+
+        # Create temporary wrapper with filtered indices
+        sparse_wrapper = BatchPrefillWithPagedKVCacheWrapper(
+            self.workspace_buffer, "NHD", backend="fa2",
+        )
+
+        prefix_lens = forward_batch.extend_prefix_lens
+        if prefix_lens is None:
+            prefix_lens = torch.zeros(bs, dtype=torch.int32, device=q.device)
+        qo_indptr = torch.zeros(bs + 1, dtype=torch.int32, device=q.device)
+        qo_indptr[1:bs + 1] = torch.cumsum(forward_batch.seq_lens - prefix_lens, dim=0)[:bs]
+
+        kv_last_page_len = torch.ones(bs, dtype=torch.int32, device=q.device)
+
+        sparse_wrapper.begin_forward(
+            qo_indptr[:bs + 1],
+            filtered_kv_indptr[:bs + 1],
+            filtered_kv_indices,
+            kv_last_page_len[:bs],
+            updater.num_qo_heads,
+            updater.num_kv_heads,
+            updater.head_dim,
+            1,  # page_size
+            q_data_type=updater.q_data_type,
+            kv_data_type=updater.data_type,
+        )
+
+        o = sparse_wrapper.forward(
+            q.view(-1, layer.tp_q_head_num, layer.head_dim),
+            forward_batch.token_to_kv_pool.get_kv_buffer(layer.layer_id),
+            causal=True,
+            sm_scale=layer.scaling,
+            window_left=layer.sliding_window_size,
+            logits_soft_cap=logits_soft_cap,
+            k_scale=layer.k_scale_float,
+            v_scale=layer.v_scale_float,
+        )
+
+        sparse_wrapper.end_forward()
+        return o
+
+    def _forward_extend_sparse_paged_lse(
+        self,
+        q: torch.Tensor,
+        layer: RadixAttention,
+        forward_batch: ForwardBatch,
+        sparse_meta: dict,
+        logits_soft_cap: float,
+    ) -> tuple:
+        """Run sparse paged attention for the ragged+paged merge path.
+
+        Returns (output, lse) for merging with the ragged self-attention.
+        """
+        from sglang.srt.layers.attention.sparse_prefill import (
+            build_filtered_kv_indices,
+        )
+
+        updater = self.indices_updater_prefill
+        req_to_token = updater.req_to_token
+        req_pool_indices = forward_batch.req_pool_indices
+        bs = forward_batch.batch_size
+
+        # For the ragged+paged path, paged_kernel_lens = prefix_lens
+        prefix_lens = forward_batch.extend_prefix_lens
+        if prefix_lens is None:
+            prefix_lens = torch.zeros(bs, dtype=torch.int32, device=q.device)
+        paged_kernel_lens = prefix_lens
+
+        # Build original kv_indices for prefix
+        kv_indptr_orig = torch.zeros(bs + 1, dtype=torch.int32, device=q.device)
+        kv_indptr_orig[1:bs + 1] = torch.cumsum(paged_kernel_lens, dim=0)[:bs]
+        total_kv = kv_indptr_orig[bs].item()
+
+        kv_indices_orig = torch.empty(total_kv + 256, dtype=torch.int32, device=q.device)
+        kv_start_idx = torch.zeros(bs, dtype=torch.int32, device=q.device)
+        create_flashinfer_kv_indices_triton[(bs,)](
+            req_to_token, req_pool_indices, paged_kernel_lens,
+            kv_indptr_orig, kv_start_idx, kv_indices_orig,
+            req_to_token.shape[1],
+        )
+
+        filtered_kv_indices, filtered_kv_indptr = build_filtered_kv_indices(
+            sparse_meta, req_to_token, req_pool_indices,
+            paged_kernel_lens, kv_start_idx,
+            kv_indices_orig, kv_indptr_orig, q.device,
+        )
+
+        # Create temporary wrapper
+        sparse_wrapper = BatchPrefillWithPagedKVCacheWrapper(
+            self.workspace_buffer, "NHD", backend="fa2",
+        )
+
+        extend_seq_lens = forward_batch.extend_seq_lens
+        if extend_seq_lens is None:
+            extend_seq_lens = forward_batch.seq_lens
+        qo_indptr = torch.zeros(bs + 1, dtype=torch.int32, device=q.device)
+        qo_indptr[1:bs + 1] = torch.cumsum(extend_seq_lens, dim=0)[:bs]
+
+        kv_last_page_len = torch.ones(bs, dtype=torch.int32, device=q.device)
+
+        sparse_wrapper.begin_forward(
+            qo_indptr[:bs + 1],
+            filtered_kv_indptr[:bs + 1],
+            filtered_kv_indices,
+            kv_last_page_len[:bs],
+            updater.num_qo_heads,
+            updater.num_kv_heads,
+            updater.head_dim,
+            1,  # page_size
+            q_data_type=updater.q_data_type,
+            kv_data_type=updater.data_type,
+        )
+
+        o, s = sparse_wrapper.forward_return_lse(
+            q.view(-1, layer.tp_q_head_num, layer.head_dim),
+            forward_batch.token_to_kv_pool.get_kv_buffer(layer.layer_id),
+            causal=False,
+            sm_scale=layer.scaling,
+            logits_soft_cap=logits_soft_cap,
+        )
+
+        sparse_wrapper.end_forward()
+        return o, s
 
     def forward_decode(
         self,
