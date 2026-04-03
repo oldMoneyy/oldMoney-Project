@@ -13,12 +13,49 @@ import requests
 # cd /opt/oldMoney-Project/quantization && python /opt/oldMoney-Project/quantization/fast_eval_quantization.py --mode eval --api-base http://127.0.0.1:31333
 
 # 测试用的一组 Prompt（覆盖长文本、推理、代码等不同场景）
-TEST_PROMPTS = [
+_SHORT_PROMPTS = [
     "Please explain the concept of quantum entanglement in simple terms.",
     "Write a Python script to perform binary search on a sorted array.",
     "If Jane has 3 apples and gives 1 to Bob, and Bob gives 2 to Alice who already had 5, how many apples does Alice have? Let's think step by step.",
     "Translate the following English text to Chinese: 'The quick brown fox jumps over the lazy dog.'"
 ]
+
+def _make_long_prompt(target_tokens=16384):
+    """Generate a prompt of ~target_tokens to test sparse prefill (activates at >8192 tokens).
+
+    Uses repeated filler paragraphs with a question at the end, so the model
+    must attend across the full context to answer correctly.
+    """
+    filler_paragraph = (
+        "The history of artificial intelligence dates back to classical philosophers who attempted "
+        "to describe the process of human thinking as the mechanical manipulation of symbols. "
+        "This work culminated in the invention of the programmable digital computer in the 1940s, "
+        "a machine based on the abstract essence of mathematical reasoning. This device and the ideas "
+        "behind it inspired a handful of scientists to begin seriously discussing the possibility of "
+        "building an electronic brain. The field of AI research was founded at a workshop held on the "
+        "campus of Dartmouth College during the summer of 1956. Those who attended would become the "
+        "leaders of AI research for decades. Many of them predicted that a machine as intelligent as a "
+        "human being would exist in no more than a generation, and they were given millions of dollars "
+        "to make this vision come true. Eventually, it became obvious that commercial developers and "
+        "researchers had grossly underestimated the difficulty of the project. In 1973, in response to "
+        "the criticism from James Lighthill and ongoing pressure from congress, the U.S. and British "
+        "governments cut off exploratory research in AI. The next few years would later be called an "
+        "AI winter, a period when obtaining funding for AI projects was extremely difficult. "
+    )
+    # ~200 tokens per paragraph, need ~82 repeats for 16384 tokens
+    num_repeats = (target_tokens * 4) // len(filler_paragraph)  # rough chars-to-tokens ratio
+    # Embed a unique fact early and ask about it at the end
+    secret = "The secret code hidden in this document is PHOENIX-7742."
+    paragraphs = []
+    for i in range(num_repeats):
+        if i == num_repeats // 3:
+            paragraphs.append(secret)
+        paragraphs.append(f"[Section {i+1}] {filler_paragraph}")
+    body = "\n\n".join(paragraphs)
+    question = "\n\nBased on the document above, what is the secret code hidden in this document? Answer with just the code."
+    return body + question
+
+TEST_PROMPTS = _SHORT_PROMPTS + [_make_long_prompt(16384)]
 
 def get_logprobs_from_sglang(api_base, model_name, prompt, max_tokens=128, top_k=256):
     """
@@ -34,7 +71,7 @@ def get_logprobs_from_sglang(api_base, model_name, prompt, max_tokens=128, top_k
         "top_logprobs": top_k
     }
     
-    resp = requests.post(url, json=payload, timeout=120)
+    resp = requests.post(url, json=payload, timeout=600)
     resp.raise_for_status()
     data = resp.json()
     
