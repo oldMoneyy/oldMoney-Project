@@ -44,10 +44,11 @@ def make_prompt(approx_tokens: int) -> str:
 async def send_request(session, idx, input_tokens, max_output):
     prompt = make_prompt(input_tokens)
     payload = {
-        "model": "default",
-        "prompt": prompt,
-        "max_tokens": max_output,
-        "temperature": 0.0,
+        "text": prompt,
+        "sampling_params": {
+            "max_new_tokens": max_output,
+            "temperature": 0.0,
+        },
     }
     t0 = time.time()
     try:
