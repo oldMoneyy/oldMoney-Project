@@ -305,9 +305,8 @@ Dense:
 ```bash
 fuser -k -9 31333/tcp
 # uv pip install --no-deps -e /opt/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python
+uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_flashinfer
 uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
-# uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_profiling
-# uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_opt
 # export SGLANG_SALA_PROFILE=1
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
@@ -328,6 +327,10 @@ nohup python3 -m sglang.launch_server \
 
 python /opt/oldMoney-Project/bench/long_context_test_case.py
 cd /opt/oldMoney-Project/quantization && python /opt/oldMoney-Project/quantization/fast_eval_quantization.py --mode eval --api-base http://127.0.0.1:31333
+echo "=== Smax (unlimited) ==="
+python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31333 \
+    --dataset-name custom --dataset-path /opt/oldMoney-Project/bench/competition_bench_64.jsonl \
+    --num-prompts 64 --flush-cache
 ```
 
 
