@@ -1,5 +1,14 @@
 
+20260403：
+1. 完成 flashinfer 的 c64 profiling，发现了以 attn 为首的瓶颈；
+2. 完成优化 flashinfer 的准备工作；
+3. 较为清楚地梳理清楚 chunked prefill 过程，embed、计算 QKV、存储 KV Cache、计算 attention、输出最后一个 token 的 logits；
+4. 定义了优化 flashinfer 和使用 minicpm_flashinfer 的区别。
 
+
+20260402:
+1. 重新理解了 KC2 本质上和 KC1 根本不是数学上对齐的，而是一种近似，并且作者通过实验得到了验证；
+2. 有开始读 InfLLMv2 稠密推理和 DeepSeek DSA 的 topk indexer，暂无结论。
 
 
 20260401:
@@ -8,7 +17,4 @@
 3. 上传了 GPTQ smooth W4A16 模型，以及收集了对应的 KL 散度信息，并确认了 0330 21:03 提交的 tar 即为当前的 SOTA 包。
 
 
-20260402:
-1. 重新理解了 KC2 本质上和 KC1 根本不是数学上对齐的，而是一种近似，并且作者通过实验得到了验证；
-2. 有开始读 InfLLMv2 稠密推理和 DeepSeek DSA 的 topk indexer，暂无结论。
 
