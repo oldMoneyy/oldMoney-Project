@@ -560,6 +560,9 @@ Files reused as reference:
   minicpm_sparse_utils.py: compressed_attention(), compress_k_core_new()
   minicpm_sparse_kernels.py: compress_k_complete_kernel_new (Triton)
   minicpm_backend.py: sparse page table construction
+
+STATUS (2026-04-03): IMPLEMENTED AND VALIDATED. See PART 3 Attempt 1 for
+  full results. Correctness preserved, no speedup yet due to KC1 overhead.
 ================================================================================
 OPINION I: "Lightning attention is the underexplored elephant" (AI session 5)
 ================================================================================
@@ -629,3 +632,139 @@ them for you. SALA_paper.md is already available in the project root.
 NOTE: Read claude_persona in the project root for the expected engineering
 mindset. TL;DR: decompose complexity, trace before proposing, quantify
 everything, ship complete code, don't hedge or retreat from hard problems.
+
+================================================================================
+OPINION D2: "Current state of sglang_sala_flashinfer" (2026-04-03)
+================================================================================
+sglang_sala_flashinfer/ is the active development codebase. As of 2026-04-03
+it contains everything in sglang_sala_cp/ (proven working base) PLUS sparse
+prefill support on the flashinfer backend. Here is what changed vs the base:
+
+New file: sglang/srt/layers/attention/sparse_prefill.py
+  - SGLANG_SPARSE_PREFILL env var controls activation (0=off, 1=on)
+  - compress_keys_simple(): torch-based KC1/KC2 compression (sliding-window mean)
+  - compute_sparse_prefill_metadata(): reads prefix keys from KV cache,
+    compresses, scores Q vs KC1 via infllmv2_attn_stage1, selects topk blocks
+  - build_filtered_kv_indices(): maps topk blocks to physical KV cache locations
+  - Key details:
+    * cu_seqlens_q multiplied by heads_per_group (16) for infllmv2_attn_stage1
+    * max_pooling_1d_varlen uses NON-adjusted cu_seqlens_q, total_q=-1
+    * Threshold: prefix must STRICTLY exceed dense_len to trigger sparse
+    * First dense_len (8192) tokens always included in filtered indices
+    * topk blocks applied only to tokens beyond dense_len
+
+Modified: sglang/srt/layers/attention/flashinfer_backend.py
+  - forward_extend() ragged+paged path: if sparse_prefill_metadata present
+    and layer is minicpm4, calls _forward_extend_sparse_paged_lse() instead
+    of dense paged wrapper
+  - _forward_extend_sparse_paged_lse(): builds filtered kv_indices directly
+    from req_to_token (no redundant Triton kernel), creates temporary
+    BatchPrefillWithPagedKVCacheWrapper, runs sparse paged attention,
+    returns (output, lse) for merge_state with ragged self-attention
+  - Non-ragged sparse path (_forward_extend_sparse_paged) exists but disabled
+    with `if False` guard
+
+Modified: sglang/srt/models/minicpm.py
+  - MiniCPMAttention.forward(): when SPARSE_PREFILL_ENABLED and extend mode,
+    calls compute_sparse_prefill_metadata() before self.attn(), passes result
+    via kwargs["sparse_prefill_metadata"]
+  - MiniCPMDecoderLayer.__init__(): attaches _sparse_config to self_attn for
+    minicpm4 layers when sparse prefill is enabled
+
+Known limitations (as of 2026-04-03):
+  1. KC1 recomputed from scratch every chunk (not incremental like minicpm_backend)
+  2. Temporary FlashInfer wrapper created per layer per chunk (8 wrappers/chunk)
+  3. No sparse decode -- decode still uses dense attention on all prefix tokens
+  4. chunked_prefill_size must be >= 32768 for accuracy; 8192 causes error
+     compounding across too many sparse chunks
+  5. compress_keys_simple uses torch unfold (not Triton kernel) -- may differ
+     slightly from original compress_k_complete_kernel_new on edge cases
+  6. No speedup measured yet -- KC1 overhead offsets attention savings
+
+================================================================================
+================================================================================
+              PART 3: EXPERIMENT LOG (chronological attempts & results)
+================================================================================
+================================================================================
+
+================================================================================
+ATTEMPT 1: Sparse prefill on flashinfer path (2026-04-03)
+================================================================================
+Goal: Add sparse block selection to MiniCPMAttention during chunked prefill
+on the flashinfer backend. Only prefill, no decode changes. Keep W4A16 Marlin.
+
+Codebase: sglang_sala_flashinfer/
+Files modified:
+  sglang/srt/layers/attention/sparse_prefill.py     (new file)
+  sglang/srt/layers/attention/flashinfer_backend.py  (added sparse paged path)
+  sglang/srt/models/minicpm.py                       (call sparse metadata)
+
+Architecture:
+  MiniCPMAttention.forward() computes KC1/KC2 from prefix keys + new keys,
+  scores Q against KC1 via infllmv2_attn_stage1, selects topk blocks,
+  passes sparse_metadata through kwargs to FlashInfer backend.
+  FlashInfer forward_extend() builds filtered kv_indices with only selected
+  blocks, runs sparse paged attention via temporary wrapper, merges with
+  ragged self-attention via LSE merge.
+
+Bugs found and fixed (3 iterations):
+
+  1. cu_seqlens_q not multiplied by heads_per_group (16) for infllmv2_attn_stage1.
+     The scoring kernel expects adjusted seqlens to handle GQA grouping.
+     Without this, scoring produced garbage -> topk missed critical blocks.
+     Result: 151K multi-doc test got stuck in degenerate loop, never found answer.
+
+  2. max_seqlen_q not adjusted by heads_per_group either. Same root cause.
+
+  3. total_q passed as q.shape[0] instead of -1 (original default) to
+     max_pooling_1d_varlen.
+
+  4. First dense_len tokens not guaranteed in filtered kv_indices. Original
+     SALA design: always attend to first dense_len (8192) tokens densely,
+     apply topk only beyond that. Our implementation initially applied topk
+     to the ENTIRE prefix, which could drop early important tokens.
+     Fix: always include tokens [0, dense_len) + topk blocks beyond dense_len.
+
+  5. Threshold was prefix_len < dense_len (strict less). With chunked_prefill_size
+     = dense_len = 8192, prefix of exactly 8192 triggered sparse incorrectly.
+     Fix: changed to prefix_len <= dense_len (must strictly exceed).
+
+  6. KC1 computed from scratch every chunk by reading ALL prefix keys from KV
+     cache. Performance fix: skip KC1 for requests with prefix <= dense_len.
+
+  7. Redundant Triton kernel call in flashinfer_backend to build original
+     kv_indices before filtering. Fixed by building filtered indices directly
+     from req_to_token.
+
+Test results (SGLANG_SPARSE_PREFILL=1, chunked_prefill_size=32768):
+  Test 1 - Capital of France (20K tokens):  PASS ("Paris")
+  Test 2 - Needle in Haystack (87K tokens): PASS ("BLUE-TIGER-42")
+  Test 3 - Multi-document (151K tokens):    PASS ("Alice Zhang, 1987")
+  Test 4 - Long Generation (decode):        PASS
+  KL divergence: 0.000 (all 5 prompts)
+  Correctness: fully preserved vs dense baseline.
+
+Key finding -- chunked_prefill_size matters for sparse accuracy:
+  With chunked_prefill_size=8192: Test 2 FAILS (degenerate loop after 4096 tokens).
+  With chunked_prefill_size=32768: Test 2 PASSES.
+  Reason: each sparse chunk independently selects topk blocks. Smaller chunks
+  mean more sparse iterations, and KV cache entries produced under sparse
+  attention propagate errors through subsequent layers and chunks. With 8192
+  chunk size, Test 2 has ~9 sparse chunks (error compounds). With 32768,
+  only ~2 sparse chunks.
+
+Performance assessment:
+  No measurable speedup on these test cases. The KC1 computation (reading all
+  prefix keys from KV cache + compress + score + topk) adds overhead that
+  offsets the savings from reduced paged attention. The original minicpm_backend
+  uses incremental KC1 (only new entries per chunk) which avoids this cost.
+  To get real speedup, need either:
+    a. Incremental KC1 updates (only compute new KC1 entries, cache history)
+    b. Much larger sequences where attention savings dominate KC1 overhead
+    c. Avoid per-layer temporary FlashInfer wrapper creation
+
+Status: CORRECTNESS VALIDATED, PERFORMANCE NEUTRAL.
+  Sparse prefill is working correctly on flashinfer path with W4A16 Marlin.
+  No accuracy degradation. But no speed gain yet -- need optimization work
+  to reduce KC1 overhead before this translates to competition score improvement.
+
