@@ -34,8 +34,11 @@ from sglang.srt.layers.attention.minicpm_sparse_utils import (
 )
 from sglang.srt.layers.attention.sparse_prefill import (
     compute_sparse_prefill_metadata,
+    compute_sparse_decode_metadata,
     clear_kc1_cache,
+    clear_decode_caches,
     SPARSE_PREFILL_ENABLED,
+    SPARSE_DECODE_ENABLED,
 )
 from sglang.srt.layers.layernorm import RMSNorm
 from sglang.srt.layers.linear import (
@@ -208,6 +211,18 @@ class MiniCPMAttention(nn.Module):
             )
             if sparse_meta is not None:
                 kwargs["sparse_prefill_metadata"] = sparse_meta
+
+        # Sparse decode: compute topk blocks for decode attention
+        if (
+            SPARSE_DECODE_ENABLED
+            and forward_batch.forward_mode.is_decode()
+            and hasattr(self, '_sparse_config')
+        ):
+            sparse_meta = compute_sparse_decode_metadata(
+                q, k, forward_batch, self.attn, self._sparse_config,
+            )
+            if sparse_meta is not None:
+                kwargs["sparse_decode_metadata"] = sparse_meta
 
         attn_output = self.attn(q, k, v, forward_batch, **kwargs)
 
@@ -497,8 +512,8 @@ class MiniCPMDecoderLayer(nn.Module):
                 ),
                 prefix=add_prefix("self_attn", prefix),
             )
-            # Attach sparse config for sparse prefill
-            if SPARSE_PREFILL_ENABLED and hasattr(config, 'sparse_dense_len'):
+            # Attach sparse config for sparse prefill/decode
+            if (SPARSE_PREFILL_ENABLED or SPARSE_DECODE_ENABLED) and hasattr(config, 'sparse_dense_len'):
                 self.self_attn._sparse_config = config
         elif self.mixer_type in ["lightning", "lightning_attn", "lightning-attn"]:
             assert (
@@ -714,12 +729,15 @@ class MiniCPMForCausalLM(nn.Module):
         input_embeds: torch.Tensor = None,
     ) -> torch.Tensor:
         # Clean up incremental KC1 cache for finished requests
-        if SPARSE_PREFILL_ENABLED:
-            if not forward_batch.forward_mode.is_extend():
-                clear_kc1_cache()  # Decode mode: no prefill, clear all
+        if SPARSE_PREFILL_ENABLED or SPARSE_DECODE_ENABLED:
+            active = set(forward_batch.req_pool_indices.tolist())
+            if not forward_batch.forward_mode.is_extend() and not SPARSE_DECODE_ENABLED:
+                clear_kc1_cache()  # Decode mode without sparse decode: clear all
             else:
-                active = set(forward_batch.req_pool_indices.tolist())
-                clear_kc1_cache(active)
+                clear_kc1_cache(active)  # Keep cache for active requests
+        if SPARSE_DECODE_ENABLED:
+            active = set(forward_batch.req_pool_indices.tolist())
+            clear_decode_caches(active)
         if input_embeds is not None:
             input_embeds = input_embeds * self.config.scale_emb
         hidden_states = self.model(input_ids, positions, forward_batch, input_embeds)

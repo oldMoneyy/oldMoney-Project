@@ -93,24 +93,29 @@ CRITICAL FACT: With flashinfer backend, minicpm4 layers do DENSE attention
 minicpm_flashinfer backend.
 
 ================================================================================
-CURRENT SCORES (as of 2026-04-03)
+CURRENT SCORES (as of 2026-04-07)
 ================================================================================
-  S1  (--max-concurrent 1):  397.99s
-  S8  (--max-concurrent 8):  557.30s
-  Smax (no limit):          1036.11s
-  Score: 65.43
-  Leader: 100.00
+  Score: 62.92
+  Rank: 10
+  Leader: 134% of bounty target score
+
+  Previous scores (2026-04-03):
+    S1  (--max-concurrent 1):  397.99s
+    S8  (--max-concurrent 8):  557.30s
+    Smax (no limit):          1036.11s
+    Score was: 65.43
 
   Bounty reference:
-    Us:     85% of bounty target score
-    Leader: 129% of bounty target score
+    Leader: 134% of bounty target score (up from 129%)
     Leader's individual S1/S8/Smax unknown -- only overall score visible.
 
-  Sub-score breakdown:
+  Sub-score breakdown (from previous submission):
     S1:   420/398 = 1.055  -> weighted: 0.422 (above bounty)
     S8:   420/557 = 0.754  -> weighted: 0.226 (below bounty)
     Smax: 720/1036 = 0.695 -> weighted: 0.209 (below bounty)
     Total: 0.857 (85.7% of bounty)
+  NOTE: Current score dropped to 62.92 (from 65.43) likely because the leader
+  improved further and the scoring is relative to best performer.
 
   S8 and Smax are the weak points. S1 already beats bounty target.
 
@@ -854,19 +859,31 @@ Status: CORRECTNESS VALIDATED, PERFORMANCE NEUTRAL.
 ================================================================================
 CURRENT STATUS SUMMARY (as of 2026-04-07)
 ================================================================================
-Score: 65.43 (85% of bounty). Leader: 129% of bounty. Target: 105%+ of bounty.
+Score: 62.92 (rank 10). Leader: 134% of bounty. Target: 105%+ of bounty.
 
 Completed work:
   1. Sparse prefill on flashinfer backend: IMPLEMENTED, CORRECTNESS VALIDATED.
      Incremental KC1 cache implemented. Speed benchmark PENDING.
-  2. FP8 KV cache: working with flashinfer backend.
-  3. W4A16 GPTQ Marlin quantization: working, all competitors use same.
-  4. Optimized tilelang fused topk kernels (minicpm_fuse_kernel.py): implemented
+  2. Sparse decode on flashinfer backend: IMPLEMENTED, NOT YET TESTED.
+     Amortized block selection (every 16 steps, layer 0 only, shared across
+     all 8 minicpm4 layers). Pre-allocated wrapper for CUDA graph compat.
+     Vectorized index building. ~7x KV read reduction per layer.
+  3. FP8 KV cache: working with flashinfer backend.
+  4. W4A16 GPTQ Marlin quantization: working, all competitors use same.
+  5. Optimized tilelang fused topk kernels (minicpm_fuse_kernel.py): implemented
      for minicpm_flashinfer backend (2-pass -> 3-pass optimization).
-  5. FP8 KV cache workaround for minicpm_flashinfer backend: implemented
+  6. FP8 KV cache workaround for minicpm_flashinfer backend: implemented
      (mini-pool dequant approach).
-  6. Vectorized metadata builders in minicpm_sparse_utils.py.
-  7. fla 0.4.2 kernel diff: CHECKED, identical to 0.4.1. No free win.
+  7. Vectorized metadata builders in minicpm_sparse_utils.py.
+  8. fla 0.4.2 kernel diff: CHECKED, identical to 0.4.1. No free win.
+  9. minicpm_flashinfer backend: TESTED AND REJECTED. 11x slower, crashes
+     on S8/Smax, 26.67% accuracy. Not viable.
+
+Pending / next steps:
+  1. TEST sparse decode: correctness (4-test suite) + speed benchmark.
+  2. Run speed benchmark with SGLANG_SPARSE_PREFILL=1 + incremental KC1.
+  3. Investigate fla fused_recurrent kernel BK=128 optimization.
+  4. Consider topk reduction (64 -> 32/16) for sparse prefill+decode.
 
 Pending / next steps:
   1. Run speed benchmark with SGLANG_SPARSE_PREFILL=1 + incremental KC1.
@@ -880,6 +897,70 @@ KEY INSIGHT (2026-04-07):
   minicpm4 dense decode attention (8 layers, O(n) per token, reads full
   KV cache). For long-context S8/Smax, sparse decode for minicpm4 is
   the highest-impact optimization.
+
+================================================================================
+ATTEMPT 2: Sparse decode on flashinfer path (2026-04-07)
+================================================================================
+Goal: Add sparse block selection to MiniCPMAttention during DECODE on the
+flashinfer backend. Only 8 minicpm4 layers, not lightning layers.
+
+minicpm_flashinfer backend was tested and REJECTED:
+  S1=4432s (11x slower than flashinfer's 398s), S8/Smax=CRASHED (OOM),
+  accuracy=26.67%. Fundamentally broken -- FP8 dequant workaround, no CUDA
+  graph, Python metadata overhead. Confirmed: porting sparse algo to flashinfer
+  backend is the right approach.
+
+Codebase: sglang_sala_flashinfer/
+Files modified:
+  sglang/srt/layers/attention/sparse_prefill.py  (extended with decode logic)
+  sglang/srt/layers/attention/flashinfer_backend.py (sparse decode path)
+  sglang/srt/models/minicpm.py (wired up sparse decode)
+
+Architecture:
+  Aggressive amortized strategy:
+  - Block selection computed every 16 decode steps, in layer 0 ONLY
+  - Cached blocks shared across all 8 minicpm4 layers → 128x scoring reduction
+  - Each minicpm4 layer: attend to dense_len(8192) + window(2048) + topk(64)*
+    block_size(64) = ~14K tokens instead of full context (e.g. 100K)
+  - ~7x KV read reduction per minicpm4 layer
+
+  Data flow:
+    MiniCPMAttention.forward() [decode mode]
+      → compute_sparse_decode_metadata(q, k, forward_batch, layer, config)
+        Layer 0 (anchor): every 16 steps, update KC1/KC2 incrementally,
+          score q vs KC1 via infllmv2_attn_stage1, max_pooling → topk blocks,
+          cache in _decode_block_cache[req_idx]
+        Other layers: return cached blocks from layer 0
+      → kwargs["sparse_decode_metadata"] = sparse_meta
+    FlashInferAttnBackend.forward_decode(**kwargs)
+      → _forward_decode_sparse(): build filtered kv_indices (dense + window +
+        topk blocks), reuse pre-allocated decode wrapper, run sparse attention
+
+  Key implementation details:
+  - Pre-allocated sparse decode wrapper + buffers in __init__() for CUDA graph
+    compatibility. No temporary wrapper creation per step.
+  - Vectorized index building: torch.arange + torch.cat + torch.unique instead
+    of Python set/range/sorted. Direct write into pre-allocated kv_indices buffer.
+  - begin_forward(non_blocking=True) to avoid GPU sync.
+  - KC1/KC2 cache persisted across decode steps (changed clear_kc1_cache logic).
+  - Scoring math verified against prefill bug fixes:
+    cu_seqlens_q * heads_per_group ✓, max_seqlen_q * heads_per_group ✓,
+    total_q=-1 ✓, causal=False for decode ✓, cache_lens=seq_lens ✓.
+
+  Gating: SGLANG_SPARSE_DECODE=1 environment variable.
+
+Status: IMPLEMENTED, NOT YET TESTED.
+  Needs: correctness validation (4-test suite), speed benchmark, potential
+  bug fixes (expect iteration similar to sparse prefill's 7 bug fixes).
+
+Remaining concerns:
+  - Still has Python for-loop over batch items in _forward_decode_sparse
+    (same pattern as existing sglang code, bounded by batch_size)
+  - Inner block loop: ~64 iterations of torch.arange (small, bounded)
+  - CUDA graph capture: sparse layers use pre-allocated wrapper outside
+    captured graph. Dense layers (24 lightning) still use CUDA graph normally.
+  - Accuracy risk: sparse decode compounds errors over hundreds of decode
+    tokens. May need topk tuning or progressive sparsification.
 
 ================================================================================
 ================================================================================

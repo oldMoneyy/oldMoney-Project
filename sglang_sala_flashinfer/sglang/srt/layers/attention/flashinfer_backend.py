@@ -298,6 +298,26 @@ class FlashInferAttnBackend(AttentionBackend):
         self.prefill_cuda_graph_metadata = {}  # For verify
         self.draft_extend_cuda_graph_metadata = {}  # For draft extend
 
+        # Pre-allocate sparse decode resources (reused across steps)
+        # Max tokens per request in sparse decode:
+        # dense_len(8192) + window_size(2048) + topk(64)*block_size(64) = 14336
+        self._sparse_decode_max_kv_per_req = 14336
+        sparse_max_total = max_bs * self._sparse_decode_max_kv_per_req
+        self._sparse_decode_kv_indptr = torch.zeros(
+            (max_bs + 1,), dtype=torch.int32, device=model_runner.device
+        )
+        self._sparse_decode_kv_indices = torch.zeros(
+            (sparse_max_total + 256,), dtype=torch.int32, device=model_runner.device
+        )
+        self._sparse_decode_kv_last_page_len = torch.ones(
+            (max_bs,), dtype=torch.int32, device=model_runner.device
+        )
+        self._sparse_decode_wrapper = BatchDecodeWithPagedKVCacheWrapper(
+            self.workspace_buffer,
+            "NHD",
+            use_tensor_cores=self.decode_use_tensor_cores,
+        )
+
     def _process_multi_item_scoring(
         self, forward_batch: ForwardBatch
     ) -> MultiItemScoringParams:
@@ -1072,10 +1092,8 @@ class FlashInferAttnBackend(AttentionBackend):
         layer: RadixAttention,
         forward_batch: ForwardBatch,
         save_kv_cache=True,
+        **kwargs,
     ):
-        decode_wrapper = self.forward_metadata.decode_wrappers[
-            self._get_wrapper_idx(layer)
-        ]
         cache_loc = (
             forward_batch.out_cache_loc
             if not layer.is_cross_attention
@@ -1089,6 +1107,15 @@ class FlashInferAttnBackend(AttentionBackend):
                     layer, cache_loc, k, v, layer.k_scale, layer.v_scale
                 )
 
+        # Check for sparse decode metadata
+        sparse_meta = kwargs.get("sparse_decode_metadata")
+        if sparse_meta is not None and layer.layer_id in _MINICPM4_LAYERS:
+            return self._forward_decode_sparse(q, layer, forward_batch, sparse_meta)
+
+        decode_wrapper = self.forward_metadata.decode_wrappers[
+            self._get_wrapper_idx(layer)
+        ]
+
         # Call the wrapped function
         o = decode_wrapper.forward(
             q.contiguous().view(-1, layer.tp_q_head_num, layer.head_dim),
@@ -1096,6 +1123,124 @@ class FlashInferAttnBackend(AttentionBackend):
             sm_scale=layer.scaling,
             logits_soft_cap=layer.logit_cap,
             # Must use _float to avoid device-to-host copy that breaks cuda graph capture.
+            k_scale=layer.k_scale_float,
+            v_scale=layer.v_scale_float,
+        )
+
+        return o.view(-1, layer.tp_q_head_num * layer.head_dim)
+
+    def _forward_decode_sparse(
+        self,
+        q: torch.Tensor,
+        layer: RadixAttention,
+        forward_batch: ForwardBatch,
+        sparse_meta: dict,
+    ) -> torch.Tensor:
+        """Run sparse decode attention for minicpm4 layers.
+
+        Builds filtered kv_indices containing only:
+        - Dense region [0, dense_len)
+        - Window region [seq_len - window_size, seq_len)
+        - TopK selected blocks beyond dense_len
+        Uses pre-allocated wrapper and vectorized index construction.
+        """
+        updater = self.indices_updater_decode
+        req_to_token = updater.req_to_token
+        req_pool_indices = forward_batch.req_pool_indices
+        bs = forward_batch.batch_size
+        device = q.device
+
+        sparse_block_indices = sparse_meta["sparse_block_indices"]
+        block_size = sparse_meta["block_size"]
+        seq_lens = sparse_meta["seq_lens"]
+        dense_len = sparse_meta["dense_len"]
+        window_size = sparse_meta.get("window_size", 2048)
+
+        # Vectorized kv_indices construction
+        kv_indptr = self._sparse_decode_kv_indptr
+        kv_indices = self._sparse_decode_kv_indices
+        offset = 0
+
+        for b in range(bs):
+            req_idx = req_pool_indices[b].item()
+            sl = seq_lens[b]
+
+            if sl > dense_len and sparse_block_indices[b] is not None:
+                # Dense region: [0, dense_len)
+                dense_end = min(dense_len, sl)
+                dense_pos = torch.arange(0, dense_end, device=device, dtype=torch.long)
+
+                # Sparse blocks beyond dense_len
+                all_blocks = torch.cat(sparse_block_indices[b], dim=0).unique()
+                all_blocks = all_blocks[all_blocks >= 0].sort().values
+
+                block_starts = all_blocks.long() * block_size
+                block_ends = torch.clamp(block_starts + block_size, max=sl)
+                sparse_mask = (block_starts >= dense_len) & (block_starts < sl)
+
+                if sparse_mask.any():
+                    s_starts = block_starts[sparse_mask]
+                    s_ends = block_ends[sparse_mask]
+                    # Vectorized: create ranges for all blocks at once
+                    block_lens = s_ends - s_starts
+                    total_sparse = block_lens.sum().item()
+                    sparse_pos = torch.empty(total_sparse, device=device, dtype=torch.long)
+                    pos = 0
+                    # Use torch.arange per block — small number of blocks (topk=64)
+                    for i in range(len(s_starts)):
+                        blen = block_lens[i].item()
+                        sparse_pos[pos:pos + blen] = torch.arange(
+                            s_starts[i].item(), s_ends[i].item(), device=device
+                        )
+                        pos += blen
+                else:
+                    sparse_pos = torch.empty(0, device=device, dtype=torch.long)
+
+                # Window: [max(dense_len, sl - window_size), sl)
+                window_start = max(dense_len, sl - window_size)
+                if window_start < sl:
+                    window_pos = torch.arange(window_start, sl, device=device, dtype=torch.long)
+                else:
+                    window_pos = torch.empty(0, device=device, dtype=torch.long)
+
+                # Merge and deduplicate (sorted unique)
+                all_pos = torch.cat([dense_pos, sparse_pos, window_pos])
+                token_positions = torch.unique(all_pos, sorted=True)
+
+                phys = req_to_token[req_idx, token_positions]
+                n = len(phys)
+                kv_indices[offset:offset + n] = phys.to(torch.int32)
+                offset += n
+            else:
+                # Dense: all tokens
+                phys = req_to_token[req_idx, :sl]
+                kv_indices[offset:offset + sl] = phys.to(torch.int32)
+                offset += sl
+
+            kv_indptr[b + 1] = offset
+
+        kv_indptr[0] = 0
+
+        # Reuse pre-allocated wrapper
+        self._sparse_decode_wrapper.end_forward()
+        self._sparse_decode_wrapper.begin_forward(
+            kv_indptr[:bs + 1],
+            kv_indices[:offset],
+            self._sparse_decode_kv_last_page_len[:bs],
+            updater.num_qo_heads,
+            updater.num_kv_heads,
+            updater.head_dim,
+            1,  # page_size
+            data_type=updater.data_type,
+            q_data_type=updater.q_data_type,
+            non_blocking=True,
+        )
+
+        o = self._sparse_decode_wrapper.forward(
+            q.contiguous().view(-1, layer.tp_q_head_num, layer.head_dim),
+            forward_batch.token_to_kv_pool.get_kv_buffer(layer.layer_id),
+            sm_scale=layer.scaling,
+            logits_soft_cap=layer.logit_cap,
             k_scale=layer.k_scale_float,
             v_scale=layer.v_scale_float,
         )

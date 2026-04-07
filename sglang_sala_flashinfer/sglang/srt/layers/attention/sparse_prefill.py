@@ -1,30 +1,29 @@
-"""Sparse prefill attention for MiniCPM4 layers on the FlashInfer backend.
+"""Sparse attention for MiniCPM4 layers on the FlashInfer backend.
 
-This module adds sparse block selection to the PAGED prefix attention path
-during chunked prefill. For chunks 2+ (which have a cached prefix), the
-paged wrapper normally attends to ALL prefix tokens. Sparse prefill reduces
-this to only the top-k selected blocks.
+This module adds sparse block selection to both PREFILL and DECODE paths.
 
-Flow:
-1. MiniCPMAttention.forward(): compute KC1 from prefix keys + new keys,
-   score Q against KC1 to select top-k blocks, attach to kwargs
-2. FlashInfer forward_extend(): detect sparse metadata, build filtered
-   kv_indices for the paged wrapper, compute sparse prefix attention
+PREFILL (sparse prefill):
+  For chunks 2+ (which have a cached prefix), the paged wrapper normally
+  attends to ALL prefix tokens. Sparse prefill reduces this to top-k blocks.
+
+DECODE (sparse decode):
+  During decode, each token attends to dense_len + window + topk blocks
+  instead of the full KV cache. Block selection is amortized: computed every
+  DECODE_SELECTION_INTERVAL steps in DECODE_ANCHOR_LAYER only, then shared
+  across all 8 minicpm4 layers.
 
 Incremental KC1: compressed keys are cached per (request, layer) across
-chunks. Only new tokens + a small boundary overlap are compressed each
-chunk, avoiding O(prefix_len) KV cache reads.
+chunks/decode steps. Only new tokens are compressed incrementally.
 
-Only applies when:
-- Layer is minicpm4 (layer_id in MINICPM4_LAYERS)
-- Prefix length > dense_len (8192)
-- SGLANG_SPARSE_PREFILL=1 environment variable is set
+Gated by:
+- SGLANG_SPARSE_PREFILL=1 for prefill
+- SGLANG_SPARSE_DECODE=1 for decode
 """
 
 import logging
 import os
-from dataclasses import dataclass
-from typing import Optional, Set, Tuple
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Set, Tuple
 
 import torch
 
@@ -49,8 +48,17 @@ def _lazy_import():
 # Whether sparse prefill is enabled (set via env or server arg)
 SPARSE_PREFILL_ENABLED = os.environ.get("SGLANG_SPARSE_PREFILL", "0") == "1"
 
+# Whether sparse decode is enabled
+SPARSE_DECODE_ENABLED = os.environ.get("SGLANG_SPARSE_DECODE", "0") == "1"
+
 # MiniCPM4 layer IDs (softmax attention layers that benefit from sparse)
 MINICPM4_LAYERS = {0, 9, 16, 17, 22, 29, 30, 31}
+
+# Sparse decode: anchor layer for block selection (computed here, shared to all)
+DECODE_ANCHOR_LAYER = 0
+
+# Sparse decode: recompute block selection every N decode steps
+DECODE_SELECTION_INTERVAL = 16
 
 
 # ---------------------------------------------------------------------------
@@ -69,6 +77,41 @@ class CachedKC:
 
 # Module-level cache: (req_pool_index, layer_id) -> CachedKC
 _kc1_cache: dict[tuple[int, int], CachedKC] = {}
+
+
+# ---------------------------------------------------------------------------
+# Sparse decode: cached block selection (shared across layers)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class CachedDecodeBlocks:
+    """Cached block selection for a request during decode."""
+    block_indices: List[torch.Tensor]   # per kv_head: 1D int32 tensor of block indices
+    decode_step: int                    # decode step when this was computed
+    seq_len_at_compute: int             # seq_len when blocks were selected
+
+
+# Module-level cache: req_pool_index -> CachedDecodeBlocks
+_decode_block_cache: Dict[int, CachedDecodeBlocks] = {}
+
+# Module-level buffer for accumulating new keys during decode
+# (req_pool_index, layer_id) -> list of key tensors (each shape (1, kv_heads, head_dim))
+_decode_key_buffer: Dict[Tuple[int, int], List[torch.Tensor]] = {}
+
+
+def clear_decode_caches(active_req_indices: Optional[Set[int]] = None):
+    """Remove stale decode cache entries for finished requests."""
+    global _decode_block_cache, _decode_key_buffer
+    if active_req_indices is None:
+        _decode_block_cache.clear()
+        _decode_key_buffer.clear()
+        return
+    stale = [k for k in _decode_block_cache if k not in active_req_indices]
+    for k in stale:
+        del _decode_block_cache[k]
+    stale_buf = [k for k in _decode_key_buffer if k[0] not in active_req_indices]
+    for k in stale_buf:
+        del _decode_key_buffer[k]
 
 
 def clear_kc1_cache(active_req_indices: Optional[Set[int]] = None):
@@ -369,6 +412,308 @@ def compute_sparse_prefill_metadata(
         "prefix_lens": prefix_lens_cpu,
         "seq_lens": seq_lens_cpu,
         "dense_len": dense_len,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Sparse DECODE: block selection for decode tokens
+# ---------------------------------------------------------------------------
+
+def _update_kc_for_decode(
+    req_pool_idx: int,
+    layer_id: int,
+    k_new: torch.Tensor,       # (1, kv_heads, head_dim) or (kv_heads, head_dim)
+    seq_len: int,
+    k_cache: torch.Tensor,
+    req_to_token: torch.Tensor,
+    kernel_size: int,
+    kernel_stride: int,
+    dtype: torch.dtype,
+) -> torch.Tensor:
+    """Incrementally update KC1 or KC2 with a single new decode key.
+
+    Appends the new key to a buffer. When enough keys accumulate
+    (kernel_stride tokens), produces a new compressed entry.
+    For partial buffers, recomputes the last entry using boundary tokens.
+
+    Returns:
+        Full compressed keys, shape (total_chunks, kv_heads, head_dim)
+    """
+    cache_key = (req_pool_idx, layer_id)
+    cached = _kc1_cache.get(cache_key)
+
+    if cached is None:
+        # First decode after prefill ended without caching (shouldn't happen
+        # if prefill ran, but handle gracefully): full recompute
+        phys_locs = req_to_token[req_pool_idx, :seq_len]
+        k_all = k_cache[phys_locs].float()
+        kc = compress_keys_simple(k_all, kernel_size, kernel_stride)
+        return kc.to(dtype)
+
+    # Get the right cached tensor
+    is_kc1 = (kernel_stride == cached.kc1_kernel_stride)
+    cached_kc = cached.kc1 if is_kc1 else cached.kc2
+    history_chunks = cached_kc.shape[0]
+
+    # boundary_start: first token not fully covered by cached chunks
+    boundary_start = history_chunks * kernel_stride
+
+    if seq_len < boundary_start + kernel_size:
+        # Not enough new tokens for another full chunk yet — return as-is
+        return cached_kc.to(dtype)
+
+    # We have enough tokens for new chunks — read boundary from KV cache
+    phys_locs = req_to_token[req_pool_idx, boundary_start:seq_len]
+    k_tail = k_cache[phys_locs].float()
+    new_kc = compress_keys_simple(k_tail, kernel_size, kernel_stride)
+
+    if new_kc.shape[0] == 0:
+        return cached_kc.to(dtype)
+
+    kc_full = torch.cat([cached_kc.to(new_kc.dtype), new_kc], dim=0)
+    return kc_full.to(dtype)
+
+
+def compute_sparse_decode_metadata(
+    q: torch.Tensor,
+    k_new: torch.Tensor,
+    forward_batch,
+    layer,
+    config,
+) -> Optional[dict]:
+    """Compute sparse block indices for decode attention.
+
+    Amortized: block selection is computed every DECODE_SELECTION_INTERVAL
+    steps in DECODE_ANCHOR_LAYER only. Other layers/steps reuse cached blocks.
+
+    Args:
+        q: (bs, num_q_heads * head_dim) — one token per request
+        k_new: (bs, num_kv_heads * head_dim) — new key per request
+        forward_batch: ForwardBatch
+        layer: RadixAttention
+        config: model config with sparse_* attributes
+
+    Returns:
+        dict with sparse_block_indices, block_size, etc. or None if no
+        request needs sparse decode.
+    """
+    _lazy_import()
+
+    num_q_heads = layer.tp_q_head_num
+    num_kv_heads = layer.tp_k_head_num
+    head_dim = layer.head_dim
+    heads_per_group = num_q_heads // num_kv_heads
+    layer_id = layer.layer_id
+
+    block_size = config.sparse_block_size
+    kernel_size = config.sparse_kernel_size
+    kernel_stride = config.sparse_kernel_stride
+    dense_len = config.sparse_dense_len
+    topk = config.sparse_topk
+    window_size = config.sparse_window_size
+    init_blocks = config.sparse_init_blocks
+    local_blocks = window_size // block_size
+    sparse_topk = topk + local_blocks
+
+    seq_lens_cpu = forward_batch.seq_lens_cpu.tolist() if hasattr(forward_batch.seq_lens_cpu, 'tolist') else list(forward_batch.seq_lens_cpu)
+    batch_size = len(seq_lens_cpu)
+    device = q.device
+
+    # Check if any request needs sparse decode
+    max_seq = max(seq_lens_cpu)
+    if max_seq <= dense_len:
+        return None
+
+    req_pool_indices = forward_batch.req_pool_indices
+    req_to_token = forward_batch.req_to_token_pool.req_to_token
+    k_cache, _ = forward_batch.token_to_kv_pool.get_kv_buffer(layer_id)
+
+    q_3d = q.view(-1, num_q_heads, head_dim)   # (bs, num_q_heads, head_dim)
+    k_3d = k_new.view(-1, num_kv_heads, head_dim)  # (bs, num_kv_heads, head_dim)
+
+    is_anchor = (layer_id == DECODE_ANCHOR_LAYER)
+
+    # For non-anchor layers, just return cached block selection
+    if not is_anchor:
+        sparse_block_indices = []
+        any_sparse = False
+        for b in range(batch_size):
+            req_idx = req_pool_indices[b].item()
+            if seq_lens_cpu[b] <= dense_len:
+                sparse_block_indices.append(None)
+                continue
+            cached_blocks = _decode_block_cache.get(req_idx)
+            if cached_blocks is not None:
+                sparse_block_indices.append(cached_blocks.block_indices)
+                any_sparse = True
+            else:
+                sparse_block_indices.append(None)
+        if not any_sparse:
+            return None
+        return {
+            "sparse_block_indices": sparse_block_indices,
+            "block_size": block_size,
+            "seq_lens": seq_lens_cpu,
+            "dense_len": dense_len,
+            "window_size": window_size,
+        }
+
+    # Anchor layer: check if we need to recompute block selection
+    needs_recompute = []
+    for b in range(batch_size):
+        req_idx = req_pool_indices[b].item()
+        if seq_lens_cpu[b] <= dense_len:
+            needs_recompute.append(False)
+            continue
+        cached_blocks = _decode_block_cache.get(req_idx)
+        if cached_blocks is None:
+            needs_recompute.append(True)
+        elif (seq_lens_cpu[b] - cached_blocks.seq_len_at_compute) >= DECODE_SELECTION_INTERVAL:
+            needs_recompute.append(True)
+        else:
+            needs_recompute.append(False)
+
+    if not any(needs_recompute) and not any(seq_lens_cpu[b] > dense_len for b in range(batch_size)):
+        return None
+
+    # For requests that need recompute: update KC1/KC2, score, select topk
+    # For others: use cached blocks
+    recompute_indices = [b for b in range(batch_size) if needs_recompute[b]]
+
+    if recompute_indices:
+        # Update KC1/KC2 for requests that need recompute
+        kc1_list = []
+        kc2_list = []
+        q_recompute = []
+        recompute_seq_lens = []
+
+        for b in recompute_indices:
+            req_idx = req_pool_indices[b].item()
+            sl = seq_lens_cpu[b]
+
+            kc1 = _update_kc_for_decode(
+                req_idx, layer_id, k_3d[b:b+1], sl,
+                k_cache, req_to_token,
+                kernel_size, kernel_stride, q_3d.dtype,
+            )
+            kc2 = _update_kc_for_decode(
+                req_idx, layer_id, k_3d[b:b+1], sl,
+                k_cache, req_to_token,
+                kernel_size * 4, kernel_stride * 4, q_3d.dtype,
+            )
+
+            # Update the KC cache
+            cache_key = (req_idx, layer_id)
+            _kc1_cache[cache_key] = CachedKC(
+                kc1=kc1.to(torch.bfloat16), kc2=kc2.to(torch.bfloat16),
+                total_len=sl,
+                kc1_kernel_stride=kernel_stride,
+                kc2_kernel_stride=kernel_stride * 4,
+            )
+
+            kc1_list.append(kc1)
+            kc2_list.append(kc2)
+            q_recompute.append(q_3d[b:b+1])  # (1, num_q_heads, head_dim)
+            recompute_seq_lens.append(sl)
+
+        # Stack and score
+        rc_bs = len(recompute_indices)
+        kc1_all = torch.cat(kc1_list, dim=0)
+        kc2_all = torch.cat(kc2_list, dim=0)
+        q_rc = torch.cat(q_recompute, dim=0)  # (rc_bs, num_q_heads, head_dim)
+
+        # Build cu_seqlens
+        cu_seqlens_q = torch.zeros(rc_bs + 1, dtype=torch.int32, device=device)
+        cu_seqlens_k1 = torch.zeros(rc_bs + 1, dtype=torch.int32, device=device)
+        cu_seqlens_k2 = torch.zeros(rc_bs + 1, dtype=torch.int32, device=device)
+        for i, b in enumerate(recompute_indices):
+            cu_seqlens_q[i + 1] = cu_seqlens_q[i] + 1  # 1 query token per request
+            sl = recompute_seq_lens[i]
+            cu_seqlens_k1[i + 1] = cu_seqlens_k1[i] + max(0, (sl - kernel_size) // kernel_stride + 1)
+            cu_seqlens_k2[i + 1] = cu_seqlens_k2[i] + max(0, (sl - kernel_size * 4) // (kernel_stride * 4) + 1)
+
+        max_context_len = max(recompute_seq_lens)
+        # cache_lens: for decode, all tokens are cached (prefix = full seq_len)
+        cache_lens = torch.tensor(recompute_seq_lens, dtype=torch.int32, device=device)
+
+        # GQA adjustment
+        q_for_scoring = q_rc
+        current_ratio = num_q_heads // num_kv_heads
+        if current_ratio < 16:
+            q_for_scoring = q_rc.repeat_interleave(16 // current_ratio, dim=1)
+
+        cu_seqlens_q_adjusted = cu_seqlens_q * heads_per_group
+        max_seqlen_q_adjusted = 1 * heads_per_group
+
+        score = _infllmv2_attn_stage1(
+            q_for_scoring.contiguous(),
+            kc1_all.contiguous(),
+            kc2_all.contiguous(),
+            cu_seqlens_q=cu_seqlens_q_adjusted,
+            cu_seqlens_k=cu_seqlens_k1,
+            cu_seqlens_v=cu_seqlens_k2,
+            max_seqlen_q=max_seqlen_q_adjusted,
+            max_seqlen_k=max_context_len // kernel_stride,
+            causal=False,  # decode: query is after all KV, no causal mask needed
+        )
+
+        block_score = _max_pooling_1d_varlen(
+            score.contiguous(),
+            cu_seqlens_q,
+            cu_seqlens_k1,
+            cache_lens,
+            1,  # max_seqlen_q = 1 token
+            max_context_len,
+            local_blocks=local_blocks,
+            init_blocks=init_blocks,
+            block_size=block_size,
+            stride=kernel_stride,
+            total_q=-1,
+        )
+
+        topk_idx = block_score.topk(sparse_topk, dim=-1).indices.sort(-1).values
+        topk_idx = topk_idx.to(torch.int32)
+
+        # Extract per-request block indices and cache them
+        q_offset = 0
+        for i, b in enumerate(recompute_indices):
+            req_idx = req_pool_indices[b].item()
+            req_blocks = []
+            for h in range(num_kv_heads):
+                blocks = topk_idx[h, q_offset:q_offset + 1, :].reshape(-1).unique()
+                blocks = blocks[blocks >= 0]
+                req_blocks.append(blocks)
+            _decode_block_cache[req_idx] = CachedDecodeBlocks(
+                block_indices=req_blocks,
+                decode_step=seq_lens_cpu[b],
+                seq_len_at_compute=seq_lens_cpu[b],
+            )
+            q_offset += 1
+
+    # Build final result for all requests
+    sparse_block_indices = []
+    any_sparse = False
+    for b in range(batch_size):
+        req_idx = req_pool_indices[b].item()
+        if seq_lens_cpu[b] <= dense_len:
+            sparse_block_indices.append(None)
+            continue
+        cached_blocks = _decode_block_cache.get(req_idx)
+        if cached_blocks is not None:
+            sparse_block_indices.append(cached_blocks.block_indices)
+            any_sparse = True
+        else:
+            sparse_block_indices.append(None)
+
+    if not any_sparse:
+        return None
+
+    return {
+        "sparse_block_indices": sparse_block_indices,
+        "block_size": block_size,
+        "seq_lens": seq_lens_cpu,
+        "dense_len": dense_len,
+        "window_size": window_size,
     }
 
 
