@@ -14,10 +14,10 @@ import json, requests, time, threading
 def send_request():
     with open("/opt/oldMoney-Project/bench/competition_bench_64.jsonl") as f:
         first = json.loads(f.readline())
-    prompt = first["prompt"][:50000]
+    messages = [{"role": c["role"], "content": c["content"][:50000]} for c in first["conversations"]]
     try:
-        requests.post("http://127.0.0.1:31333/v1/completions", json={
-            "model": "default", "prompt": prompt, "max_tokens": 300
+        requests.post("http://127.0.0.1:31333/v1/chat/completions", json={
+            "model": "default", "messages": messages, "max_tokens": 300
         }, timeout=300)
     except:
         pass
