@@ -339,6 +339,10 @@ class TpModelWorker(BaseTpWorker):
             draft_model_idx=0 if self.is_multi_layer_eagle else None,
         )
 
+        # Install decode profiler if SGLANG_DECODE_PROFILE=1
+        from sglang.srt.decode_profiler import maybe_patch_forward_decode
+        maybe_patch_forward_decode(self._model_runner)
+
     def _init_multi_layer_eagle_model_runners(self):
         from sglang.srt.model_executor.model_runner import ModelRunner
 
