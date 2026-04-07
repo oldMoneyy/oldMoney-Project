@@ -38,8 +38,11 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# MiniCPM4 layer IDs (for sparse prefill)
+# MiniCPM4 layer IDs (for sparse prefill/decode)
 _MINICPM4_LAYERS = {0, 9, 16, 17, 22, 29, 30, 31}
+
+# Sparse decode enabled via environment variable
+_SPARSE_DECODE_ENABLED = os.environ.get("SGLANG_SPARSE_DECODE", "0") == "1"
 
 if envs.SGLANG_ENABLE_TORCH_COMPILE.get():
     torch._logging.set_logs(dynamo=logging.ERROR)
@@ -59,6 +62,7 @@ if is_flashinfer_available():
 class WrapperDispatch(Enum):
     SLIDING_WINDOW = auto()
     CROSS_ATTENTION = auto()
+    SPARSE_DECODE = auto()
 
 
 @dataclass
@@ -158,6 +162,10 @@ class FlashInferAttnBackend(AttentionBackend):
         elif model_runner.model_config.is_encoder_decoder:
             self.num_wrappers = 2
             self.dispatch_reason = WrapperDispatch.CROSS_ATTENTION
+        elif _SPARSE_DECODE_ENABLED:
+            self.num_wrappers = 2
+            self.dispatch_reason = WrapperDispatch.SPARSE_DECODE
+            logger.info("Sparse decode enabled: using 2 decode wrappers (dense + sparse)")
         else:
             self.num_wrappers = 1
             self.dispatch_reason = None
@@ -298,25 +306,9 @@ class FlashInferAttnBackend(AttentionBackend):
         self.prefill_cuda_graph_metadata = {}  # For verify
         self.draft_extend_cuda_graph_metadata = {}  # For draft extend
 
-        # Pre-allocate sparse decode resources (reused across steps)
-        # Max tokens per request in sparse decode:
+        # Sparse decode constant: max KV tokens per request in sparse mode
         # dense_len(8192) + window_size(2048) + topk(64)*block_size(64) = 14336
         self._sparse_decode_max_kv_per_req = 14336
-        sparse_max_total = max_bs * self._sparse_decode_max_kv_per_req
-        self._sparse_decode_kv_indptr = torch.zeros(
-            (max_bs + 1,), dtype=torch.int32, device=model_runner.device
-        )
-        self._sparse_decode_kv_indices = torch.zeros(
-            (sparse_max_total + 256,), dtype=torch.int32, device=model_runner.device
-        )
-        self._sparse_decode_kv_last_page_len = torch.ones(
-            (max_bs,), dtype=torch.int32, device=model_runner.device
-        )
-        self._sparse_decode_wrapper = BatchDecodeWithPagedKVCacheWrapper(
-            self.workspace_buffer,
-            "NHD",
-            use_tensor_cores=self.decode_use_tensor_cores,
-        )
 
     def _process_multi_item_scoring(
         self, forward_batch: ForwardBatch
@@ -1107,11 +1099,6 @@ class FlashInferAttnBackend(AttentionBackend):
                     layer, cache_loc, k, v, layer.k_scale, layer.v_scale
                 )
 
-        # Check for sparse decode metadata
-        sparse_meta = kwargs.get("sparse_decode_metadata")
-        if sparse_meta is not None and layer.layer_id in _MINICPM4_LAYERS:
-            return self._forward_decode_sparse(q, layer, forward_batch, sparse_meta)
-
         decode_wrapper = self.forward_metadata.decode_wrappers[
             self._get_wrapper_idx(layer)
         ]
@@ -1129,124 +1116,6 @@ class FlashInferAttnBackend(AttentionBackend):
 
         return o.view(-1, layer.tp_q_head_num * layer.head_dim)
 
-    def _forward_decode_sparse(
-        self,
-        q: torch.Tensor,
-        layer: RadixAttention,
-        forward_batch: ForwardBatch,
-        sparse_meta: dict,
-    ) -> torch.Tensor:
-        """Run sparse decode attention for minicpm4 layers.
-
-        Builds filtered kv_indices containing only:
-        - Dense region [0, dense_len)
-        - Window region [seq_len - window_size, seq_len)
-        - TopK selected blocks beyond dense_len
-        Uses pre-allocated wrapper and vectorized index construction.
-        """
-        updater = self.indices_updater_decode
-        req_to_token = updater.req_to_token
-        req_pool_indices = forward_batch.req_pool_indices
-        bs = forward_batch.batch_size
-        device = q.device
-
-        sparse_block_indices = sparse_meta["sparse_block_indices"]
-        block_size = sparse_meta["block_size"]
-        seq_lens = sparse_meta["seq_lens"]
-        dense_len = sparse_meta["dense_len"]
-        window_size = sparse_meta.get("window_size", 2048)
-
-        # Vectorized kv_indices construction
-        kv_indptr = self._sparse_decode_kv_indptr
-        kv_indices = self._sparse_decode_kv_indices
-        offset = 0
-
-        for b in range(bs):
-            req_idx = req_pool_indices[b].item()
-            sl = seq_lens[b]
-
-            if sl > dense_len and sparse_block_indices[b] is not None:
-                # Dense region: [0, dense_len)
-                dense_end = min(dense_len, sl)
-                dense_pos = torch.arange(0, dense_end, device=device, dtype=torch.long)
-
-                # Sparse blocks beyond dense_len
-                all_blocks = torch.cat(sparse_block_indices[b], dim=0).unique()
-                all_blocks = all_blocks[all_blocks >= 0].sort().values
-
-                block_starts = all_blocks.long() * block_size
-                block_ends = torch.clamp(block_starts + block_size, max=sl)
-                sparse_mask = (block_starts >= dense_len) & (block_starts < sl)
-
-                if sparse_mask.any():
-                    s_starts = block_starts[sparse_mask]
-                    s_ends = block_ends[sparse_mask]
-                    # Vectorized: create ranges for all blocks at once
-                    block_lens = s_ends - s_starts
-                    total_sparse = block_lens.sum().item()
-                    sparse_pos = torch.empty(total_sparse, device=device, dtype=torch.long)
-                    pos = 0
-                    # Use torch.arange per block — small number of blocks (topk=64)
-                    for i in range(len(s_starts)):
-                        blen = block_lens[i].item()
-                        sparse_pos[pos:pos + blen] = torch.arange(
-                            s_starts[i].item(), s_ends[i].item(), device=device
-                        )
-                        pos += blen
-                else:
-                    sparse_pos = torch.empty(0, device=device, dtype=torch.long)
-
-                # Window: [max(dense_len, sl - window_size), sl)
-                window_start = max(dense_len, sl - window_size)
-                if window_start < sl:
-                    window_pos = torch.arange(window_start, sl, device=device, dtype=torch.long)
-                else:
-                    window_pos = torch.empty(0, device=device, dtype=torch.long)
-
-                # Merge and deduplicate (sorted unique)
-                all_pos = torch.cat([dense_pos, sparse_pos, window_pos])
-                token_positions = torch.unique(all_pos, sorted=True)
-
-                phys = req_to_token[req_idx, token_positions]
-                n = len(phys)
-                kv_indices[offset:offset + n] = phys.to(torch.int32)
-                offset += n
-            else:
-                # Dense: all tokens
-                phys = req_to_token[req_idx, :sl]
-                kv_indices[offset:offset + sl] = phys.to(torch.int32)
-                offset += sl
-
-            kv_indptr[b + 1] = offset
-
-        kv_indptr[0] = 0
-
-        # Reuse pre-allocated wrapper
-        self._sparse_decode_wrapper.end_forward()
-        self._sparse_decode_wrapper.begin_forward(
-            kv_indptr[:bs + 1],
-            kv_indices[:offset],
-            self._sparse_decode_kv_last_page_len[:bs],
-            updater.num_qo_heads,
-            updater.num_kv_heads,
-            updater.head_dim,
-            1,  # page_size
-            data_type=updater.data_type,
-            q_data_type=updater.q_data_type,
-            non_blocking=True,
-        )
-
-        o = self._sparse_decode_wrapper.forward(
-            q.contiguous().view(-1, layer.tp_q_head_num, layer.head_dim),
-            forward_batch.token_to_kv_pool.get_kv_buffer(layer.layer_id),
-            sm_scale=layer.scaling,
-            logits_soft_cap=layer.logit_cap,
-            k_scale=layer.k_scale_float,
-            v_scale=layer.v_scale_float,
-        )
-
-        return o.view(-1, layer.tp_q_head_num * layer.head_dim)
-
     def _get_wrapper_idx(self, layer: RadixAttention):
         if self.num_wrappers == 1:
             return 0
@@ -1255,6 +1124,12 @@ class FlashInferAttnBackend(AttentionBackend):
             return layer.sliding_window_size == -1
         if self.dispatch_reason == WrapperDispatch.CROSS_ATTENTION:
             return layer.is_cross_attention
+        if self.dispatch_reason == WrapperDispatch.SPARSE_DECODE:
+            # Only dispatch minicpm4 layers to sparse wrapper during decode.
+            # During prefill, always use wrapper 0 (sparse prefill has its own mechanism).
+            if isinstance(self.forward_metadata, DecodeMetadata):
+                return layer.layer_id in _MINICPM4_LAYERS
+            return 0
 
         raise ValueError(f"Unknown dispatch reason: {self.dispatch_reason}")
 
@@ -1285,6 +1160,9 @@ class FlashInferIndicesUpdaterDecode:
             self.update = self.update_sliding_window
         elif self.attn_backend.dispatch_reason == WrapperDispatch.CROSS_ATTENTION:
             self.update = self.update_cross_attention
+        elif self.attn_backend.dispatch_reason == WrapperDispatch.SPARSE_DECODE:
+            self.update = self.update_sparse_decode
+            self._sparse_cfg = None  # Lazy-loaded on first call (model init hasn't run yet)
         else:
             assert self.attn_backend.num_wrappers == 1
             self.update = self.update_single_wrapper
@@ -1413,6 +1291,172 @@ class FlashInferIndicesUpdaterDecode:
                 spec_info,
                 seq_lens_cpu=seq_lens_cpu,
             )
+
+    def update_sparse_decode(
+        self,
+        req_pool_indices: torch.Tensor,
+        seq_lens: torch.Tensor,
+        seq_lens_cpu: Optional[torch.Tensor],
+        seq_lens_sum: int,
+        decode_wrappers: List[BatchDecodeWithPagedKVCacheWrapper],
+        encoder_lens: Optional[torch.Tensor],
+        spec_info: Optional[SpecInput],
+        fixed_split_size: Optional[int] = None,
+        disable_split_kv: Optional[bool] = None,
+    ):
+        """Build indices for two wrappers: dense (wrapper 0) and sparse (wrapper 1).
+
+        Wrapper 0 (dense): standard full-attention indices for lightning layers.
+        Wrapper 1 (sparse): filtered indices for minicpm4 layers using cached
+        block selections from _decode_block_cache.
+        """
+        # Wrapper 0: full attention (same as update_single_wrapper)
+        self.call_begin_forward(
+            decode_wrappers[0],
+            req_pool_indices,
+            seq_lens,
+            seq_lens_sum,
+            self.kv_indptr[0],
+            None,
+            spec_info,
+            seq_lens_cpu,
+            fixed_split_size=fixed_split_size,
+            disable_split_kv=disable_split_kv,
+        )
+
+        # Lazy-load sparse config (model init runs after backend init)
+        if self._sparse_cfg is None:
+            from sglang.srt.layers.attention.sparse_prefill import get_sparse_decode_config
+            self._sparse_cfg = get_sparse_decode_config()
+
+        cfg = self._sparse_cfg
+        if cfg is None:
+            # Model doesn't have sparse config — wrapper 1 = dense fallback
+            self.call_begin_forward(
+                decode_wrappers[1],
+                req_pool_indices,
+                seq_lens,
+                seq_lens_sum,
+                self.kv_indptr[1],
+                None,
+                spec_info,
+                seq_lens_cpu,
+                fixed_split_size=fixed_split_size,
+                disable_split_kv=disable_split_kv,
+            )
+            return
+
+        dense_len = cfg["dense_len"]
+        window_size = cfg["window_size"]
+        block_size = cfg["block_size"]
+        bs = len(req_pool_indices)
+        device = seq_lens.device
+
+        from sglang.srt.layers.attention.sparse_prefill import _decode_block_cache
+
+        # Build sparse kv_indices for wrapper 1
+        kv_indptr = self.kv_indptr[1]
+        if decode_wrappers[1].is_cuda_graph_enabled:
+            kv_indices = decode_wrappers[1]._paged_kv_indices_buf
+        else:
+            max_per_req = self.attn_backend._sparse_decode_max_kv_per_req
+            kv_indices = torch.empty(
+                bs * max_per_req, dtype=torch.int32, device=device
+            )
+
+        seq_lens_list = seq_lens_cpu.tolist() if seq_lens_cpu is not None else seq_lens.tolist()
+        req_pool_list = req_pool_indices.tolist()
+
+        offset = 0
+        for b in range(bs):
+            req_idx = req_pool_list[b]
+            sl = seq_lens_list[b]
+            cached = _decode_block_cache.get(req_idx)
+
+            if sl > dense_len and cached is not None:
+                # Collect unique block indices from all KV heads
+                all_blocks = torch.cat(cached.block_indices, dim=0).unique()
+                all_blocks = all_blocks[all_blocks >= 0].sort().values
+
+                # Block start/end positions
+                block_starts = all_blocks.long() * block_size
+                block_ends = torch.clamp(block_starts + block_size, max=sl)
+                sparse_mask = (block_starts >= dense_len) & (block_starts < sl)
+
+                # 1. Dense region [0, dense_len)
+                dense_end = min(dense_len, sl)
+                parts = [torch.arange(0, dense_end, device=device, dtype=torch.long)]
+
+                # 2. Sparse block positions (vectorized — no inner Python loop)
+                if sparse_mask.any():
+                    s_starts = block_starts[sparse_mask]
+                    s_ends = block_ends[sparse_mask]
+                    block_lens = s_ends - s_starts
+                    # Vectorized range expansion: arange(total) + repeat_interleave offsets
+                    total_sparse = block_lens.sum().item()
+                    if total_sparse > 0:
+                        offsets = torch.repeat_interleave(
+                            s_starts - torch.cat([torch.zeros(1, device=device, dtype=torch.long),
+                                                   block_lens[:-1].cumsum(0)]),
+                            block_lens
+                        )
+                        sparse_pos = torch.arange(total_sparse, device=device, dtype=torch.long) + offsets
+                        parts.append(sparse_pos)
+
+                # 3. Window region
+                window_start = max(dense_len, sl - window_size)
+                if window_start < sl:
+                    parts.append(torch.arange(window_start, sl, device=device, dtype=torch.long))
+
+                token_positions = torch.unique(torch.cat(parts), sorted=True)
+                phys = self.req_to_token[req_idx, token_positions].to(torch.int32)
+                n = len(phys)
+                kv_indices[offset:offset + n] = phys
+                offset += n
+            else:
+                # Short sequence or no cached blocks: full dense
+                phys = self.req_to_token[req_idx, :sl].to(torch.int32)
+                kv_indices[offset:offset + sl] = phys
+                offset += sl
+
+            kv_indptr[b + 1] = offset
+
+        kv_indptr[0] = 0
+
+        # Call begin_forward for wrapper 1 directly (not via call_begin_forward
+        # to avoid global_override_indptr_cpu contention with wrapper 0)
+        wrapper = decode_wrappers[1]
+
+        wrapper_uses_fast_decode_plan = (
+            hasattr(wrapper.begin_forward, "func")
+            and wrapper.begin_forward.func == fast_decode_plan
+        )
+
+        fwd_args = [
+            kv_indptr[:bs + 1],
+            kv_indices[:offset] if not wrapper.is_cuda_graph_enabled else kv_indices,
+            self.kv_last_page_len[:bs],
+            self.num_qo_heads,
+            self.num_kv_heads,
+            self.head_dim,
+            1,  # page_size
+        ]
+        fwd_kwargs = dict(
+            data_type=self.data_type,
+            q_data_type=self.q_data_type,
+            non_blocking=True,
+            disable_split_kv=disable_split_kv if disable_split_kv is not None else False,
+        )
+        if fixed_split_size is not None:
+            fwd_kwargs["fixed_split_size"] = fixed_split_size
+
+        if wrapper_uses_fast_decode_plan:
+            # Build local override indptr for sparse lens (no global contention)
+            # kv_indptr[0] is already 0, so kv_indptr[1:bs+1] IS the cumsum
+            sparse_indptr_cpu = kv_indptr[:bs + 1].cpu()
+            fwd_kwargs["global_override_indptr_cpu"] = sparse_indptr_cpu
+
+        wrapper.begin_forward(*fwd_args, **fwd_kwargs)
 
     def call_begin_forward(
         self,
@@ -1548,7 +1592,7 @@ class FlashInferIndicesUpdaterPrefill:
         elif self.attn_backend.dispatch_reason == WrapperDispatch.CROSS_ATTENTION:
             self.update = self.update_cross_attention
         else:
-            assert self.attn_backend.num_wrappers == 1
+            # For SPARSE_DECODE, prefill still uses single wrapper (wrapper 0)
             self.update = self.update_single_wrapper
 
     def update(

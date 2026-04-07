@@ -212,17 +212,20 @@ class MiniCPMAttention(nn.Module):
             if sparse_meta is not None:
                 kwargs["sparse_prefill_metadata"] = sparse_meta
 
-        # Sparse decode: compute topk blocks for decode attention
+        # Sparse decode: compute topk blocks to populate _decode_block_cache.
+        # The cache is read by update_sparse_decode in the indices updater.
+        # This only runs during non-CUDA-graph steps (Python doesn't execute
+        # during CUDA graph replay), so blocks cached during warmup are used
+        # for the entire generation.
         if (
             SPARSE_DECODE_ENABLED
             and forward_batch.forward_mode.is_decode()
             and hasattr(self, '_sparse_config')
+            and not torch.cuda.is_current_stream_capturing()
         ):
-            sparse_meta = compute_sparse_decode_metadata(
+            compute_sparse_decode_metadata(
                 q, k, forward_batch, self.attn, self._sparse_config,
             )
-            if sparse_meta is not None:
-                kwargs["sparse_decode_metadata"] = sparse_meta
 
         attn_output = self.attn(q, k, v, forward_batch, **kwargs)
 
@@ -515,6 +518,9 @@ class MiniCPMDecoderLayer(nn.Module):
             # Attach sparse config for sparse prefill/decode
             if (SPARSE_PREFILL_ENABLED or SPARSE_DECODE_ENABLED) and hasattr(config, 'sparse_dense_len'):
                 self.self_attn._sparse_config = config
+                if SPARSE_DECODE_ENABLED:
+                    from sglang.srt.layers.attention.sparse_prefill import set_sparse_decode_config
+                    set_sparse_decode_config(config)
         elif self.mixer_type in ["lightning", "lightning_attn", "lightning-attn"]:
             assert (
                 config.head_dim is not False
@@ -573,7 +579,6 @@ class MiniCPMDecoderLayer(nn.Module):
             # TODO: Implement full TopK computation in prefill mode
             pass
 
-    # dotv ######################################################################
     def forward(
         self,
         positions: torch.Tensor,
@@ -581,60 +586,28 @@ class MiniCPMDecoderLayer(nn.Module):
         forward_batch: ForwardBatch,
         residual: Optional[torch.Tensor],
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        import time
-        
-        # Only profile during real forward, not CUDA graph capture
-        do_profile = (hidden_states.shape[0] > 100) and not torch.cuda.is_current_stream_capturing()
-
-        if do_profile:
-            torch.cuda.synchronize()
-            t0 = time.perf_counter()
-        
         residual = hidden_states
         hidden_states = self.input_layernorm(hidden_states)
 
-        if do_profile:
-            torch.cuda.synchronize()
-            t1 = time.perf_counter()
-        
         hidden_states = self.self_attn(
             positions=positions,
             hidden_states=hidden_states,
             forward_batch=forward_batch,
         )
 
-        if do_profile:
-            torch.cuda.synchronize()
-            t2 = time.perf_counter()
-        
         hidden_states = residual + hidden_states * (
             self.config.scale_depth / math.sqrt(self.config.num_hidden_layers)
         )
         residual = hidden_states
         hidden_states = self.post_attention_layernorm(hidden_states)
 
-        if do_profile:
-            torch.cuda.synchronize()
-            t3 = time.perf_counter()
-        
         hidden_states = self.mlp(hidden_states)
 
-        if do_profile:
-            torch.cuda.synchronize()
-            t4 = time.perf_counter()
-        
         hidden_states = residual + hidden_states * (
             self.config.scale_depth / math.sqrt(self.config.num_hidden_layers)
         )
 
-        # PROFILE
-        # if do_profile:
-        #     attn_ms = (t2 - t1) * 1000
-        #     mlp_ms = (t4 - t3) * 1000
-        #     print(f"[Layer {self.layer_id}] type={self.mixer_type} attn={attn_ms:.1f}ms mlp={mlp_ms:.1f}ms tokens={hidden_states.shape[0]}", flush=True)
-        
         return hidden_states, None
-    # dotv ######################################################################
 
 
 class MiniCPMModel(nn.Module):

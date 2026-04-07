@@ -8,8 +8,15 @@ This file has four sections:
   PART 3: PROGRESS -- experiment log, current status, and next steps
   PART 4: DIFF -- detailed codebase diff (sglang_sala_flashinfer vs official)
 
-Future AI: read ALL parts. The opinions may contain errors or disagreements.
-Use the facts to validate opinions. Think independently about what's promising.
+FIRST: Read .claude/claude_persona in the project root. It defines HOW you must think
+(first principles, calculate from physics, verify everything against code).
+Internalize it BEFORE reading any opinions below.
+
+THEN: Read ALL parts of this file. The opinions may contain errors and
+disagreements — previous AI sessions made confident claims that were WRONG.
+Do NOT trust any opinion at face value. Verify against PART 1 facts, against
+the actual code, and against first-principles calculations (bytes, FLOPS,
+bandwidth limits). Think independently about what's promising.
 Do NOT limit yourself to angles already explored.
 
 ================================================================================
@@ -670,9 +677,8 @@ NOTE: If you need related papers (FlashInfer, InfLLM-V2/SALA, NSA, GLA/lightning
 attention, GPTQ, Marlin, block-sparse attention, etc.), ask the user to download
 them for you. SALA_paper.md is already available in the project root.
 
-NOTE: Read claude_persona in the project root for the expected engineering
-mindset. TL;DR: decompose complexity, trace before proposing, quantify
-everything, ship complete code, don't hedge or retreat from hard problems.
+NOTE: .claude/claude_persona defines the required thinking approach
+(first principles, calculate from physics, verify against code). Read it first.
 
 ================================================================================
 OPINION D2: "Current state of sglang_sala_flashinfer" (2026-04-03)
@@ -1219,4 +1225,186 @@ Identical files (no changes):
   - srt/configs/minicpm.py
   - srt/layers/attention/fla/* (all 15 FLA Triton kernels)
   - All other srt/ infrastructure (scheduler, memory pool, tokenizer, etc.)
+
+
+================================================================================
+================================================================================
+   PART 5: DEEP PROFILING ANALYSIS (2026-04-07, corrects earlier assumptions)
+================================================================================
+================================================================================
+
+CRITICAL CORRECTION: The profiling data in PART 1 was collected at CONCURRENT
+workload (all 64 requests sent simultaneously, request_rate=inf, peak batch=64,
+avg batch=17.5), NOT single-request. Previous AI sessions (including multiple
+analyses in this conversation) incorrectly assumed single-request profiling and
+drew wrong conclusions. All numbers below come from the ACTUAL profiling data in
+sglang_sala_profiling/results/flashinfer/c64/.
+
+Source: sala_timings.csv + sala_summary.txt
+Conditions: --disable-cuda-graph, SGLANG_SALA_PROFILE=1, 64 requests, unlimited
+concurrency, competition_bench_64.jsonl (3.88M input, 410K output tokens).
+Wall clock: 1815.86s (production with CUDA graph: ~1036s for Smax)
+
+================================================================================
+DECODE vs PREFILL SPLIT
+================================================================================
+  Profiled decode total:   1189.0s (59%)
+  Profiled prefill total:   825.1s (41%)
+  Sum:                     2014.1s (exceeds wall 1816s due to GPU pipeline overlap)
+
+================================================================================
+BATCH SIZE DISTRIBUTION DURING DECODE (30,055 decode steps)
+================================================================================
+Batch size progression: 1→1→(prefill)→64→63→...→1→1
+  batch >= 32:  ~1,560 steps ( 5.2%)
+  batch 10-31: ~12,060 steps (40.1%)
+  batch 2-9:   ~14,860 steps (49.4%)
+  batch 1:      ~1,580 steps ( 5.3%)
+
+TIME SPENT IN EACH BATCH PHASE (total layer time, 32 layers):
+  batch >= 30:    129.3s ( 10.7%)
+  batch 10-29:    606.4s ( 50.1%)
+  batch 2-9:      424.9s ( 35.1%)
+  batch 1:         49.7s (  4.1%)
+  TOTAL:         1210.4s
+
+KEY FINDING: 85% of decode time is spent at batch < 30. Only 5.2% of steps
+are at batch >= 32. The "high concurrency" phase is surprisingly SHORT because
+long-context requests finish at staggered times, rapidly reducing batch size.
+
+================================================================================
+PER-STEP DECODE COST BY BATCH SIZE (minicpm4 attn_kernel vs fla_kernel)
+================================================================================
+  Batch Range    Steps    attn_kernel     fla_kernel     attn/fla ratio
+  -----------------------------------------------------------------------
+  batch 50-64      315      9.985 ms      10.465 ms       0.95x (EQUAL)
+  batch 30-49    1,500      6.418 ms       6.182 ms       1.04x (EQUAL)
+  batch 15-29    9,200      4.043 ms       5.008 ms       0.81x
+  batch  8-14   10,140      2.938 ms       5.441 ms       0.54x
+  batch  3-7     7,220      1.728 ms       5.321 ms       0.32x
+  batch  1-2     1,640      0.686 ms       4.804 ms       0.14x
+
+CRITICAL INSIGHT #1: fla_kernel (lightning recurrence) is ~5ms/step REGARDLESS
+of batch size — it is O(1) per token (fixed 128×128 state per head per layer).
+It does NOT read KV cache and does NOT scale with sequence length.
+
+CRITICAL INSIGHT #2: attn_kernel (minicpm4 dense attention) scales linearly
+with batch size — from 0.7ms at batch=1 to 10ms at batch=64. This is O(n)
+per token — it reads the full KV cache for every request in the batch.
+
+CRITICAL INSIGHT #3: At batch >= 30 (which is only 11% of decode time),
+attn_kernel ≈ fla_kernel. Sparse decode is very valuable HERE. But at batch
+2-9 (which is 35% of decode time), attn_kernel is 0.3x of fla_kernel.
+Sparse decode has minimal impact in this phase.
+
+================================================================================
+TOTAL KERNEL TIMES (DECODE ONLY)
+================================================================================
+  minicpm4 attn_kernel (decode):     93.4s ( 7.9% of decode)
+  lightning fla_kernel (decode):    160.3s (13.5% of decode)
+  fused_recurrent_gla (decode):      73.6s ( 6.2% of decode)
+  state load + save (decode):        65.2s ( 5.5% of decode)
+  lightning MLP (decode):            79.6s ( 6.7% of decode)
+  minicpm4 MLP (decode):             22.4s ( 1.9% of decode)
+  all other decode components:      694.5s (58.4% of decode)
+  TOTAL DECODE:                    1189.0s
+
+fla_kernel decode (160.3s) is 1.72x the minicpm4 attn_kernel decode (93.4s).
+Lightning attention dominates decode time at ALL batch sizes.
+
+================================================================================
+TOTAL KERNEL TIMES (PREFILL ONLY)
+================================================================================
+  minicpm4 attn_kernel (prefill):   150.1s (18.2% of prefill)
+  minicpm4 attn wrapper (prefill):  166.7s (20.2% of prefill)
+  lightning MLP (prefill):          200.8s (24.3% of prefill)
+  lightning attn wrapper (prefill): 105.0s (12.7% of prefill)
+  minicpm4 MLP (prefill):           67.1s ( 8.1% of prefill)
+  lightning qkv_proj (prefill):      44.7s ( 5.4% of prefill)
+  all other prefill components:      90.7s (11.0% of prefill)
+  TOTAL PREFILL:                    825.1s
+
+minicpm4 attn_kernel prefill (150.1s) is LARGER than minicpm4 attn_kernel
+decode (93.4s). Sparse prefill targets 150.1s; sparse decode targets 93.4s.
+
+================================================================================
+REVISED SAVINGS ESTIMATES (correcting bg.txt PART 3 estimates)
+================================================================================
+
+Sparse decode (minicpm4 attn_kernel = 93.4s total):
+  If 75% of attn_kernel time is saved: ~70s
+  As % of profiled total (2014s): 3.5%
+  As % of production Smax (1036s): ~6.7% (assuming attn_kernel compute
+    time stays same with CUDA graph — CUDA graph doesn't change kernel math)
+  CAVEAT: Not all 93.4s is from long sequences. Short sequences (< dense_len
+    8192) don't trigger sparse. Effective savings may be 50-60s, not 70s.
+  REVISED ESTIMATE: 5-7% of production Smax, NOT 8-12% as previously claimed.
+
+Sparse prefill (minicpm4 attn_kernel = 150.1s total):
+  Sparse prefill is already implemented but speed benchmark PENDING.
+  If 60% of prefill attn_kernel time saved: ~90s
+  As % of profiled total: 4.5%
+  As % of production Smax: ~8-9%
+  CAVEAT: chunked_prefill_size=32768 limits how much sparse helps. At 32K
+    chunks, prefix must exceed 8192 (dense_len) for sparse to trigger.
+    Many early chunks won't benefit.
+  REVISED ESTIMATE: 5-8% of production Smax.
+
+fla_kernel BK=128:
+  fla_kernel decode = 160.3s. If BK=128 eliminates NK=2 reduction overhead
+  and saves 10-15% of fla_kernel time: 16-24s = ~1.5-2.3% of production Smax.
+  Previously estimated 3-5%. REVISED to 1.5-2.5%.
+
+COMBINED OPTIMISTIC TOTAL: 12-17% improvement on Smax.
+  This falls SHORT of the 26% needed for top 5 (79.31 from 62.92).
+  Even with ALL known optimizations, we likely cannot reach top 5 through
+  incremental kernel-level optimization alone.
+
+================================================================================
+WHAT EXPLAINS THE LEADER'S 2x ADVANTAGE?
+================================================================================
+Known facts about leader:
+  - Uses same W4A16 GPTQ quantization
+  - Uses same flashinfer backend
+  - Score: 134% of bounty (vs our 85%)
+  - Unknown S1/S8/Smax breakdown
+
+The combined maximum savings from all known optimizations is ~17%. The leader
+is 2.1x faster overall. This means:
+  1. The leader has optimizations we haven't identified, OR
+  2. The leader's advantage is concentrated in S8/Smax scheduling (not kernel
+     level), OR
+  3. The leader has custom kernels that go beyond what we've considered, OR
+  4. Some combination of the above.
+
+Unexplored angles that could explain 2x:
+  a. Continuous batching / scheduling: experts said "not much room" but the
+     batch size distribution shows requests finishing at staggered times with
+     long tail. Smarter scheduling could reduce the low-batch-size tail.
+  b. max_running_requests tuning: currently 64. Lower values might improve
+     throughput by reducing per-step KV cache reads at the cost of queueing.
+  c. Prefill/decode interleaving: only 127 prefill steps vs 30,055 decode
+     steps. More aggressive chunked prefill or different scheduling could
+     overlap prefill with decode more efficiently.
+  d. Lightning kernel replacement: fla_kernel (160.3s) + fused_recurrent_gla
+     (73.6s) + state I/O (65.2s) = 299s. This is the single largest category.
+     A custom fused kernel that combines state load → recurrence → query → save
+     in one kernel per layer could eliminate kernel launch overhead and reduce
+     state I/O.
+  e. MLP optimization: prefill MLP (268s) + decode MLP (102s) = 370s. If the
+     leader has a faster MLP kernel or different quantization for MLP, this
+     could be significant.
+  f. Model-level changes: different topk, different sparse config, different
+     attention algorithm entirely.
+  g. Per-scenario server config: different --max-running-requests for S1 vs
+     S8 vs Smax could dramatically change the score balance.
+
+RECOMMENDATION: Before investing more engineering time in CUDA-graph-compatible
+sparse decode (complex, estimated 5-7%), investigate the cheap experiments first:
+  1. Run sparse prefill speed benchmark (ALREADY IMPLEMENTED, just need to test)
+  2. Tune max_running_requests (try 8, 16, 32 for Smax)
+  3. Tune chunked_prefill_size (try 65536, 131072)
+  4. Test --disable-cuda-graph + sparse decode to measure RAW potential
+  5. Profile the leader's competition entry if possible (competition forum,
+     shared approaches, or reverse-engineer from score patterns)
 

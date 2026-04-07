@@ -114,6 +114,30 @@ def clear_decode_caches(active_req_indices: Optional[Set[int]] = None):
         del _decode_key_buffer[k]
 
 
+# Cached sparse decode config (set once from model config)
+_sparse_decode_cfg: Optional[dict] = None
+
+
+def set_sparse_decode_config(config) -> None:
+    """Set sparse decode config from model config. Called during model init."""
+    global _sparse_decode_cfg
+    if not hasattr(config, 'sparse_dense_len'):
+        return
+    _sparse_decode_cfg = {
+        "dense_len": config.sparse_dense_len,
+        "window_size": config.sparse_window_size,
+        "block_size": config.sparse_block_size,
+        "topk": config.sparse_topk,
+        "kernel_size": config.sparse_kernel_size,
+        "kernel_stride": config.sparse_kernel_stride,
+    }
+
+
+def get_sparse_decode_config() -> Optional[dict]:
+    """Get sparse decode config. Returns None if not set."""
+    return _sparse_decode_cfg
+
+
 def clear_kc1_cache(active_req_indices: Optional[Set[int]] = None):
     """Remove stale cache entries for requests no longer active.
 
@@ -405,6 +429,18 @@ def compute_sparse_prefill_metadata(
             req_blocks.append(blocks)
         sparse_block_indices.append(req_blocks)
         q_offset += extend_len
+
+    # Seed _decode_block_cache from prefill so CUDA-graph decode has blocks.
+    # Only save on the last minicpm4 layer (31) to avoid redundant writes.
+    if SPARSE_DECODE_ENABLED and layer_id == 31:
+        for b in range(batch_size):
+            if sparse_block_indices[b] is not None:
+                req_idx = req_pool_indices[b].item()
+                _decode_block_cache[req_idx] = CachedDecodeBlocks(
+                    block_indices=sparse_block_indices[b],
+                    decode_step=0,
+                    seq_len_at_compute=seq_lens_cpu[b],
+                )
 
     return {
         "sparse_block_indices": sparse_block_indices,
