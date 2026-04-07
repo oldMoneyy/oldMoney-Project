@@ -1,12 +1,14 @@
 ================================================================================
 SOAR 2026 Competition -- Background & Context
 ================================================================================
-This file has two sections:
+This file has four sections:
   PART 1: FACTS -- ground truth about setup, profiling, scores, what's been tried
-  PART 2: AI OPINIONS -- collected analyses from multiple AI sessions, labeled
+  PART 2: OPINIONS -- collected analyses from multiple AI sessions, labeled
           as opinions for future AI to read and form their own judgment.
+  PART 3: PROGRESS -- experiment log, current status, and next steps
+  PART 4: DIFF -- detailed codebase diff (sglang_sala_flashinfer vs official)
 
-Future AI: read BOTH parts. The opinions may contain errors or disagreements.
+Future AI: read ALL parts. The opinions may contain errors or disagreements.
 Use the facts to validate opinions. Think independently about what's promising.
 Do NOT limit yourself to angles already explored.
 
@@ -333,7 +335,7 @@ Validation (ALL must pass before submission):
 
 ================================================================================
 ================================================================================
-                    PART 2: AI OPINIONS (for future AI to evaluate)
+                    PART 2: OPINIONS (for future AI to evaluate)
 ================================================================================
 ================================================================================
 
@@ -599,6 +601,39 @@ VERIFICATION NEEDED:
   memory bandwidth limit. If it IS at bandwidth limit, no kernel optimization
   will help -- only reducing I/O (FP8 state, state compression) can help.
 - Check fla library version installed vs latest available.
+  UPDATE (2026-04-07): CHECKED. fla 0.4.1 installed, 0.4.2 available. Diffed
+  fla/ops/common/fused_recurrent.py between 0.4.1 and 0.4.2: IDENTICAL.
+  No kernel changes. Upgrading fla will NOT help.
+
+CRITICAL CORRECTION ON LIGHTNING DECODE (2026-04-07):
+  Lightning attention does NOT read the KV cache during decode. It uses a
+  fixed-size recurrent state (H=16, K=128, V=128 per layer = 512KB/layer).
+  fused_recurrent_simple_gla processes T=1 per decode step:
+    1. Load state from MambaPool (128×128 per head per layer)
+    2. state = state * exp(g_gamma) + k^T @ v  (rank-1 update)
+    3. output = q @ state  (query)
+    4. Save updated state
+  This is O(1) per token -- does NOT scale with sequence length.
+  The 15ms/step cost is from state I/O + matmuls across 24 layers × 16 heads,
+  NOT from reading a growing KV cache.
+
+  IMPLICATION: For long-context S8/Smax, lightning is a FIXED COST per step.
+  The SCALING bottleneck is minicpm4 dense decode attention (8 layers, O(n)
+  per step, reads full KV cache). This makes sparse decode for minicpm4
+  layers the highest-impact optimization for S8/Smax.
+
+FLA KERNEL DETAILS (fused_recurrent_fwd_kernel, fla 0.4.1):
+  Location: fla.ops.common.fused_recurrent (external pip package)
+  Local copy: sglang_sala_flashinfer/_fla_reference/common/fused_recurrent.py
+  For simple_gla: USE_G=False, USE_G_GAMMA=True, USE_GK=False, USE_GV=False
+  Block sizes: BK = min(next_power_of_2(K), 64) = 64, BV = 64
+  NK = ceil(128/64) = 2, NV = ceil(128/64) = 2
+  Grid = (NV=2, NK=2, N*H) = 4 blocks per head
+  State b_h[BK=64, BV=64] lives in registers during the loop.
+  For T=1 decode: loop runs once, then o = o.sum(0) reduces NK=2 partial outputs.
+  The BK=64 cap forces NK=2 split + Python-level reduction (extra kernel launch).
+  Potential optimization: BK=128 → NK=1, no reduction needed. Needs register
+  pressure check (128×64 = 8192 floats = 32KB registers per block).
 
 ================================================================================
 OPEN QUESTIONS FOR FUTURE AI
@@ -731,7 +766,7 @@ Why minicpm_flashinfer + INT4 breaks but sglang_sala_flashinfer + INT4 works:
 
 ================================================================================
 ================================================================================
-              PART 3: EXPERIMENT LOG (chronological attempts & results)
+              PART 3: PROGRESS (experiment log, status, next steps)
 ================================================================================
 ================================================================================
 
@@ -815,4 +850,233 @@ Status: CORRECTNESS VALIDATED, PERFORMANCE NEUTRAL.
   Sparse prefill is working correctly on flashinfer path with W4A16 Marlin.
   No accuracy degradation. But no speed gain yet -- need optimization work
   to reduce KC1 overhead before this translates to competition score improvement.
+
+================================================================================
+CURRENT STATUS SUMMARY (as of 2026-04-07)
+================================================================================
+Score: 65.43 (85% of bounty). Leader: 129% of bounty. Target: 105%+ of bounty.
+
+Completed work:
+  1. Sparse prefill on flashinfer backend: IMPLEMENTED, CORRECTNESS VALIDATED.
+     Incremental KC1 cache implemented. Speed benchmark PENDING.
+  2. FP8 KV cache: working with flashinfer backend.
+  3. W4A16 GPTQ Marlin quantization: working, all competitors use same.
+  4. Optimized tilelang fused topk kernels (minicpm_fuse_kernel.py): implemented
+     for minicpm_flashinfer backend (2-pass -> 3-pass optimization).
+  5. FP8 KV cache workaround for minicpm_flashinfer backend: implemented
+     (mini-pool dequant approach).
+  6. Vectorized metadata builders in minicpm_sparse_utils.py.
+  7. fla 0.4.2 kernel diff: CHECKED, identical to 0.4.1. No free win.
+
+Pending / next steps:
+  1. Run speed benchmark with SGLANG_SPARSE_PREFILL=1 + incremental KC1.
+  2. Sparse DECODE for minicpm4 layers (highest-impact for S8/Smax).
+  3. Investigate fla fused_recurrent kernel BK=128 optimization.
+  4. Consider topk reduction (64 -> 32/16) for sparse prefill+decode.
+
+KEY INSIGHT (2026-04-07):
+  Lightning attention (24 layers) is O(1) per decode token -- fixed-size
+  recurrent state, does NOT read KV cache. The scaling bottleneck is
+  minicpm4 dense decode attention (8 layers, O(n) per token, reads full
+  KV cache). For long-context S8/Smax, sparse decode for minicpm4 is
+  the highest-impact optimization.
+
+================================================================================
+================================================================================
+     PART 4: DIFF -- sglang_sala_flashinfer vs official sglang-minicpm
+================================================================================
+================================================================================
+
+Reference: _official_pkgs/sglang-minicpm/python/sglang/srt/
+Working:   sglang_sala_flashinfer/sglang/srt/
+
+9 files differ. Changes fall into 4 categories:
+  A. Sparse prefill on FlashInfer backend (new feature)
+  B. Optimized tilelang fused kernels (2-pass -> 3-pass)
+  C. FP8 KV cache + NVFP4 mixed-precision robustness
+  D. Vectorized CPU-side metadata builders
+
+================================================================================
+FILE 1 (NEW): srt/layers/attention/sparse_prefill.py
+================================================================================
+Purpose: Sparse block selection for FlashInfer paged prefix attention during
+  chunked prefill. Instead of attending to ALL prefix tokens, only top-k
+  selected blocks are used.
+
+Key components:
+  - SPARSE_PREFILL_ENABLED: gated by env var SGLANG_SPARSE_PREFILL=1
+  - MINICPM4_LAYERS = {0, 9, 16, 17, 22, 29, 30, 31}
+  - CachedKC dataclass: per-(request, layer) cache for KC1/KC2
+  - _kc1_cache: module-level dict storing compressed key caches across chunks
+  - clear_kc1_cache(): evicts stale entries for completed requests
+  - compress_keys_simple(): sliding-window mean pooling (torch.unfold)
+  - _compress_incremental(): reads only ~16 boundary tokens from KV cache
+    per chunk instead of full prefix. Reuses previously compressed chunks.
+  - compute_sparse_prefill_metadata(): main entry point. Compresses keys
+    incrementally, uses infllm_v2 (infllmv2_attn_stage1, max_pooling_1d_varlen)
+    to score and select top-k blocks per head. Returns block indices.
+  - build_filtered_kv_indices(): constructs filtered kv_indices containing
+    only dense region [0, dense_len) + selected sparse blocks beyond dense_len.
+
+================================================================================
+FILE 2 (MODIFIED): srt/layers/attention/flashinfer_backend.py
+================================================================================
+Changes:
+  - Added _MINICPM4_LAYERS constant for sparse prefill layer identification.
+  - forward_extend() signature: added **kwargs to pass sparse metadata.
+  - Ragged+paged merge path: when sparse_prefill_metadata exists and layer
+    is minicpm4, calls _forward_extend_sparse_paged_lse() instead of
+    standard prefill_wrapper_paged.forward_return_lse().
+  - New method _forward_extend_sparse_paged_lse(): for each batch element,
+    if prefix > dense_len and sparse blocks exist, builds physical token
+    positions from (1) first dense_len tokens + (2) top-k selected block
+    tokens beyond dense_len. Creates temporary FlashInfer wrapper with
+    filtered indices, runs forward_return_lse(), returns (output, lse) for
+    merge_state with ragged self-attention.
+  - Dead code _forward_extend_sparse_paged() (gated by `if False`): non-ragged
+    sparse path kept for reference but disabled.
+
+================================================================================
+FILE 3 (MODIFIED): srt/models/minicpm.py
+================================================================================
+Changes (most significant file):
+
+  A. Sparse prefill integration:
+     - Imports compute_sparse_prefill_metadata, clear_kc1_cache,
+       SPARSE_PREFILL_ENABLED from sparse_prefill
+     - MiniCPMAttention.forward(): when SPARSE_PREFILL_ENABLED and extend mode,
+       calls compute_sparse_prefill_metadata() before self.attn(), passes
+       result via kwargs["sparse_prefill_metadata"]
+     - MiniCPMDecoderLayer.__init__(): attaches _sparse_config to self_attn
+       for minicpm4 layers when sparse prefill enabled
+     - MiniCPMForCausalLM.forward(): cleans up incremental KC1 cache for
+       finished requests
+
+  B. Dynamic quantization routing:
+     - Reads exclude_modules from config.quantization_config or
+       config.hf_quant_config
+     - Routes attn_quant_config = None if attention is excluded
+     - Routes mlp_quant_config = None if MLP is excluded
+     - Supports: fully NVFP4, mixed NVFP4-MLP + BF16-Attention, late-layer BF16
+
+  C. NVFP4 weight loading robustness:
+     - Added guards for missing params_dict keys
+     - Try/except for AssertionError on weight_loader: handles scalar params
+       (input_scale, weight_scale_2) by taking max, tensor params
+       (weight_scale) by manual gate_up_proj slicing
+
+  D. Layer-level profiling:
+     - time.perf_counter() instrumentation around layernorm, self_attn,
+       post_attention_layernorm, mlp calls
+     - Guarded by hidden_states.shape[0] > 100 and not CUDA graph capturing
+     - Print statement commented out but sync points remain
+
+================================================================================
+FILE 4 (MODIFIED): srt/layers/attention/minicpm_backend.py
+================================================================================
+Changes (~300 lines diff):
+
+  A. Optimized fused kernel imports:
+     - Uses _optimized variants of fused_attn_pooling_online_topk kernels
+
+  B. sparse_topk_override support:
+     - Reads server_args.sparse_topk_override for runtime topk sweep
+
+  C. model_dtype tracking:
+     - Stores model_runner.dtype for FlashInfer wrapper configuration
+
+  D. FlashInfer attention kernel dtype fix:
+     - All begin_forward() calls: q_data_type=self.q_data_type changed to
+       q_data_type=self.model_dtype
+
+  E. FP8 KV cache prefill workaround:
+     - When is_fp8_kv and prefill mode: extracts unique referenced KV pages,
+       creates "mini-pool" by converting only referenced pages from FP8 to
+       model_dtype (BF16), applies k_descale/v_descale, runs FlashInfer
+       attention on mini-pool. Avoids FA2's lack of FP8 support.
+
+  F. Buffer reuse and plan caching:
+     - Pre-allocated buffers for kv_indptr/kv_indices/kv_last_page_len
+       reused across calls when batch size matches
+     - begin_forward() skipped when batch structure unchanged (saves plan
+       computation on repeated decode calls)
+
+  G. FP8 descale in forward:
+     - k_scale/v_scale passed to decode attention forward when FP8 active
+
+================================================================================
+FILE 5 (MODIFIED): srt/layers/attention/minicpm_attention_kernels.py
+================================================================================
+Changes:
+  - Added model_dtype, plan caching fields, FP8 KV detection
+  - Commented-out FA3 backend selection for FP8 (keeps FA2 default)
+  - New _safe_resize_flashinfer_buffers(): dynamically resizes FlashInfer
+    internal buffers when batch sizes exceed pre-allocated capacities
+  - All plan_decode/prefill_wrapper calls preceded by safe resize
+  - kv_indices truncated to valid pages before begin_forward()
+  - q_data_type changed to model_dtype
+
+================================================================================
+FILE 6 (MODIFIED): srt/layers/attention/minicpm_fuse_kernel.py
+================================================================================
+Changes: Added ~560 lines containing two new optimized tilelang kernels:
+
+  fused_attn_pooling_online_topk_decode_optimized:
+    Original: Q*K GEMM computed (1 + loop_range_pool) times, interleaving
+    pooling and TopK in nested loop.
+    Optimized: Q*K GEMM computed exactly TWICE. Key change:
+      Pass 1: Attention scan (scores_max + logsum)
+      Pass 2: Normalized pooling scan (one pass over K, scatter to full pool
+               buffer using T.atomic_max)
+      Pass 3: TopK via bitonic sort (no GEMM, reads from pool buffer)
+    Result: O(2 * K_blocks) GEMM instead of O(pool_blocks * K_blocks).
+
+  fused_attn_pooling_online_topk_prefill_optimized:
+    Same optimization for prefill, includes causal masking logic.
+
+  NOTE: These kernels are for the minicpm_flashinfer backend ONLY. They are
+  not used by the flashinfer backend (our current production setup).
+
+================================================================================
+FILE 7 (MODIFIED): srt/layers/attention/minicpm_sparse_utils.py
+================================================================================
+Changes:
+  - build_token_mappings(): rewritten from Python for-loops to vectorized
+    PyTorch (torch.repeat_interleave, cumsum, broadcasting). Original code
+    preserved in comments.
+  - build_sparse_prefill_metadata(): rewritten from Python for-loops to
+    vectorized PyTorch (torch.where, cumsum, repeat_interleave). Original
+    code preserved in comments (~120 lines).
+
+================================================================================
+FILE 8 (MODIFIED): srt/server_args.py
+================================================================================
+Changes:
+  - Added field: sparse_topk_override: Optional[int] = None
+  - Added CLI argument: --sparse-topk-override for runtime topk sweep
+    experiments without changing model config.
+
+================================================================================
+FILE 9 (MODIFIED): srt/layers/quantization/petit.py
+================================================================================
+Changes: Minimal -- added commented-out alternative for
+  is_petit_nvfp4_compatible() that would remove HIP-only restriction for
+  NVFP4. Active code unchanged.
+
+================================================================================
+STRUCTURAL DIFFERENCES
+================================================================================
+Files only in working codebase (new):
+  - srt/layers/attention/sparse_prefill.py (sparse prefill feature)
+  - srt/models/unused_models/ (non-MiniCPM models moved here)
+  - _fla_reference/ (extracted fla pip package kernels for analysis)
+
+Files removed from working vs official:
+  - ~100 model files (llama.py, qwen2.py, deepseek.py, etc.) moved to
+    unused_models/ -- working codebase focused solely on MiniCPM
+
+Identical files (no changes):
+  - srt/configs/minicpm.py
+  - srt/layers/attention/fla/* (all 15 FLA Triton kernels)
+  - All other srt/ infrastructure (scheduler, memory pool, tokenizer, etc.)
 
