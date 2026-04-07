@@ -729,15 +729,15 @@ class MiniCPMForCausalLM(nn.Module):
         input_embeds: torch.Tensor = None,
     ) -> torch.Tensor:
         # Clean up incremental KC1 cache for finished requests
-        if SPARSE_PREFILL_ENABLED or SPARSE_DECODE_ENABLED:
+        # Skip during CUDA graph capture (.tolist() does GPU->CPU copy)
+        if (SPARSE_PREFILL_ENABLED or SPARSE_DECODE_ENABLED) and not torch.cuda.is_current_stream_capturing():
             active = set(forward_batch.req_pool_indices.tolist())
             if not forward_batch.forward_mode.is_extend() and not SPARSE_DECODE_ENABLED:
                 clear_kc1_cache()  # Decode mode without sparse decode: clear all
             else:
                 clear_kc1_cache(active)  # Keep cache for active requests
-        if SPARSE_DECODE_ENABLED:
-            active = set(forward_batch.req_pool_indices.tolist())
-            clear_decode_caches(active)
+            if SPARSE_DECODE_ENABLED:
+                clear_decode_caches(active)
         if input_embeds is not None:
             input_embeds = input_embeds * self.config.scale_emb
         hidden_states = self.model(input_ids, positions, forward_batch, input_embeds)
