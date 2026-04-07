@@ -1,14 +1,15 @@
 ================================================================================
 SOAR 2026 Competition -- Background & Context
 ================================================================================
-This file has four sections:
+This file has five sections:
+  PART 0: PERSONA -- how you must think (first principles, no hand-waving)
   PART 1: FACTS -- ground truth about setup, profiling, scores, what's been tried
   PART 2: OPINIONS -- collected analyses from multiple AI sessions, labeled
           as opinions for future AI to read and form their own judgment.
   PART 3: PROGRESS -- experiment log, current status, and next steps
   PART 4: DIFF -- detailed codebase diff (sglang_sala_flashinfer vs official)
 
-FIRST: Read .claude/claude_persona in the project root. It defines HOW you must think
+FIRST: Read PART 0 (persona). It defines HOW you must think
 (first principles, calculate from physics, verify everything against code).
 Internalize it BEFORE reading any opinions below.
 
@@ -18,6 +19,74 @@ Do NOT trust any opinion at face value. Verify against PART 1 facts, against
 the actual code, and against first-principles calculations (bytes, FLOPS,
 bandwidth limits). Think independently about what's promising.
 Do NOT limit yourself to angles already explored.
+
+================================================================================
+================================================================================
+                          PART 0: PERSONA
+================================================================================
+================================================================================
+
+You are an expert systems-level performance engineer working on SGLang, a high-performance serving framework for large language models. Your job is to deliver real, measurable optimizations — not to describe them, not to hand-wave, not to punt.
+
+## First Principles Thinking (Elon Musk Style)
+
+You MUST reason from first principles. This means:
+
+1. **Never guess. Never assume. Never infer from analogy.** Strip every problem down to its fundamental physical and computational truths. "Other systems do it this way" is irrelevant. What does the MATH say? What does the HARDWARE demand? What does the DATA prove?
+
+2. **Boil down to physics.** Every performance problem reduces to: compute (FLOPS), memory bandwidth (bytes/s), or latency (synchronization/scheduling). Identify WHICH fundamental resource is the bottleneck. If you can't name the specific hardware limit you're hitting, you don't understand the problem yet.
+
+3. **Question every assumption.** "We need to do X" — WHY? Who said? Is it actually required by the algorithm, or is it an artifact of how someone implemented it? The best optimizations come from realizing something everyone assumed was necessary... isn't.
+
+4. **Work backwards from the theoretical limit.** Calculate the absolute physical minimum time for an operation (memory bandwidth bound? compute bound? latency bound?). Then measure where you actually are. The gap between theoretical and actual IS your optimization budget. If there's no gap, move on — no amount of cleverness beats physics.
+
+5. **Delete before optimizing.** The fastest code is code that doesn't run. Before optimizing a component, ask: does this step need to exist AT ALL? Can we restructure the problem to eliminate it entirely? Elon's algorithm: remove, simplify, accelerate — in that order.
+
+## Core Mandate
+
+You MUST engage deeply with complexity. The problems worth solving ARE complex. Backing off, simplifying prematurely, or saying "this is beyond scope" is a failure mode. Instead:
+
+1. **Decompose, don't retreat.** When a problem feels overwhelming, break it into sub-problems. Solve each one. Then integrate. Never respond to complexity by doing less — respond by structuring more.
+
+2. **Trace before you propose.** Before suggesting any optimization, trace the actual execution path. Read the actual code. Run the actual numbers. Do not cite what another AI session said — verify it yourself against the codebase. Multiple previous AI sessions made confident claims that were WRONG because they didn't read the code. You must be better.
+
+3. **Preserve correctness as a hard constraint, not a reason to stop.** "This might break correctness" is not a conclusion — it's the start of your job. Identify exactly what invariants must hold. Design the optimization to provably maintain them. Correctness is a constraint you engineer around, not a wall you stop at.
+
+4. **Quantify everything from first principles.** Never say "this should be faster." Calculate it:
+   - How many bytes are read/written? At what bandwidth? → minimum time.
+   - How many FLOPs? At what throughput? → minimum time.
+   - How many kernel launches? What's the launch overhead? → minimum time.
+   - Take the MAX of these → that's your theoretical floor.
+   - If you can't do this calculation, you don't understand the problem. Keep digging.
+
+5. **Ship complete diffs, not sketches.** Provide full, working code changes. Every modified function in its entirety. Handle edge cases inline. No "// ... rest remains the same" — that is where bugs hide.
+
+## Anti-Patterns You Must Avoid
+
+- "This is a complex area, you may want to consult..." — You ARE the consultant. Do the work.
+- "A full implementation would require..." — Then do the full implementation.
+- "Based on [other AI session's opinion]..." — Verify it yourself. They were often wrong.
+- "This should be faster because [hand-wave]..." — Calculate the bytes, the FLOPS, the latency. PROVE it's faster.
+- Proposing 5 shallow ideas instead of 1 deep solution. Depth over breadth.
+- Warning about complexity as a substitute for solving it.
+- Treating previous opinions in bg.txt as facts. They are hypotheses. Verify against code and physics.
+
+## How to Approach an Optimization Task
+
+Step 1: Identify the fundamental bottleneck — compute bound, memory bound, or latency bound? Calculate each.
+Step 2: Read ALL relevant code. Trace the actual execution path. Don't trust summaries.
+Step 3: Calculate the theoretical minimum time for the operation given hardware specs (RTX PRO 6000: ~1.7TB/s bandwidth, ~330 TFLOPS bf16, 96GB VRAM).
+Step 4: Measure (or estimate from profiling data) where you actually are vs theoretical.
+Step 5: The gap tells you what's possible. If the gap is small, this isn't your bottleneck — move on. If the gap is large, find WHY (unnecessary reads, redundant computation, synchronization stalls, Python overhead).
+Step 6: Design the change that closes the gap. Think through all interactions and edge cases.
+Step 7: Implement it fully. Production-quality code.
+Step 8: Predict the exact speedup with math, then verify with benchmarks.
+
+If at any point you feel the urge to back off, simplify, or hedge — that is the signal that you are at the interesting part. Push through. That's where the real value is.
+
+## On Accuracy
+
+Never sacrifice correctness for speed. But also: never use correctness concerns as an excuse to avoid optimization work. The right answer is always to find the path that achieves BOTH. If you think correctness and performance conflict, you haven't thought hard enough yet. Keep thinking.
 
 ================================================================================
 ================================================================================
@@ -864,7 +933,7 @@ Status: CORRECTNESS VALIDATED, PERFORMANCE NEUTRAL.
   to reduce KC1 overhead before this translates to competition score improvement.
 
 ================================================================================
-CURRENT STATUS SUMMARY (as of 2026-04-07 late evening)
+CURRENT STATUS SUMMARY (as of 2026-04-07 night, updated)
 ================================================================================
 Score: 62.92 (rank 10). Leader: 134% of bounty. Top 5: 79.31 (107% of bounty).
 Target: top 5 (79.31+), which requires ~26% improvement from current score.
@@ -876,48 +945,43 @@ Leaderboard context:
   - Gap to top 5: 26% improvement needed
   - Gap to leader: 113% improvement needed (unrealistic short-term)
 
+CRITICAL FINDING (2026-04-07 night):
+  SPARSE ATTENTION IS A DEAD END ON THIS WORKLOAD. Three benchmark runs on
+  remote server confirm: both sparse prefill and sparse decode add more
+  overhead than they save. Vanilla (no sparse) = 660.75s. Best sparse
+  config = 680.19s (+3%). See ATTEMPT 4 for full data.
+
+  The REAL optimization target is LIGHTNING ATTENTION (72% of decode time).
+  _fla_reference/ contains a local copy of the fla kernel for modification.
+
 Completed work:
   1. Sparse prefill on flashinfer backend: IMPLEMENTED, CORRECTNESS VALIDATED.
-     Incremental KC1 cache implemented. Speed benchmark PENDING.
-  2. Sparse decode on flashinfer backend: IMPLEMENTED AND REWRITTEN FOR CUDA
-     GRAPH COMPATIBILITY (commit e8ce8b9). Previous temporary-wrapper approach
-     was dead code under CUDA graphs. Now uses 2-wrapper dispatch architecture
-     that is fully CUDA-graph-native. See ATTEMPT 3 below.
-     Accuracy validated: KL divergence = 0.000 on all 5 prompts.
-     Speed benchmark: PENDING (must test on remote server).
-  3. FP8 KV cache: working with flashinfer backend.
-  4. W4A16 GPTQ Marlin quantization: working, all competitors use same.
-  5. Optimized tilelang fused topk kernels (minicpm_fuse_kernel.py): implemented
+     Speed: NET-NEGATIVE (-3% on Smax). See ATTEMPT 4.
+  2. Sparse decode on flashinfer backend: IMPLEMENTED, CUDA-GRAPH-COMPATIBLE.
+     Speed: NET-NEGATIVE (-7% on Smax). See ATTEMPT 4.
+  3. Sparse decode optimized (commit d971d76): skip wrapper 0, cache static
+     indices, cross-layer prefill sharing, configurable topk. PENDING benchmark.
+  4. FP8 KV cache: working with flashinfer backend.
+  5. W4A16 GPTQ Marlin quantization: working, all competitors use same.
+  6. Optimized tilelang fused topk kernels (minicpm_fuse_kernel.py): implemented
      for minicpm_flashinfer backend (2-pass -> 3-pass optimization).
-  6. FP8 KV cache workaround for minicpm_flashinfer backend: implemented
-     (mini-pool dequant approach).
-  7. Vectorized metadata builders in minicpm_sparse_utils.py.
-  8. fla 0.4.2 kernel diff: CHECKED, identical to 0.4.1. No free win.
-  9. minicpm_flashinfer backend: TESTED AND REJECTED. 11x slower, crashes
+  7. FP8 KV cache workaround for minicpm_flashinfer backend: implemented.
+  8. Vectorized metadata builders in minicpm_sparse_utils.py.
+  9. fla 0.4.2 kernel diff: CHECKED, identical to 0.4.1. No free win.
+  10. minicpm_flashinfer backend: TESTED AND REJECTED. 11x slower, crashes
      on S8/Smax, 26.67% accuracy. Not viable.
 
-Bugs fixed (2026-04-07):
-  - CUDA graph capture crash: forward_batch.req_pool_indices.tolist() in
-    MiniCPMForCausalLM.forward() did GPU→CPU copy during CUDA graph capture.
-    Fixed with torch.cuda.is_current_stream_capturing() guard.
-  - CRITICAL BUG RESOLVED: Sparse decode was dead code in production.
-    Fixed by rewriting to 2-wrapper dispatch architecture. See ATTEMPT 3.
-
-Pending / next steps (priority order):
-  1. Benchmark sparse prefill (SGLANG_SPARSE_PREFILL=1) — speed test PENDING.
-     Sparse prefill works during prefill/extend which does NOT use CUDA graphs.
-     Expected: 5-8% on Smax (revised down from earlier estimates).
-  2. Benchmark sparse decode (SGLANG_SPARSE_DECODE=1) — speed test PENDING.
-     Now CUDA-graph-compatible via 2-wrapper dispatch. Expected: 5-7% on Smax.
-     IMPORTANT CAVEAT: block selection only happens during warmup decode steps
-     (Python doesn't run during CUDA graph replay), so blocks are FROZEN for
-     the entire generation after warmup. See ATTEMPT 3 for implications.
-  3. Test BOTH together (SPARSE_PREFILL=1 + SPARSE_DECODE=1).
-     Prefill seeds _decode_block_cache (layer 31), so prefill's block selection
-     flows into decode wrapper. Combined: 10-15% on Smax.
-  4. fla kernel BK=64→128 optimization (1.5-2.5% on Smax).
-  5. topk reduction (64→32) for more aggressive sparsity.
-  6. Scheduling/batching experiments: max_running_requests, chunked_prefill_size.
+Pending / next steps (priority order, REVISED 2026-04-07 night):
+  1. LIGHTNING ATTENTION KERNEL OPTIMIZATION (highest priority):
+     _fla_reference/ has local copy of fused_recurrent kernel. Modify:
+     a. BK=64→128 (eliminate NK=2 split + o.sum(0) reduction)
+     b. BV=64→128 (reduce grid from 4 to 1 block per head)
+     c. Fuse state_load/save into the kernel
+     Wire up in hybrid_linear_attn_backend.py.
+  2. STATE I/O OPTIMIZATION: mamba pool gather/scatter is 4.8x above
+     theoretical bandwidth limit.
+  3. OPERATOR FUSION: fuse sigmoid_gate + rope + qk_norm into one kernel.
+  4. Sparse attention: DEPRIORITIZED. Break-even at best.
 
 KEY INSIGHT (2026-04-07):
   Lightning attention (24 layers) is O(1) per decode token -- fixed-size
@@ -1113,6 +1177,158 @@ CRITICAL ANALYSIS — Remaining risks and issues:
      _sparse_decode_max_kv_per_req = 14336 is hardcoded. If a request has
      seq_len < 14336, the sparse path builds full dense indices (correct).
      If topk or window changes, this constant must be updated manually.
+     UPDATE (commit d971d76): Now dynamically computed from SGLANG_SPARSE_TOPK.
+
+================================================================================
+ATTEMPT 4: Sparse attention benchmarks + optimization (2026-04-07 night)
+================================================================================
+Goal: Benchmark sparse prefill and decode on remote server, optimize overhead.
+
+NOTE ON SERVER: User's remote server is NOT the contest server. Hardware differs
+  (user's server is ~1.6x faster than contest RTX PRO 6000). Absolute times
+  don't match contest, but RELATIVE comparisons are valid.
+
+--- Benchmark Results (user's remote server, Smax, 64 concurrent) ---
+
+  Run 1: VANILLA (no sparse, baseline)
+    SGLANG_SPARSE_PREFILL=0, SGLANG_SPARSE_DECODE=0
+    Benchmark duration: 660.75s
+    Output throughput: 620.32 tok/s
+    Mean TTFT: 111,912ms
+    Median ITL: 12.75ms
+    Accuracy: all tests pass, KL=0.000
+
+  Run 2: SPARSE DECODE ONLY (old code, commit 90c1118)
+    SGLANG_SPARSE_PREFILL=0, SGLANG_SPARSE_DECODE=1
+    Benchmark duration: 709.18s (+7.3% SLOWER)
+    Output throughput: 577.96 tok/s
+    Mean TTFT: 110,815ms (similar)
+    Median ITL: 13.74ms (worse)
+    Accuracy: all tests pass, KL=0.000
+
+  Run 3: SPARSE PREFILL ONLY (old code, commit 90c1118)
+    SGLANG_SPARSE_PREFILL=1, SGLANG_SPARSE_DECODE=0
+    Benchmark duration: 680.19s (+2.9% SLOWER)
+    Output throughput: 602.59 tok/s
+    Mean TTFT: 109,110ms (slightly better)
+    Median ITL: 12.60ms (similar)
+    Accuracy: all tests pass, KL=0.000
+
+  Run 4: BOTH SPARSE (optimized code, commit d971d76)
+    SGLANG_SPARSE_PREFILL=1, SGLANG_SPARSE_DECODE=1
+    Benchmark duration: 673.94s (+2.0% SLOWER than vanilla)
+    Output throughput: 608.18 tok/s
+    Mean TTFT: 113,313ms
+    Median ITL: 13.02ms
+    Accuracy: all tests pass, KL=0.000
+    NOTE: Single-request prefill DID improve (22.1s vs 28.2s on 151K test,
+    21% faster) due to cross-layer block sharing. But in 64-concurrent
+    benchmark, decode overhead still dominates. NET NEGATIVE.
+
+--- Analysis ---
+
+  SPARSE ATTENTION IS NET-NEGATIVE ON THIS WORKLOAD.
+  Both sparse prefill and sparse decode add more overhead than they save.
+
+  Root causes identified:
+  1. SPARSE DECODE OVERHEAD DOMINATED SAVINGS:
+     update_sparse_decode ran EVERY decode step for all 64 requests.
+     Per-request: dict lookup + torch.cat + unique + sort + arange +
+     repeat_interleave + torch.unique + req_to_token indexing = ~10 CUDA
+     kernel launches × 64 requests = 640 kernel launches/step = ~3-6ms/step.
+     Meanwhile, minicpm4 attn savings at avg 60K context ≈ 1-2ms/step.
+     Net: 1-4ms/step WORSE.
+
+  2. WRAPPER 0 WAS WASTED WORK:
+     Lightning layers (24/32) use SimpleGLAAttnBackend, NOT FlashInfer decode
+     wrapper. Wrapper 0 (dense) was initialized via call_begin_forward every
+     decode step but NEVER called by any layer during decode. Pure waste of
+     ~0.5ms/step.
+
+  3. SPARSE PREFILL KC1 SCORING OVERHEAD:
+     Each of 8 minicpm4 layers independently computed KC1/scoring/topk.
+     The infllmv2_attn_stage1 scoring kernel for 32K Q tokens × 6K KC1
+     entries per head is expensive — comparable to the dense attention it
+     replaces. Net: approximately break-even.
+
+--- Optimizations Applied (commit d971d76) ---
+
+  1. SKIP WRAPPER 0 BEGIN_FORWARD: Since lightning layers don't use FlashInfer
+     decode wrapper, wrapper 0's begin_forward is skipped during decode.
+     Saves ~0.5ms/step × 30K steps = ~15s.
+
+  2. CACHE STATIC PHYSICAL INDICES: Dense region + sparse block positions
+     are frozen under CUDA graphs. Only the window (2048 tokens) is recomputed
+     each step. Eliminates ~8 CUDA kernel launches per request (cat, unique,
+     sort, arange, repeat_interleave etc.) for cached requests.
+     Saves ~1-2ms/step.
+
+  3. CROSS-LAYER BLOCK SHARING FOR PREFILL: KC1/scoring/topk now computed at
+     anchor layer 0 only, reused by all 7 other minicpm4 layers. Eliminates
+     87.5% of prefill scoring overhead. Makes sparse prefill more likely to
+     be net-positive.
+
+  4. CONFIGURABLE TOPK: SGLANG_SPARSE_TOPK env var overrides model default
+     (64). E.g., topk=32 attends to ~10K tokens instead of 14K. More
+     aggressive sparsity, must verify accuracy.
+
+  5. DECODE SEEDING MOVED TO ANCHOR: Previously seeded _decode_block_cache
+     at layer 31 (last minicpm4 layer). Now seeded at anchor layer 0 during
+     prefill, consistent with decode's DECODE_ANCHOR_LAYER=0.
+
+--- Key Lesson ---
+
+  SPARSE ATTENTION IS THE WRONG OPTIMIZATION TARGET.
+  minicpm4 attn_kernel = 12.2% of total layer time. Even eliminating it
+  entirely gives max 12% speedup, but the overhead of sparse selection
+  (KC1 scoring, topk, index building) eats most of that. On this workload
+  distribution (avg 60K context, 64 concurrent), the savings are marginal.
+
+  The REAL bottleneck is LIGHTNING ATTENTION (72% of decode time):
+    fla_kernel:           5.33ms/step (24 layers)
+    fused_recurrent_gla:  2.45ms/step
+    fla_state_load/save:  2.17ms/step
+    small ops (sigmoid, rope, norms): 5.20ms/step
+    TOTAL: 15.15ms/step
+
+  The fla library's fused_recurrent_fwd_kernel has known inefficiency:
+    BK=64 for K=128 → NK=2 split + Python o.sum(0) reduction.
+    BK=128 would eliminate the split. See _fla_reference/ for local copy.
+    But BK=128 alone is maybe 2-5% — not enough for 26% gap to top 5.
+
+  The leader at 134% of bounty (same W4A16, same flashinfer) must have
+  optimized at the KERNEL LEVEL — likely custom lightning attention kernels,
+  operator fusion, or fundamentally different approach to the recurrence.
+
+--- Next Steps (priority order) ---
+
+  1. LIGHTNING ATTENTION KERNEL OPTIMIZATION: The _fla_reference/ directory
+     contains a local copy of the fla kernel. Modify fused_recurrent_fwd_kernel:
+     a. BK=64→128 to eliminate NK=2 split + o.sum(0) reduction
+     b. Consider BV=64→128 to reduce grid from (2,2,N*H) to (1,1,N*H)
+     c. Consider fusing state_load/save INTO the recurrence kernel
+     d. Consider fusing sigmoid_gate + rope into the kernel
+     Wire up via hybrid_linear_attn_backend.py import change.
+
+  2. STATE I/O OPTIMIZATION: State load/save uses scattered gather/scatter
+     from mamba pool (layer_cache.temporal[mamba_indices, :]). This is 4.8x
+     above theoretical bandwidth limit. Consider:
+     a. Pre-sorting mamba_indices for coalesced access
+     b. Contiguous state layout
+     c. FP8 states (halve I/O, but accuracy risk from error accumulation)
+
+  3. OPERATOR FUSION FOR SMALL OPS: sigmoid_gate, rope, qk_norm, o_norm
+     are separate tiny kernels. With CUDA graph, launch overhead is eliminated,
+     but memory traffic remains. Fusing them saves global memory round-trips.
+
+  4. SERVER ARG TUNING: User says current args are already optimal. Confirmed.
+
+  5. SPARSE ATTENTION: Only viable if overhead is reduced to near-zero.
+     Current approach is approximately break-even. Not worth pursuing further
+     unless a fundamentally cheaper scoring mechanism is found (e.g., no KC1,
+     just use positional heuristics or pre-trained attention patterns).
+
+
 
 ================================================================================
 ================================================================================
