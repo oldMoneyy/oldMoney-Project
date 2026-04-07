@@ -57,8 +57,21 @@ MINICPM4_LAYERS = {0, 9, 16, 17, 22, 29, 30, 31}
 # Sparse decode: anchor layer for block selection (computed here, shared to all)
 DECODE_ANCHOR_LAYER = 0
 
+# Sparse prefill: anchor layer for block selection (compute once, reuse for all 8 layers)
+PREFILL_ANCHOR_LAYER = 0
+
 # Sparse decode: recompute block selection every N decode steps
 DECODE_SELECTION_INTERVAL = 16
+
+# Configurable topk override via environment variable
+_TOPK_OVERRIDE = int(os.environ.get("SGLANG_SPARSE_TOPK", "0"))  # 0 = use model default
+
+if _TOPK_OVERRIDE > 0:
+    logger.info(f"Sparse attention topk override: {_TOPK_OVERRIDE} (model default: 64)")
+if SPARSE_PREFILL_ENABLED:
+    logger.info("Sparse prefill ENABLED with cross-layer block sharing (anchor=layer 0)")
+if SPARSE_DECODE_ENABLED:
+    logger.info("Sparse decode ENABLED")
 
 
 # ---------------------------------------------------------------------------
@@ -77,6 +90,10 @@ class CachedKC:
 
 # Module-level cache: (req_pool_index, layer_id) -> CachedKC
 _kc1_cache: dict[tuple[int, int], CachedKC] = {}
+
+# Prefill block cache: share blocks across layers (computed at anchor, reused by others)
+# Key: req_pool_index, Value: list of per-head block indices (same format as sparse_block_indices)
+_prefill_block_cache: Dict[int, List[torch.Tensor]] = {}
 
 
 # ---------------------------------------------------------------------------
@@ -127,7 +144,7 @@ def set_sparse_decode_config(config) -> None:
         "dense_len": config.sparse_dense_len,
         "window_size": config.sparse_window_size,
         "block_size": config.sparse_block_size,
-        "topk": config.sparse_topk,
+        "topk": _TOPK_OVERRIDE if _TOPK_OVERRIDE > 0 else config.sparse_topk,
         "kernel_size": config.sparse_kernel_size,
         "kernel_stride": config.sparse_kernel_stride,
     }
@@ -145,13 +162,17 @@ def clear_kc1_cache(active_req_indices: Optional[Set[int]] = None):
         active_req_indices: Set of currently active req_pool_indices.
             If None, clears the entire cache.
     """
-    global _kc1_cache
+    global _kc1_cache, _prefill_block_cache
     if active_req_indices is None:
         _kc1_cache.clear()
+        _prefill_block_cache.clear()
         return
     stale_keys = [k for k in _kc1_cache if k[0] not in active_req_indices]
     for k in stale_keys:
         del _kc1_cache[k]
+    stale_prefill = [k for k in _prefill_block_cache if k not in active_req_indices]
+    for k in stale_prefill:
+        del _prefill_block_cache[k]
 
 
 # ---------------------------------------------------------------------------
@@ -268,6 +289,10 @@ def compute_sparse_prefill_metadata(
 ) -> Optional[dict]:
     """Compute sparse block indices for prefill attention.
 
+    Uses cross-layer sharing: blocks are computed at the anchor layer (layer 0)
+    and reused for all other minicpm4 layers. This eliminates 7/8 of the
+    KC1/scoring/topk overhead.
+
     Uses incremental KC1/KC2 caching to avoid re-reading the entire prefix
     from the KV cache each chunk. Only boundary tokens (~16 for KC1, ~64
     for KC2) are read from the cache on subsequent chunks.
@@ -284,7 +309,7 @@ def compute_sparse_prefill_metadata(
     kernel_size = config.sparse_kernel_size
     kernel_stride = config.sparse_kernel_stride
     dense_len = config.sparse_dense_len
-    topk = config.sparse_topk
+    topk = _TOPK_OVERRIDE if _TOPK_OVERRIDE > 0 else config.sparse_topk
     window_size = config.sparse_window_size
     init_blocks = config.sparse_init_blocks
     local_blocks = window_size // block_size
@@ -300,6 +325,33 @@ def compute_sparse_prefill_metadata(
 
     batch_size = len(seq_lens_cpu)
     device = q.device
+    req_pool_indices = forward_batch.req_pool_indices
+
+    # Non-anchor layers: reuse cached blocks from the anchor layer
+    is_anchor = (layer_id == PREFILL_ANCHOR_LAYER)
+    if not is_anchor:
+        sparse_block_indices = []
+        any_sparse = False
+        for b in range(batch_size):
+            if prefix_lens_cpu[b] <= dense_len:
+                sparse_block_indices.append(None)
+                continue
+            req_idx = req_pool_indices[b].item()
+            cached_blocks = _prefill_block_cache.get(req_idx)
+            if cached_blocks is not None:
+                sparse_block_indices.append(cached_blocks)
+                any_sparse = True
+            else:
+                sparse_block_indices.append(None)
+        if not any_sparse:
+            return None
+        return {
+            "sparse_block_indices": sparse_block_indices,
+            "block_size": block_size,
+            "prefix_lens": prefix_lens_cpu,
+            "seq_lens": seq_lens_cpu,
+            "dense_len": dense_len,
+        }
 
     q_3d = q.view(-1, num_q_heads, head_dim)
     k_new_3d = k_new.view(-1, num_kv_heads, head_dim)
@@ -430,9 +482,18 @@ def compute_sparse_prefill_metadata(
         sparse_block_indices.append(req_blocks)
         q_offset += extend_len
 
+    # Cache blocks for cross-layer sharing (anchor layer only).
+    # Non-anchor minicpm4 layers will pick these up from _prefill_block_cache.
+    for b in range(batch_size):
+        if sparse_block_indices[b] is not None:
+            req_idx = req_pool_indices[b].item()
+            _prefill_block_cache[req_idx] = sparse_block_indices[b]
+
     # Seed _decode_block_cache from prefill so CUDA-graph decode has blocks.
-    # Only save on the last minicpm4 layer (31) to avoid redundant writes.
-    if SPARSE_DECODE_ENABLED and layer_id == 31:
+    # Do it at the anchor layer since with cross-layer sharing, only the anchor
+    # computes blocks. (Previously done at layer 31, but layer 31 now reuses
+    # cached blocks from the anchor and never reaches this code path.)
+    if SPARSE_DECODE_ENABLED:
         for b in range(batch_size):
             if sparse_block_indices[b] is not None:
                 req_idx = req_pool_indices[b].item()
@@ -545,7 +606,7 @@ def compute_sparse_decode_metadata(
     kernel_size = config.sparse_kernel_size
     kernel_stride = config.sparse_kernel_stride
     dense_len = config.sparse_dense_len
-    topk = config.sparse_topk
+    topk = _TOPK_OVERRIDE if _TOPK_OVERRIDE > 0 else config.sparse_topk
     window_size = config.sparse_window_size
     init_blocks = config.sparse_init_blocks
     local_blocks = window_size // block_size

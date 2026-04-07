@@ -307,8 +307,11 @@ class FlashInferAttnBackend(AttentionBackend):
         self.draft_extend_cuda_graph_metadata = {}  # For draft extend
 
         # Sparse decode constant: max KV tokens per request in sparse mode
-        # dense_len(8192) + window_size(2048) + topk(64)*block_size(64) = 14336
-        self._sparse_decode_max_kv_per_req = 14336
+        # dense_len(8192) + window_size(2048) + topk*block_size
+        # Default topk=64, block_size=64 → 14336. With SGLANG_SPARSE_TOPK override, compute dynamically.
+        _topk_override = int(os.environ.get("SGLANG_SPARSE_TOPK", "0"))
+        _effective_topk = _topk_override if _topk_override > 0 else 64
+        self._sparse_decode_max_kv_per_req = 8192 + 2048 + _effective_topk * 64
 
     def _process_multi_item_scoring(
         self, forward_batch: ForwardBatch
@@ -1163,6 +1166,10 @@ class FlashInferIndicesUpdaterDecode:
         elif self.attn_backend.dispatch_reason == WrapperDispatch.SPARSE_DECODE:
             self.update = self.update_sparse_decode
             self._sparse_cfg = None  # Lazy-loaded on first call (model init hasn't run yet)
+            # Cache for static physical indices per request (dense + sparse blocks).
+            # Key: req_pool_index, Value: (static_phys: Tensor, blocks_id: int)
+            # blocks_id = id(cached.block_indices) to detect block changes.
+            self._sparse_static_cache: dict[int, tuple[torch.Tensor, int]] = {}
         else:
             assert self.attn_backend.num_wrappers == 1
             self.update = self.update_single_wrapper
@@ -1306,23 +1313,17 @@ class FlashInferIndicesUpdaterDecode:
     ):
         """Build indices for two wrappers: dense (wrapper 0) and sparse (wrapper 1).
 
-        Wrapper 0 (dense): standard full-attention indices for lightning layers.
-        Wrapper 1 (sparse): filtered indices for minicpm4 layers using cached
-        block selections from _decode_block_cache.
+        Wrapper 0 (dense): SKIPPED — lightning layers (24/32) use SimpleGLAAttnBackend
+        not FlashInfer, so wrapper 0 is never called during decode. Skipping its
+        begin_forward eliminates ~0.5ms/step of wasted FlashInfer planning.
+
+        Wrapper 1 (sparse): filtered indices for 8 minicpm4 layers using cached
+        block selections from _decode_block_cache. Static portions (dense region +
+        sparse blocks) are cached per request to avoid redundant GPU ops.
         """
-        # Wrapper 0: full attention (same as update_single_wrapper)
-        self.call_begin_forward(
-            decode_wrappers[0],
-            req_pool_indices,
-            seq_lens,
-            seq_lens_sum,
-            self.kv_indptr[0],
-            None,
-            spec_info,
-            seq_lens_cpu,
-            fixed_split_size=fixed_split_size,
-            disable_split_kv=disable_split_kv,
-        )
+        # NOTE: Wrapper 0 begin_forward deliberately SKIPPED.
+        # Lightning attention layers use SimpleGLAAttnBackend (recurrent state),
+        # not FlashInfer decode wrapper. No layer calls wrapper 0 during decode.
 
         # Lazy-load sparse config (model init runs after backend init)
         if self._sparse_cfg is None:
@@ -1331,7 +1332,19 @@ class FlashInferIndicesUpdaterDecode:
 
         cfg = self._sparse_cfg
         if cfg is None:
-            # Model doesn't have sparse config — wrapper 1 = dense fallback
+            # Model doesn't have sparse config — both wrappers get dense fallback
+            self.call_begin_forward(
+                decode_wrappers[0],
+                req_pool_indices,
+                seq_lens,
+                seq_lens_sum,
+                self.kv_indptr[0],
+                None,
+                spec_info,
+                seq_lens_cpu,
+                fixed_split_size=fixed_split_size,
+                disable_split_kv=disable_split_kv,
+            )
             self.call_begin_forward(
                 decode_wrappers[1],
                 req_pool_indices,
@@ -1367,6 +1380,12 @@ class FlashInferIndicesUpdaterDecode:
         seq_lens_list = seq_lens_cpu.tolist() if seq_lens_cpu is not None else seq_lens.tolist()
         req_pool_list = req_pool_indices.tolist()
 
+        # Evict stale static cache entries for requests no longer in the batch
+        active_set = set(req_pool_list)
+        stale = [k for k in self._sparse_static_cache if k not in active_set]
+        for k in stale:
+            del self._sparse_static_cache[k]
+
         offset = 0
         for b in range(bs):
             req_idx = req_pool_list[b]
@@ -1374,42 +1393,53 @@ class FlashInferIndicesUpdaterDecode:
             cached = _decode_block_cache.get(req_idx)
 
             if sl > dense_len and cached is not None:
-                # Collect unique block indices from all KV heads
-                all_blocks = torch.cat(cached.block_indices, dim=0).unique()
-                all_blocks = all_blocks[all_blocks >= 0].sort().values
+                # Check if we have cached static indices for this request
+                blocks_id = id(cached.block_indices)
+                static_entry = self._sparse_static_cache.get(req_idx)
 
-                # Block start/end positions
-                block_starts = all_blocks.long() * block_size
-                block_ends = torch.clamp(block_starts + block_size, max=sl)
-                sparse_mask = (block_starts >= dense_len) & (block_starts < sl)
+                if static_entry is not None and static_entry[1] == blocks_id:
+                    # Reuse cached static physical indices (dense + sparse blocks)
+                    static_phys = static_entry[0]
+                else:
+                    # Compute static token positions: dense region + sparse blocks
+                    all_blocks = torch.cat(cached.block_indices, dim=0).unique()
+                    all_blocks = all_blocks[all_blocks >= 0].sort().values
 
-                # 1. Dense region [0, dense_len)
-                dense_end = min(dense_len, sl)
-                parts = [torch.arange(0, dense_end, device=device, dtype=torch.long)]
+                    block_starts = all_blocks.long() * block_size
+                    block_ends = torch.clamp(block_starts + block_size, max=sl)
+                    sparse_mask = (block_starts >= dense_len) & (block_starts < sl)
 
-                # 2. Sparse block positions (vectorized — no inner Python loop)
-                if sparse_mask.any():
-                    s_starts = block_starts[sparse_mask]
-                    s_ends = block_ends[sparse_mask]
-                    block_lens = s_ends - s_starts
-                    # Vectorized range expansion: arange(total) + repeat_interleave offsets
-                    total_sparse = block_lens.sum().item()
-                    if total_sparse > 0:
-                        offsets = torch.repeat_interleave(
-                            s_starts - torch.cat([torch.zeros(1, device=device, dtype=torch.long),
-                                                   block_lens[:-1].cumsum(0)]),
-                            block_lens
-                        )
-                        sparse_pos = torch.arange(total_sparse, device=device, dtype=torch.long) + offsets
-                        parts.append(sparse_pos)
+                    dense_end = min(dense_len, sl)
+                    static_parts = [torch.arange(0, dense_end, device=device, dtype=torch.long)]
 
-                # 3. Window region
+                    if sparse_mask.any():
+                        s_starts = block_starts[sparse_mask]
+                        s_ends = block_ends[sparse_mask]
+                        block_lens = s_ends - s_starts
+                        total_sparse = block_lens.sum().item()
+                        if total_sparse > 0:
+                            offsets = torch.repeat_interleave(
+                                s_starts - torch.cat([torch.zeros(1, device=device, dtype=torch.long),
+                                                       block_lens[:-1].cumsum(0)]),
+                                block_lens
+                            )
+                            sparse_pos = torch.arange(total_sparse, device=device, dtype=torch.long) + offsets
+                            static_parts.append(sparse_pos)
+
+                    static_positions = torch.unique(torch.cat(static_parts), sorted=True)
+                    static_phys = self.req_to_token[req_idx, static_positions].to(torch.int32)
+                    # Cache for future steps
+                    self._sparse_static_cache[req_idx] = (static_phys, blocks_id)
+
+                # Window region (changes every step — always recomputed, cheap)
                 window_start = max(dense_len, sl - window_size)
                 if window_start < sl:
-                    parts.append(torch.arange(window_start, sl, device=device, dtype=torch.long))
+                    window_phys = self.req_to_token[req_idx, window_start:sl].to(torch.int32)
+                    # Merge static + window, deduplicate
+                    phys = torch.unique(torch.cat([static_phys, window_phys]), sorted=True)
+                else:
+                    phys = static_phys
 
-                token_positions = torch.unique(torch.cat(parts), sorted=True)
-                phys = self.req_to_token[req_idx, token_positions].to(torch.int32)
                 n = len(phys)
                 kv_indices[offset:offset + n] = phys
                 offset += n
@@ -1452,7 +1482,6 @@ class FlashInferIndicesUpdaterDecode:
 
         if wrapper_uses_fast_decode_plan:
             # Build local override indptr for sparse lens (no global contention)
-            # kv_indptr[0] is already 0, so kv_indptr[1:bs+1] IS the cumsum
             sparse_indptr_cpu = kv_indptr[:bs + 1].cpu()
             fwd_kwargs["global_override_indptr_cpu"] = sparse_indptr_cpu
 
