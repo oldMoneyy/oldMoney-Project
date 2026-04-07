@@ -305,10 +305,10 @@ Dense:
 ```bash
 fuser -k -9 31333/tcp
 # uv pip install --no-deps -e /opt/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python
-uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_flashinfer
-# uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
-export SGLANG_SALA_PROFILE=1
-export SGLANG_SPARSE_DECODE=1
+# uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_flashinfer
+uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
+# export SGLANG_SPARSE_PREFILL=1
+# export SGLANG_SPARSE_DECODE=1
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 nohup python3 -m sglang.launch_server \
@@ -342,6 +342,40 @@ nohup python3 eval_model.py \
   --num_samples 150 \
   --verbose \
   > /opt/oldMoney-Project/logs/eval_sala_flashinfer.log 2>&1 &
+
+
+fuser -k -9 31333/tcp
+# uv pip install --no-deps -e /opt/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python
+# uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_flashinfer
+uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
+# export SGLANG_SPARSE_PREFILL=1
+# export SGLANG_SPARSE_DECODE=1
+export PYTORCH_ALLOC_CONF=expandable_segments:True
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+/opt/nvidia/nsight-compute/2025.2.1/host/target-linux-x64/nsys profile \
+    -o /opt/lightning_profile -t cuda \
+    --duration 1200 \
+    python3 -m sglang.launch_server \
+    --model-path /opt/model_gptq_int4_dense_smooth \
+    --port 31333 \
+    --quantization gptq_marlin \
+    --kv-cache-dtype fp8_e5m2 \
+    --dtype bfloat16 \
+    --disable-radix-cache \
+    --disable-overlap-schedule \
+    --max-running-requests 64 \
+    --attention-backend flashinfer \
+    --chunked-prefill-size 32768 \
+    --mem-fraction-static 0.82 \
+    --max-mamba-cache-size 64 \
+    --disable-cuda-graph \
+    --log-level info &
+
+fuser -k 31333/tcp
+sleep 10
+/opt/nvidia/nsight-compute/2025.2.1/host/target-linux-x64/nsys stats \
+    --report cuda_gpu_kern_sum --timeunit msec \
+    /opt/lightning_profile.nsys-rep
 ```
 
 
