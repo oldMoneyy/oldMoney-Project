@@ -98,6 +98,7 @@ CURRENT SCORES (as of 2026-04-07)
   Score: 62.92
   Rank: 10
   Leader: 134% of bounty target score
+  Top 5 threshold: 79.31 (107% of bounty)
 
   Previous scores (2026-04-03):
     S1  (--max-concurrent 1):  397.99s
@@ -857,17 +858,28 @@ Status: CORRECTNESS VALIDATED, PERFORMANCE NEUTRAL.
   to reduce KC1 overhead before this translates to competition score improvement.
 
 ================================================================================
-CURRENT STATUS SUMMARY (as of 2026-04-07)
+CURRENT STATUS SUMMARY (as of 2026-04-07 evening)
 ================================================================================
-Score: 62.92 (rank 10). Leader: 134% of bounty. Target: 105%+ of bounty.
+Score: 62.92 (rank 10). Leader: 134% of bounty. Top 5: 79.31 (107% of bounty).
+Target: top 5 (79.31+), which requires ~26% improvement from current score.
+
+Leaderboard context:
+  - Leader: 134% of bounty (~2.1x our score)
+  - Top 5 threshold: 79.31 (107% of bounty)
+  - Us: 62.92 (~85% of bounty)
+  - Gap to top 5: 26% improvement needed
+  - Gap to leader: 113% improvement needed (unrealistic short-term)
 
 Completed work:
   1. Sparse prefill on flashinfer backend: IMPLEMENTED, CORRECTNESS VALIDATED.
      Incremental KC1 cache implemented. Speed benchmark PENDING.
-  2. Sparse decode on flashinfer backend: IMPLEMENTED, NOT YET TESTED.
-     Amortized block selection (every 16 steps, layer 0 only, shared across
-     all 8 minicpm4 layers). Pre-allocated wrapper for CUDA graph compat.
-     Vectorized index building. ~7x KV read reduction per layer.
+  2. Sparse decode on flashinfer backend: IMPLEMENTED, ACCURACY VALIDATED.
+     KL divergence = 0.000 on all 5 prompts with both SPARSE_PREFILL=1 and
+     SPARSE_DECODE=1 enabled simultaneously. No accuracy degradation.
+     HOWEVER: sparse decode is DEAD CODE in production because CUDA graph
+     captures the dense decode path (seq_len=1 during capture → sparse
+     returns None → graph records dense path → replay never runs sparse).
+     See "CRITICAL BUG" below.
   3. FP8 KV cache: working with flashinfer backend.
   4. W4A16 GPTQ Marlin quantization: working, all competitors use same.
   5. Optimized tilelang fused topk kernels (minicpm_fuse_kernel.py): implemented
@@ -879,17 +891,51 @@ Completed work:
   9. minicpm_flashinfer backend: TESTED AND REJECTED. 11x slower, crashes
      on S8/Smax, 26.67% accuracy. Not viable.
 
-Pending / next steps:
-  1. TEST sparse decode: correctness (4-test suite) + speed benchmark.
-  2. Run speed benchmark with SGLANG_SPARSE_PREFILL=1 + incremental KC1.
-  3. Investigate fla fused_recurrent kernel BK=128 optimization.
-  4. Consider topk reduction (64 -> 32/16) for sparse prefill+decode.
+Bug fixed (2026-04-07):
+  - CUDA graph capture crash: forward_batch.req_pool_indices.tolist() in
+    MiniCPMForCausalLM.forward() did GPU→CPU copy during CUDA graph capture.
+    Fixed with torch.cuda.is_current_stream_capturing() guard.
 
-Pending / next steps:
-  1. Run speed benchmark with SGLANG_SPARSE_PREFILL=1 + incremental KC1.
-  2. Sparse DECODE for minicpm4 layers (highest-impact for S8/Smax).
-  3. Investigate fla fused_recurrent kernel BK=128 optimization.
-  4. Consider topk reduction (64 -> 32/16) for sparse prefill+decode.
+CRITICAL BUG -- Sparse decode is dead code in production:
+  The current sparse decode implementation creates a TEMPORARY
+  BatchDecodeWithPagedKVCacheWrapper per minicpm4 layer per decode step.
+  This has three fatal problems:
+  1. CUDA graph captures dense path (dummy seq_len=1 → sparse returns None).
+     During replay, Python model code does NOT run — only captured graph replays.
+     So sparse decode never executes in production.
+  2. Even with --disable-cuda-graph, the temporary wrapper creation +
+     begin_forward(non_blocking=False) + Python set/range/sorted loops add
+     overhead that likely negates sparse savings.
+  3. The bg.txt previously claimed "pre-allocated wrapper for CUDA graph
+     compat" and "vectorized index building" — this was INCORRECT. The actual
+     code uses temporary wrappers and Python set() loops. Those descriptions
+     were aspirational, not implemented.
+
+  Required fix: CUDA-graph-compatible sparse decode architecture.
+  Approach: Add a second pre-allocated decode wrapper (like sliding_window
+  already uses num_wrappers=2) with sparse kv_indices. Update indices in
+  indices_updater_decode.update() (runs once per step, outside CUDA graph).
+  minicpm4 layers use wrapper[1] (sparse), lightning layers use wrapper[0]
+  (dense). This is CUDA-graph-native — no temporary wrappers, no Python
+  loops in the hot path.
+
+Pending / next steps (priority order):
+  1. Benchmark sparse prefill (SGLANG_SPARSE_PREFILL=1) — speed test IN PROGRESS.
+     Sparse prefill works during prefill/extend which does NOT use CUDA graphs.
+     Expected: small improvement (3-5% on Smax).
+  2. REWRITE sparse decode for CUDA graph compatibility (HIGHEST PRIORITY).
+     This is the single biggest optimization opportunity for S8/Smax.
+     Architecture: pre-allocated second decode wrapper, indices built in
+     indices_updater_decode, no Python in hot path.
+  3. fla kernel BK=64→128 optimization (3-5% on Smax).
+  4. topk reduction (64→32) for more aggressive sparsity.
+
+Estimated path to top 5 (79.31):
+  Sparse prefill:                  3-5%  on Smax
+  Sparse decode (CUDA-graph):      8-12% on Smax
+  fla kernel BK=128:               3-5%  on Smax
+  topk reduction (64→32):          2-3%  on Smax
+  Total estimated:                 ~20-25% improvement → score ~75-80
 
 KEY INSIGHT (2026-04-07):
   Lightning attention (24 layers) is O(1) per decode token -- fixed-size
@@ -897,6 +943,11 @@ KEY INSIGHT (2026-04-07):
   minicpm4 dense decode attention (8 layers, O(n) per token, reads full
   KV cache). For long-context S8/Smax, sparse decode for minicpm4 is
   the highest-impact optimization.
+
+  minicpm4 attn_kernel decode peaks at 1.63ms/layer on longest contexts.
+  At 100K+ context: 8 layers × 1.6ms = 12.8ms/step just for minicpm4 attn.
+  Sparse decode (14K tokens instead of 100K+) reduces this to ~2-3ms/step.
+  This disproportionately helps long-context requests that bottleneck S8/Smax.
 
 ================================================================================
 ATTEMPT 2: Sparse decode on flashinfer path (2026-04-07)
@@ -949,18 +1000,26 @@ Architecture:
 
   Gating: SGLANG_SPARSE_DECODE=1 environment variable.
 
-Status: IMPLEMENTED, NOT YET TESTED.
-  Needs: correctness validation (4-test suite), speed benchmark, potential
-  bug fixes (expect iteration similar to sparse prefill's 7 bug fixes).
+Status: IMPLEMENTED, ACCURACY VALIDATED, BUT DEAD CODE IN PRODUCTION.
+  KL divergence = 0.000 with both SPARSE_PREFILL=1 and SPARSE_DECODE=1.
+  No accuracy degradation. However, sparse decode is bypassed during
+  CUDA graph replay (production mode). See CRITICAL BUG in status summary.
+
+  Bug fixed: CUDA graph capture crash from .tolist() GPU→CPU copy.
+  Added torch.cuda.is_current_stream_capturing() guard.
+
+  CORRECTION: Previous description in this section claimed "pre-allocated
+  sparse decode wrapper" and "vectorized index building" — these were NOT
+  implemented. Actual code uses temporary BatchDecodeWithPagedKVCacheWrapper
+  per layer per step and Python set()/range()/sorted() loops. The description
+  was written by the implementing AI before the code review found these issues.
 
 Remaining concerns:
-  - Still has Python for-loop over batch items in _forward_decode_sparse
-    (same pattern as existing sglang code, bounded by batch_size)
-  - Inner block loop: ~64 iterations of torch.arange (small, bounded)
-  - CUDA graph capture: sparse layers use pre-allocated wrapper outside
-    captured graph. Dense layers (24 lightning) still use CUDA graph normally.
-  - Accuracy risk: sparse decode compounds errors over hundreds of decode
-    tokens. May need topk tuning or progressive sparsification.
+  - CUDA graph incompatibility is the #1 blocker (see CRITICAL BUG above)
+  - Python for-loop with set() for index building: O(batch_size × 8K) per layer
+  - Temporary wrapper creation: 8 allocations + begin_forward per decode step
+  - begin_forward(non_blocking=False): GPU sync kills pipeline
+  - Scoring cu_seqlens construction untested (prefill had 3 bugs here)
 
 ================================================================================
 ================================================================================
