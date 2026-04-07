@@ -1,0 +1,10 @@
+Model: /opt/model_gptq_int4_dense_smooth
+Data: eval_dataset/perf_public_set.jsonl
+Original Accuracy: 80.47%
+Normalized Accuracy: 100%
+Num Samples: 150
+Total Duration: 2161.56 s
+Total Output Tokens: 1408039
+Average Input Tokens: 57627.8
+Average Output Tokens: 9386.9
+TPS: 651.40

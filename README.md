@@ -306,8 +306,9 @@ Dense:
 fuser -k -9 31333/tcp
 # uv pip install --no-deps -e /opt/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python
 uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_flashinfer
-uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
-# export SGLANG_SALA_PROFILE=1
+# uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
+export SGLANG_SALA_PROFILE=1
+export SGLANG_SPARSE_DECODE=1
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 nohup python3 -m sglang.launch_server \
@@ -331,6 +332,16 @@ echo "=== Smax (unlimited) ==="
 python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31333 \
     --dataset-name custom --dataset-path /opt/oldMoney-Project/bench/competition_bench_64.jsonl \
     --num-prompts 64 --flush-cache
+
+cd /opt/oldMoney-Project/SOAR-Toolkit
+nohup python3 eval_model.py \
+  --api_base http://127.0.0.1:31333 \
+  --model_path /opt/model_gptq_int4_dense_smooth \
+  --data_path eval_dataset/perf_public_set.jsonl \
+  --concurrency 64 \
+  --num_samples 150 \
+  --verbose \
+  > /opt/oldMoney-Project/logs/eval_sala_flashinfer.log 2>&1 &
 ```
 
 
