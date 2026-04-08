@@ -45,6 +45,101 @@ def create_flashinfer_kv_indices_triton(
         tl.store(kv_indices_ptr + kv_indices_offset + offset, data, mask=mask)
 
 
+@triton.jit
+def build_sparse_kv_indices_kernel(
+    # Inputs
+    req_to_token_ptr,           # (max_reqs, max_seq_len) int32
+    req_pool_indices_ptr,       # (bs,) int32
+    seq_lens_ptr,               # (bs,) int32
+    block_pool_ptr,             # (max_reqs, max_blocks_per_req) int32
+    n_blocks_ptr,               # (max_reqs,) int32
+    # Outputs
+    kv_indices_out_ptr,         # (total_buf_size,) int32
+    kv_indptr_ptr,              # (bs+1,) int32 — INPUT: cumulative offsets
+    # Strides
+    req_to_token_stride: tl.constexpr,
+    block_pool_stride: tl.constexpr,
+    # Constants
+    DENSE_LEN: tl.constexpr,
+    WINDOW_SIZE: tl.constexpr,
+    BLOCK_SIZE_SPARSE: tl.constexpr,  # sparse block size (64)
+):
+    """Build sparse kv_indices for FlashInfer decode.
+
+    One program per request. For sparse requests: writes dense region [0, dense_len),
+    then selected block tokens beyond dense_len, then window region.
+    For dense requests: writes all tokens [0, seq_len).
+
+    kv_indptr is an INPUT (pre-computed on CPU) that tells each program where
+    to start writing in kv_indices_out.
+    """
+    COPY_BLOCK: tl.constexpr = 512
+    pid = tl.program_id(0)
+
+    req_pool_idx = tl.load(req_pool_indices_ptr + pid)
+    sl = tl.load(seq_lens_ptr + pid).to(tl.int32)
+    n_blocks = tl.load(n_blocks_ptr + req_pool_idx).to(tl.int32)
+    out_offset = tl.load(kv_indptr_ptr + pid).to(tl.int64)
+
+    req_base = req_pool_idx.to(tl.int64) * req_to_token_stride
+    block_base = req_pool_idx.to(tl.int64) * block_pool_stride
+
+    is_sparse = (n_blocks > 0) & (sl > DENSE_LEN)
+
+    if is_sparse:
+        # --- 1. Dense region [0, DENSE_LEN) ---
+        for i in range(tl.cdiv(DENSE_LEN, COPY_BLOCK)):
+            offsets = tl.arange(0, COPY_BLOCK).to(tl.int64) + i * COPY_BLOCK
+            mask = offsets < DENSE_LEN
+            phys = tl.load(req_to_token_ptr + req_base + offsets, mask=mask, other=0)
+            tl.store(kv_indices_out_ptr + out_offset + offsets, phys, mask=mask)
+        out_offset += DENSE_LEN
+
+        # --- 2. Sparse blocks beyond dense_len ---
+        for bi in range(n_blocks):
+            block_idx = tl.load(block_pool_ptr + block_base + bi).to(tl.int32)
+            block_start = block_idx * BLOCK_SIZE_SPARSE
+            block_end = tl.minimum(block_start + BLOCK_SIZE_SPARSE, sl)
+
+            if block_start >= DENSE_LEN and block_start < sl:
+                n_tokens = block_end - block_start
+                # BLOCK_SIZE_SPARSE (64) fits in one COPY_BLOCK (512), single pass
+                offsets = tl.arange(0, BLOCK_SIZE_SPARSE).to(tl.int64)
+                mask = offsets < n_tokens
+                phys = tl.load(
+                    req_to_token_ptr + req_base + block_start.to(tl.int64) + offsets,
+                    mask=mask, other=0,
+                )
+                tl.store(
+                    kv_indices_out_ptr + out_offset + offsets,
+                    phys, mask=mask,
+                )
+                out_offset += n_tokens.to(tl.int64)
+
+        # --- 3. Window region [max(DENSE_LEN, sl - WINDOW_SIZE), sl) ---
+        window_start = tl.maximum(DENSE_LEN, sl - WINDOW_SIZE)
+        window_len = sl - window_start
+        if window_len > 0:
+            for i in range(tl.cdiv(window_len, COPY_BLOCK)):
+                offsets = tl.arange(0, COPY_BLOCK).to(tl.int64) + i * COPY_BLOCK
+                mask = offsets < window_len
+                phys = tl.load(
+                    req_to_token_ptr + req_base + window_start.to(tl.int64) + offsets,
+                    mask=mask, other=0,
+                )
+                tl.store(
+                    kv_indices_out_ptr + out_offset + offsets,
+                    phys, mask=mask,
+                )
+    else:
+        # Dense fallback: copy all [0, sl)
+        for i in range(tl.cdiv(sl, COPY_BLOCK)):
+            offsets = tl.arange(0, COPY_BLOCK).to(tl.int64) + i * COPY_BLOCK
+            mask = offsets < sl
+            phys = tl.load(req_to_token_ptr + req_base + offsets, mask=mask, other=0)
+            tl.store(kv_indices_out_ptr + out_offset + offsets, phys, mask=mask)
+
+
 def get_num_page_per_block_flashmla(page_size: int = 64) -> int:
     num_page_per_block = _FLASHMLA_CREATE_KV_BLOCK_SIZE // page_size
     return num_page_per_block
