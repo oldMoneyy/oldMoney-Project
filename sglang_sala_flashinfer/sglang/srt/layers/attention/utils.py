@@ -87,6 +87,9 @@ def build_sparse_kv_indices_kernel(
     is_sparse = (n_blocks > 0) & (sl > DENSE_LEN)
 
     if is_sparse:
+        # Compute window_start upfront (needed to clip sparse blocks)
+        window_start = tl.maximum(DENSE_LEN, sl - WINDOW_SIZE)
+
         # --- 1. Dense region [0, DENSE_LEN) ---
         for i in range(tl.cdiv(DENSE_LEN, COPY_BLOCK)):
             offsets = tl.arange(0, COPY_BLOCK).to(tl.int64) + i * COPY_BLOCK
@@ -95,14 +98,18 @@ def build_sparse_kv_indices_kernel(
             tl.store(kv_indices_out_ptr + out_offset + offsets, phys, mask=mask)
         out_offset += DENSE_LEN
 
-        # --- 2. Sparse blocks beyond dense_len ---
+        # --- 2. Sparse blocks beyond dense_len, clipped at window_start ---
+        # Blocks overlapping with window are clipped to avoid duplicates.
+        # Window will cover [window_start, sl) in step 3.
         for bi in range(n_blocks):
             block_idx = tl.load(block_pool_ptr + block_base + bi).to(tl.int32)
             block_start = block_idx * BLOCK_SIZE_SPARSE
             block_end = tl.minimum(block_start + BLOCK_SIZE_SPARSE, sl)
+            # Clip end at window_start to prevent overlap with window region
+            safe_end = tl.minimum(block_end, window_start)
 
-            if block_start >= DENSE_LEN and block_start < sl:
-                n_tokens = block_end - block_start
+            if block_start >= DENSE_LEN and safe_end > block_start:
+                n_tokens = safe_end - block_start
                 # BLOCK_SIZE_SPARSE (64) fits in one COPY_BLOCK (512), single pass
                 offsets = tl.arange(0, BLOCK_SIZE_SPARSE).to(tl.int64)
                 mask = offsets < n_tokens
@@ -116,8 +123,7 @@ def build_sparse_kv_indices_kernel(
                 )
                 out_offset += n_tokens.to(tl.int64)
 
-        # --- 3. Window region [max(DENSE_LEN, sl - WINDOW_SIZE), sl) ---
-        window_start = tl.maximum(DENSE_LEN, sl - WINDOW_SIZE)
+        # --- 3. Window region [window_start, sl) ---
         window_len = sl - window_start
         if window_len > 0:
             for i in range(tl.cdiv(window_len, COPY_BLOCK)):

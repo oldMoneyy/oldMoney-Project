@@ -1423,12 +1423,16 @@ class FlashInferIndicesUpdaterDecode:
                     self._update_sparse_pool(req_idx, cached)
 
                 # Compute exact kv_len from CPU-side data (no GPU sync)
+                # Blocks are clipped at window_start to avoid overlap with window.
+                window_start = max(dense_len, sl - window_size)
                 static_count = dense_len
                 for block_idx in self._sparse_blocks_cpu[req_idx]:
                     start = block_idx * block_size
-                    if start >= dense_len and start < sl:
-                        static_count += min(block_size, sl - start)
-                window_start = max(dense_len, sl - window_size)
+                    if start >= dense_len:
+                        end = min(start + block_size, sl)
+                        safe_end = min(end, window_start)
+                        if safe_end > start:
+                            static_count += safe_end - start
                 kv_lens.append(static_count + sl - window_start)
             else:
                 kv_lens.append(sl)
