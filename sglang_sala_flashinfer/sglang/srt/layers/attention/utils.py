@@ -133,26 +133,25 @@ def build_sparse_decode_kv_indices_kernel(
     req_to_token_ptr,           # (max_reqs, max_seq_len) int32
     req_pool_indices_ptr,       # (bs,) int32/int64
     seq_lens_ptr,               # (bs,) int32
-    block_pool_ptr,             # (total_blocks,) int32 — flat, pre-filtered block indices
-    block_offsets_ptr,          # (bs+1,) int32 — indptr into block_pool per request
-    is_sparse_ptr,              # (bs,) int32 — 1=sparse, 0=dense
+    block_pool_ptr,             # (max_reqs, max_blocks_per_req) int32 — persistent GPU pool
+    n_blocks_ptr,               # (max_reqs,) int32 — blocks per request
+    is_sparse_ptr,              # (bs,) int32 — 1=sparse, 0=dense (pre-set on GPU)
     # Outputs
     kv_indices_out_ptr,         # (total_buf_size,) int32
     kv_indptr_ptr,              # (bs+1,) int32 — INPUT: pre-computed output offsets
     # Strides / Constants
     req_to_token_stride: tl.constexpr,
+    block_pool_stride: tl.constexpr,
     DENSE_LEN: tl.constexpr,
     WINDOW_SIZE: tl.constexpr,
-    BLOCK_SIZE_SPARSE: tl.constexpr,  # sparse block size (e.g. 64)
+    BLOCK_SIZE_SPARSE: tl.constexpr,
 ):
     """Build sparse decode kv_indices for FlashInfer.
 
-    One program per request. For sparse requests: writes dense region [0, dense_len),
-    then pre-filtered block tokens (unconditionally), then window [window_start, sl).
+    One program per request. Reads from persistent 2D GPU block pool.
+    Blocks in pool are pre-filtered (start >= dense_len) on update.
+    Kernel clips at window_start using arithmetic (no conditional).
     For dense requests: copies all [0, sl) from req_to_token.
-
-    Blocks are pre-filtered on CPU: only qualifying blocks (start >= dense_len,
-    clipped at window_start) are in block_pool. No conditional inside the loop.
     """
     COPY_BLOCK: tl.constexpr = 512
     pid = tl.program_id(0)
@@ -163,6 +162,7 @@ def build_sparse_decode_kv_indices_kernel(
     out_offset = tl.load(kv_indptr_ptr + pid).to(tl.int64)
 
     req_base = req_pool_idx.to(tl.int64) * req_to_token_stride
+    block_base = req_pool_idx.to(tl.int64) * block_pool_stride
 
     if is_sparse:
         window_start = tl.maximum(DENSE_LEN, sl - WINDOW_SIZE)
@@ -175,27 +175,28 @@ def build_sparse_decode_kv_indices_kernel(
             tl.store(kv_indices_out_ptr + out_offset + offsets, phys, mask=mask)
         out_offset += DENSE_LEN
 
-        # --- 2. Pre-filtered sparse blocks (unconditional — all valid) ---
-        block_start_idx = tl.load(block_offsets_ptr + pid).to(tl.int32)
-        block_end_idx = tl.load(block_offsets_ptr + pid + 1).to(tl.int32)
-        n_blocks = block_end_idx - block_start_idx
-
-        for bi in range(n_blocks):
-            block_idx = tl.load(block_pool_ptr + block_start_idx + bi).to(tl.int32)
+        # --- 2. Sparse blocks from persistent pool ---
+        # All blocks have start >= DENSE_LEN (pre-filtered on CPU).
+        # Clip at window_start: n_tokens = min(BLOCK_SIZE, window_start - start).
+        # If block is fully inside window (start >= window_start), n_tokens <= 0 → skip via mask.
+        n_blks = tl.load(n_blocks_ptr + req_pool_idx).to(tl.int32)
+        for bi in range(n_blks):
+            block_idx = tl.load(block_pool_ptr + block_base + bi).to(tl.int32)
             block_start = block_idx * BLOCK_SIZE_SPARSE
-            # Blocks pre-clipped at window_start on CPU
             n_tokens = tl.minimum(BLOCK_SIZE_SPARSE, window_start - block_start)
-            offsets = tl.arange(0, BLOCK_SIZE_SPARSE).to(tl.int64)
-            mask = offsets < n_tokens
+            # n_tokens <= 0 means block is inside window region — mask prevents any write
+            block_offsets = tl.arange(0, BLOCK_SIZE_SPARSE).to(tl.int64)
+            block_mask = block_offsets < n_tokens
             phys = tl.load(
-                req_to_token_ptr + req_base + block_start.to(tl.int64) + offsets,
-                mask=mask, other=0,
+                req_to_token_ptr + req_base + block_start.to(tl.int64) + block_offsets,
+                mask=block_mask, other=0,
             )
             tl.store(
-                kv_indices_out_ptr + out_offset + offsets,
-                phys, mask=mask,
+                kv_indices_out_ptr + out_offset + block_offsets,
+                phys, mask=block_mask,
             )
-            out_offset += n_tokens.to(tl.int64)
+            # Clamp to 0 so we don't go backwards if n_tokens is negative
+            out_offset += tl.maximum(0, n_tokens).to(tl.int64)
 
         # --- 3. Window region [window_start, sl) ---
         window_len = sl - window_start
