@@ -117,13 +117,13 @@ def build_sparse_prefill_kv_indices_kernel(
             out_offset += n_tokens.to(tl.int64)
     else:
         # Dense fallback: copy from original_kv_indices
-        orig_start = tl.load(orig_kv_indptr_ptr + pid).to(tl.int64)
-        orig_end = tl.load(orig_kv_indptr_ptr + pid + 1).to(tl.int64)
+        orig_start = tl.load(orig_kv_indptr_ptr + pid).to(tl.int32)
+        orig_end = tl.load(orig_kv_indptr_ptr + pid + 1).to(tl.int32)
         orig_len = orig_end - orig_start
         for i in range(tl.cdiv(orig_len, COPY_BLOCK)):
             offsets = tl.arange(0, COPY_BLOCK).to(tl.int64) + i * COPY_BLOCK
             mask = offsets < orig_len
-            data = tl.load(orig_kv_indices_ptr + orig_start + offsets, mask=mask, other=0)
+            data = tl.load(orig_kv_indices_ptr + orig_start.to(tl.int64) + offsets, mask=mask, other=0)
             tl.store(kv_indices_out_ptr + out_offset + offsets, data, mask=mask)
 def build_sparse_kv_indices_kernel(
     # Inputs
