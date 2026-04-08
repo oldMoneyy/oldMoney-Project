@@ -19,10 +19,7 @@ import torch
 from sglang.srt.dllm.config import DllmConfig
 from sglang.srt.environ import envs
 from sglang.srt.layers.attention.base_attn_backend import AttentionBackend
-from sglang.srt.layers.attention.utils import (
-    build_sparse_kv_indices_kernel,
-    create_flashinfer_kv_indices_triton,
-)
+from sglang.srt.layers.attention.utils import create_flashinfer_kv_indices_triton
 from sglang.srt.layers.dp_attention import get_attention_tp_size
 from sglang.srt.layers.radix_attention import AttentionType
 from sglang.srt.mem_cache.swa_memory_pool import SWATokenToKVPoolAllocator
@@ -1169,25 +1166,10 @@ class FlashInferIndicesUpdaterDecode:
         elif self.attn_backend.dispatch_reason == WrapperDispatch.SPARSE_DECODE:
             self.update = self.update_sparse_decode
             self._sparse_cfg = None  # Lazy-loaded on first call (model init hasn't run yet)
-
-            # --- Persistent sparse block pool ---
-            # Stores deduplicated block indices per request on GPU.
-            # Updated only when block selection changes (rare).
-            max_reqs = self.req_to_token.shape[0]
-            _topk_env = int(os.environ.get("SGLANG_SPARSE_TOPK", "0"))
-            _effective_topk = _topk_env if _topk_env > 0 else 64
-            # Upper bound: num_kv_heads * topk. Use generous default.
-            self._max_unique_blocks = self.num_kv_heads * _effective_topk
-            self._sparse_block_pool = torch.zeros(
-                (max_reqs, self._max_unique_blocks),
-                dtype=torch.int32, device=model_runner.device,
-            )
-            self._sparse_n_blocks = torch.zeros(
-                max_reqs, dtype=torch.int32, device=model_runner.device,
-            )
-            # CPU-side caches (no GPU sync needed during hot loop)
-            self._sparse_blocks_cpu: dict[int, list] = {}   # req_idx -> [block_idx, ...]
-            self._sparse_blocks_id: dict[int, int] = {}     # req_idx -> id(block_indices)
+            # Cache for static physical indices per request (dense + sparse blocks).
+            # Key: req_pool_index, Value: (static_phys: Tensor, blocks_id: int)
+            # blocks_id = id(cached.block_indices) to detect block changes.
+            self._sparse_static_cache: dict[int, tuple[torch.Tensor, int]] = {}
         else:
             assert self.attn_backend.num_wrappers == 1
             self.update = self.update_single_wrapper
@@ -1317,23 +1299,6 @@ class FlashInferIndicesUpdaterDecode:
                 seq_lens_cpu=seq_lens_cpu,
             )
 
-    def _update_sparse_pool(self, req_idx: int, cached) -> None:
-        """Update persistent block pool for a request when blocks change.
-
-        Merges per-head block indices, deduplicates, and writes to GPU pool.
-        Also stores CPU-side copy for kv_lens computation without GPU sync.
-        Called only when block selection changes (infrequent).
-        """
-        all_blocks = torch.cat(cached.block_indices, dim=0).unique().sort().values
-        all_blocks = all_blocks[all_blocks >= 0]
-        n = len(all_blocks)
-        n = min(n, self._max_unique_blocks)  # safety clamp
-
-        self._sparse_block_pool[req_idx, :n] = all_blocks[:n].to(torch.int32)
-        self._sparse_n_blocks[req_idx] = n
-        self._sparse_blocks_cpu[req_idx] = all_blocks[:n].tolist()
-        self._sparse_blocks_id[req_idx] = id(cached.block_indices)
-
     def update_sparse_decode(
         self,
         req_pool_indices: torch.Tensor,
@@ -1348,9 +1313,13 @@ class FlashInferIndicesUpdaterDecode:
     ):
         """Build indices for two wrappers: dense (wrapper 0) and sparse (wrapper 1).
 
-        Wrapper 0 (dense): SKIPPED — lightning layers use SimpleGLAAttnBackend.
-        Wrapper 1 (sparse): Triton kernel builds filtered kv_indices from
-        persistent block pool. No per-request Python GPU ops.
+        Wrapper 0 (dense): SKIPPED — lightning layers (24/32) use SimpleGLAAttnBackend
+        not FlashInfer, so wrapper 0 is never called during decode. Skipping its
+        begin_forward eliminates ~0.5ms/step of wasted FlashInfer planning.
+
+        Wrapper 1 (sparse): filtered indices for 8 minicpm4 layers using cached
+        block selections from _decode_block_cache. Static portions (dense region +
+        sparse blocks) are cached per request to avoid redundant GPU ops.
         """
         # Lazy-load sparse config (model init runs after backend init)
         if self._sparse_cfg is None:
@@ -1394,98 +1363,94 @@ class FlashInferIndicesUpdaterDecode:
 
         from sglang.srt.layers.attention.sparse_prefill import _decode_block_cache
 
-        # --- Step 1: CPU-side loop — update block pool & compute kv_lens ---
-        # Only GPU ops: _update_sparse_pool (rare, on block change).
-        # kv_lens computation is pure CPU arithmetic.
+        # Build sparse kv_indices for wrapper 1
+        kv_indptr = self.kv_indptr[1]
+        if decode_wrappers[1].is_cuda_graph_enabled:
+            kv_indices = decode_wrappers[1]._paged_kv_indices_buf
+        else:
+            max_per_req = self.attn_backend._sparse_decode_max_kv_per_req
+            kv_indices = torch.empty(
+                bs * max_per_req, dtype=torch.int32, device=device
+            )
+
         seq_lens_list = seq_lens_cpu.tolist() if seq_lens_cpu is not None else seq_lens.tolist()
         req_pool_list = req_pool_indices.tolist()
 
-        # Evict stale pool entries
+        # Evict stale static cache entries for requests no longer in the batch
         active_set = set(req_pool_list)
-        stale = [k for k in self._sparse_blocks_cpu if k not in active_set]
-        if stale:
-            stale_t = torch.tensor(stale, dtype=torch.int64, device=device)
-            self._sparse_n_blocks[stale_t] = 0
-            for k in stale:
-                del self._sparse_blocks_cpu[k]
-                del self._sparse_blocks_id[k]
+        stale = [k for k in self._sparse_static_cache if k not in active_set]
+        for k in stale:
+            del self._sparse_static_cache[k]
 
-        kv_lens = []
-        is_sparse_list = []
+        offset = 0
         for b in range(bs):
             req_idx = req_pool_list[b]
             sl = seq_lens_list[b]
             cached = _decode_block_cache.get(req_idx)
 
             if sl > dense_len and cached is not None:
-                # Update pool if blocks changed
-                bid = id(cached.block_indices)
-                if self._sparse_blocks_id.get(req_idx) != bid:
-                    self._update_sparse_pool(req_idx, cached)
+                # Check if we have cached static indices for this request
+                blocks_id = id(cached.block_indices)
+                static_entry = self._sparse_static_cache.get(req_idx)
 
-                # Compute exact kv_len from CPU-side data (no GPU sync)
-                # Blocks are clipped at window_start to avoid overlap with window.
+                if static_entry is not None and static_entry[1] == blocks_id:
+                    # Reuse cached static physical indices (dense + sparse blocks)
+                    static_phys = static_entry[0]
+                else:
+                    # Compute static token positions: dense region + sparse blocks
+                    all_blocks = torch.cat(cached.block_indices, dim=0).unique()
+                    all_blocks = all_blocks[all_blocks >= 0].sort().values
+
+                    block_starts = all_blocks.long() * block_size
+                    block_ends = torch.clamp(block_starts + block_size, max=sl)
+                    sparse_mask = (block_starts >= dense_len) & (block_starts < sl)
+
+                    dense_end = min(dense_len, sl)
+                    static_parts = [torch.arange(0, dense_end, device=device, dtype=torch.long)]
+
+                    if sparse_mask.any():
+                        s_starts = block_starts[sparse_mask]
+                        s_ends = block_ends[sparse_mask]
+                        block_lens = s_ends - s_starts
+                        total_sparse = block_lens.sum().item()
+                        if total_sparse > 0:
+                            offsets = torch.repeat_interleave(
+                                s_starts - torch.cat([torch.zeros(1, device=device, dtype=torch.long),
+                                                       block_lens[:-1].cumsum(0)]),
+                                block_lens
+                            )
+                            sparse_pos = torch.arange(total_sparse, device=device, dtype=torch.long) + offsets
+                            static_parts.append(sparse_pos)
+
+                    static_positions = torch.unique(torch.cat(static_parts), sorted=True)
+                    static_phys = self.req_to_token[req_idx, static_positions].to(torch.int32)
+                    # Cache for future steps
+                    self._sparse_static_cache[req_idx] = (static_phys, blocks_id)
+
+                # Window region (changes every step — always recomputed, cheap)
                 window_start = max(dense_len, sl - window_size)
-                static_count = dense_len
-                for block_idx in self._sparse_blocks_cpu[req_idx]:
-                    start = block_idx * block_size
-                    if start >= dense_len:
-                        end = min(start + block_size, sl)
-                        safe_end = min(end, window_start)
-                        if safe_end > start:
-                            static_count += safe_end - start
-                kv_lens.append(static_count + sl - window_start)
-                is_sparse_list.append(1)
+                if window_start < sl:
+                    window_phys = self.req_to_token[req_idx, window_start:sl].to(torch.int32)
+                    # Merge static + window, deduplicate
+                    phys = torch.unique(torch.cat([static_phys, window_phys]), sorted=True)
+                else:
+                    phys = static_phys
+
+                n = len(phys)
+                kv_indices[offset:offset + n] = phys
+                offset += n
             else:
-                kv_lens.append(sl)
-                is_sparse_list.append(0)
+                # Short sequence or no cached blocks: full dense
+                phys = self.req_to_token[req_idx, :sl].to(torch.int32)
+                kv_indices[offset:offset + sl] = phys
+                offset += sl
 
-        # --- Step 2: Build kv_indptr on CPU (no GPU sync) ---
-        kv_indptr = self.kv_indptr[1]
-        sparse_indptr_cpu = torch.zeros(bs + 1, dtype=torch.int32)
-        for b in range(bs):
-            sparse_indptr_cpu[b + 1] = sparse_indptr_cpu[b] + kv_lens[b]
-        kv_indptr[:bs + 1] = sparse_indptr_cpu.to(device, non_blocking=True)
+            kv_indptr[b + 1] = offset
 
-        # --- Step 3: Select output buffer ---
-        if decode_wrappers[1].is_cuda_graph_enabled:
-            kv_indices = decode_wrappers[1]._paged_kv_indices_buf
-        else:
-            total_tokens = sparse_indptr_cpu[bs].item()
-            kv_indices = torch.empty(
-                total_tokens, dtype=torch.int32, device=device
-            )
+        kv_indptr[0] = 0
 
-        # --- Step 4: Launch Triton kernel (1 kernel launch) ---
-        if bs > 0:
-            is_sparse_gpu = torch.tensor(
-                is_sparse_list, dtype=torch.int32, device=device
-            )
-            build_sparse_kv_indices_kernel[(bs,)](
-                self.req_to_token,
-                req_pool_indices,
-                seq_lens,
-                self._sparse_block_pool,
-                self._sparse_n_blocks,
-                is_sparse_gpu,
-                kv_indices,
-                kv_indptr,
-                self.req_to_token.shape[1],
-                self._sparse_block_pool.shape[1],
-                dense_len,
-                window_size,
-                block_size,
-            )
-
-            # Sort each request's kv_indices by physical value to match
-            # the Python version's torch.unique(..., sorted=True) ordering.
-            for b in range(bs):
-                start = sparse_indptr_cpu[b].item()
-                end = sparse_indptr_cpu[b + 1].item()
-                if end > start:
-                    kv_indices[start:end] = kv_indices[start:end].sort().values
-
-        # --- Step 5: begin_forward for wrapper 1 ---
+        # Call begin_forward for wrapper 1 directly (not via call_begin_forward
+        # to avoid global_override_indptr_cpu contention with wrapper 0)
         wrapper = decode_wrappers[1]
 
         wrapper_uses_fast_decode_plan = (
@@ -1495,7 +1460,7 @@ class FlashInferIndicesUpdaterDecode:
 
         fwd_args = [
             kv_indptr[:bs + 1],
-            kv_indices if wrapper.is_cuda_graph_enabled else kv_indices,
+            kv_indices[:offset] if not wrapper.is_cuda_graph_enabled else kv_indices,
             self.kv_last_page_len[:bs],
             self.num_qo_heads,
             self.num_kv_heads,
@@ -1512,7 +1477,8 @@ class FlashInferIndicesUpdaterDecode:
             fwd_kwargs["fixed_split_size"] = fixed_split_size
 
         if wrapper_uses_fast_decode_plan:
-            # CPU-side indptr already computed — no GPU→CPU sync needed!
+            # Build local override indptr for sparse lens (no global contention)
+            sparse_indptr_cpu = kv_indptr[:bs + 1].cpu()
             fwd_kwargs["global_override_indptr_cpu"] = sparse_indptr_cpu
 
         wrapper.begin_forward(*fwd_args, **fwd_kwargs)
