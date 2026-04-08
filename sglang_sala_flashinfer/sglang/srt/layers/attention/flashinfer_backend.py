@@ -1477,6 +1477,14 @@ class FlashInferIndicesUpdaterDecode:
                 block_size,
             )
 
+            # Sort each request's kv_indices by physical value to match
+            # the Python version's torch.unique(..., sorted=True) ordering.
+            for b in range(bs):
+                start = sparse_indptr_cpu[b].item()
+                end = sparse_indptr_cpu[b + 1].item()
+                if end > start:
+                    kv_indices[start:end] = kv_indices[start:end].sort().values
+
         # --- Step 5: begin_forward for wrapper 1 ---
         wrapper = decode_wrappers[1]
 
