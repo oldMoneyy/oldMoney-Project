@@ -1,0 +1,802 @@
+================================================================================
+  SGLang MiniCPM-SALA Execution Roadmap
+  Model: MiniCPMSALAForCausalLM | Quant: GPTQ-Marlin int4 | KV: fp8_e5m2
+  Attention: FlashInfer + HybridLinearAttnBackend (minicpm4 + lightning layers)
+================================================================================
+
+Launch command:
+
+  export SGLANG_SPARSE_PREFILL=1   # only effective in sglang_sala_flashinfer variant, NOT sglang_sala_cp
+
+  python -m sglang.launch_server \
+    --model ... --quantization gptq_marlin --kv-cache-dtype fp8_e5m2 \
+    --attention-backend flashinfer --disable-radix-cache \
+    --chunked-prefill-size 32768 --mem-fraction-static 0.82 \
+    --max-running-requests 64
+
+Flag effects:
+
+  ┌────────────────────────────────┬──────────────────────────────────────────────────────────────┐
+  │              Flag              │                            Effect                            │
+  ├────────────────────────────────┼──────────────────────────────────────────────────────────────┤
+  │ --quantization gptq_marlin     │ Model weights loaded as GPTQ, repacked to Marlin int4 format │
+  │ --kv-cache-dtype fp8_e5m2      │ KV pool allocated as float8_e5m2 (saves ~50% VRAM vs fp16)   │
+  │ --disable-radix-cache          │ Uses ChunkCache instead of RadixCache (no prefix sharing)    │
+  │ --attention-backend flashinfer │ FlashInfer kernels for attention                             │
+  │ --chunked-prefill-size 32768   │ Prefill split into 32K-token chunks per step                 │
+  │ --mem-fraction-static 0.82     │ 82% of GPU memory for KV cache pool                          │
+  │ --max-running-requests 64      │ At most 64 concurrent decode batches                         │
+  └────────────────────────────────┴──────────────────────────────────────────────────────────────┘
+
+All file paths relative to: /opt/oldMoney-Project/sglang_sala_cp/python/sglang/
+(or sglang_sala_flashinfer/sglang/ for the sparse prefill section)
+
+================================================================================
+
+
+sglang/launch_server.py:28  __main__
+│
+├── prepare_server_args(sys.argv[1:])                                    [srt/server_args.py:5084]
+│   ├── ServerArgs.add_cli_args(parser)                                  [srt/server_args.py:2528]
+│   └── ServerArgs.from_cli_args(raw_args)                               [srt/server_args.py:4603]
+│       └── ServerArgs.post_init()
+│           ├── _handle_model_specific_adjustments()                     [srt/server_args.py:688]
+│           │   └── [line 1519] model_arch in ["MiniCPMSALAForCausalLM"]:
+│           │       └── force_dense_minicpm=False → no override
+│           │           (if True, would rewrite "minicpm_flashinfer"→"flashinfer")
+│           │           user passed "flashinfer" directly → unchanged
+│           └── _handle_attention_backend_compatibility()                [srt/server_args.py:695]
+│               └── attention_backend already set → skip auto-selection
+│
+└── run_server(server_args)                                              [sglang/launch_server.py:11]
+    └── launch_server(server_args)                                       [srt/entrypoints/http_server.py:1667]
+        │
+        │
+        ╔══════════════════════════════════════════════════════════════════
+        ║  PHASE 1: SUBPROCESS ORCHESTRATION
+        ╚══════════════════════════════════════════════════════════════════
+        │
+        ├── _launch_subprocesses(server_args)                            [srt/entrypoints/engine.py:925]
+        │   ├── server_args.check_server_args()                          [srt/server_args.py:4656]
+        │   │
+        │   │  ┌─────────────────────────────────────────────────────┐
+        │   │  │  3 processes connected via ZMQ IPC:                 │
+        │   │  │                                                     │
+        │   │  │  TokenizerManager (main)                            │
+        │   │  │        │ ZMQ PUSH                                   │
+        │   │  │        ▼                                            │
+        │   │  │  Scheduler (subprocess, 1 per TP rank)              │
+        │   │  │        │ ZMQ PUSH                                   │
+        │   │  │        ▼                                            │
+        │   │  │  DetokenizerManager (subprocess)                    │
+        │   │  │        │ ZMQ PUSH                                   │
+        │   │  │        └──► back to TokenizerManager                │
+        │   │  └─────────────────────────────────────────────────────┘
+        │   │
+        │   │
+        │   ├──── PROCESS 1: TokenizerManager (main process) ───────────────────
+        │   │
+        │   ├── TokenizerManager.__init__()                              [srt/managers/tokenizer_manager.py:179]
+        │   │   ├── init_model_config()                                  # loads HF config.json
+        │   │   ├── init_tokenizer_and_processor()                       # HF AutoTokenizer
+        │   │   ├── init_ipc_channels(port_args)                         # ZMQ PUSH to scheduler, PULL from detokenizer
+        │   │   └── init_running_status()                                # rid_to_state: Dict[str, ReqState]
+        │   │
+        │   │
+        │   ├──── PROCESS 2: Scheduler (subprocess — the heavy one) ────────────
+        │   │
+        │   ├── mp.Process → run_scheduler_process()                     [srt/managers/scheduler.py:2881]
+        │   │   └── Scheduler.__init__()                                 [srt/managers/scheduler.py:251]
+        │   │       │
+        │   │       ├── init_model_config()                              # loads HF config.json → MiniCPMHybridConfig
+        │   │       │   └── MiniCPMHybridConfig                          [srt/configs/minicpm.py:9]
+        │   │       │       ├── model_type = "minicpm_sala"
+        │   │       │       ├── mixer_types: list[str]                   # per-layer: "minicpm4" or "lightning"
+        │   │       │       ├── full_attention_layer_ids                  [srt/configs/minicpm.py:130]
+        │   │       │       ├── lightning_layer_ids                       [srt/configs/minicpm.py:162]
+        │   │       │       ├── has_sparse_attention                      [srt/configs/minicpm.py:140]
+        │   │       │       ├── has_lightning_layers                      [srt/configs/minicpm.py:145]
+        │   │       │       ├── mamba2_cache_params → SimpleGLACacheParams [srt/configs/minicpm.py:105]
+        │   │       │       ├── scale_emb, scale_depth, scale_width       # μP scaling factors
+        │   │       │       ├── dim_model_base                            # base width for μP
+        │   │       │       └── sparse attention params:
+        │   │       │           sparse_block_size, sparse_dense_len,
+        │   │       │           sparse_topk, sparse_window_size, ...
+        │   │       │
+        │   │       ├── init_ipc_channels()                              # ZMQ PULL from tokenizer, PUSH to detokenizer
+        │   │       ├── init_tokenizer()
+        │   │       │
+        │   │       ├── init_model_worker()
+        │   │       │   └── TpModelWorker.__init__()                     [srt/managers/tp_worker.py:206]
+        │   │       │       └── ModelRunner.__init__()                    [srt/model_executor/model_runner.py:262]
+        │   │       │           │
+        │   │       │           └── ═══════════════════════════════════════
+        │   │       │              ModelRunner.initialize()               [model_runner.py:413]
+        │   │       │              (heaviest init — GPU setup)
+        │   │       │              ═══════════════════════════════════════
+        │   │       │               │
+        │   │       │               ├── init_torch_distributed()
+        │   │       │               │   └── torch.distributed.init_process_group("nccl")
+        │   │       │               │
+        │   │       │               ├── load_model()                     [model_runner.py:799]
+        │   │       │               │   └── DefaultModelLoader.load_model()  [srt/model_loader/loader.py:616]
+        │   │       │               │       ├── _initialize_model()
+        │   │       │               │       │   └── ModelRegistry.resolve_model_cls()  [srt/models/registry.py:78]
+        │   │       │               │       │       └── import_model_classes()          [srt/models/registry.py:93]
+        │   │       │               │       │           └── scans srt/models/*.py for EntryClass
+        │   │       │               │       │               └── minicpm.py EntryClass =
+        │   │       │               │       │                   [MiniCPMForCausalLM, MiniCPMSALAForCausalLM]
+        │   │       │               │       │                                          [srt/models/minicpm.py:807]
+        │   │       │               │       │
+        │   │       │               │       │   └── instantiate MiniCPMSALAForCausalLM [srt/models/minicpm.py:804]
+        │   │       │               │       │       └── (pass — identical to MiniCPMForCausalLM)
+        │   │       │               │       │       └── MiniCPMForCausalLM.__init__()  [srt/models/minicpm.py:664]
+        │   │       │               │       │           ├── MiniCPMModel()              [srt/models/minicpm.py:597]
+        │   │       │               │       │           │   ├── embed_tokens = VocabParallelEmbedding
+        │   │       │               │       │           │   ├── layers = [MiniCPMDecoderLayer × N]
+        │   │       │               │       │           │   │                           [minicpm.py:523]
+        │   │       │               │       │           │   │   └── per layer:
+        │   │       │               │       │           │   │       ├── [mixer_type=="minicpm4"]:
+        │   │       │               │       │           │   │       │   └── self_attn = MiniCPMAttention
+        │   │       │               │       │           │   │       │                   [minicpm.py:93]
+        │   │       │               │       │           │   │       │       ├── q/k/v_proj = QKVParallelLinear
+        │   │       │               │       │           │   │       │       ├── o_proj = RowParallelLinear
+        │   │       │               │       │           │   │       │       └── attn = RadixAttention
+        │   │       │               │       │           │   │       │               [srt/layers/radix_attention.py:95]
+        │   │       │               │       │           │   │       │
+        │   │       │               │       │           │   │       ├── [mixer_type=="lightning"]:
+        │   │       │               │       │           │   │       │   └── self_attn = MiniCPMLightningMixer
+        │   │       │               │       │           │   │       │                   [minicpm.py:314]
+        │   │       │               │       │           │   │       │       ├── q/k/v_proj, o_proj
+        │   │       │               │       │           │   │       │       └── attn = RadixAttention
+        │   │       │               │       │           │   │       │
+        │   │       │               │       │           │   │       └── mlp = MiniCPMMLP  [minicpm.py:464]
+        │   │       │               │       │           │   │           ├── gate_proj (GPTQMarlin int4)
+        │   │       │               │       │           │   │           ├── up_proj   (GPTQMarlin int4)
+        │   │       │               │       │           │   │           └── down_proj  (GPTQMarlin int4)
+        │   │       │               │       │           │   │
+        │   │       │               │       │           │   └── norm = RMSNorm
+        │   │       │               │       │           │
+        │   │       │               │       │           ├── lm_head = ParallelLMHead
+        │   │       │               │       │           └── scale_width = hidden_size / dim_model_base
+        │   │       │               │       │                              [minicpm.py:683]
+        │   │       │               │       │
+        │   │       │               │       │   with GPTQMarlin quant config, dtype=bfloat16
+        │   │       │               │       │
+        │   │       │               │       └── load_weights_and_postprocess()
+        │   │       │               │           ├── model.load_weights(safetensors)
+        │   │       │               │           │   └── reads .safetensors shards from disk
+        │   │       │               │           └── quant_method.process_weights_after_loading()
+        │   │       │               │               └── repacks GPTQ → Marlin int4 format (GPU kernel)
+        │   │       │               │
+        │   │       │               ├── dist.monitored_barrier()         # sync all TP ranks
+        │   │       │               │
+        │   │       │               ├── configure_kv_cache_dtype()       # → torch.float8_e5m2
+        │   │       │               │
+        │   │       │               ├── init_memory_pool()               [model_runner_kv_cache_mixin.py:248]
+        │   │       │               │   │
+        │   │       │               │   │   mem_fraction_static=0.82 → 82% of GPU VRAM for KV cache
+        │   │       │               │   │
+        │   │       │               │   ├── MiniCPMHybridReqToTokenPool  [srt/mem_cache/memory_pool.py:577]
+        │   │       │               │   │   └── extends HybridReqToTokenPool for MiniCPM-specific sizing
+        │   │       │               │   │
+        │   │       │               │   ├── MHATokenToKVPool(fp8_e5m2)   [srt/mem_cache/memory_pool.py:666]
+        │   │       │               │   │   ├── store_dtype = torch.uint8
+        │   │       │               │   │   │   (fp8 stored as uint8 for index_put)
+        │   │       │               │   │   ├── get_key_buffer()         [memory_pool.py:967]
+        │   │       │               │   │   │   └── k_buffer[...].view(torch.float8_e5m2)
+        │   │       │               │   │   │       (reinterpret cast on read)
+        │   │       │               │   │   └── set_kv_buffer()          [memory_pool.py:995]
+        │   │       │               │   │       └── cache_k /= k_scale
+        │   │       │               │   │           → .to(float8_e5m2) → .view(uint8) → index_put
+        │   │       │               │   │
+        │   │       │               │   └── MambaPool                    [srt/mem_cache/memory_pool.py:128]
+        │   │       │               │       └── mamba2_layer_cache(layer_id)  [memory_pool.py:283]
+        │   │       │               │           └── per lightning layer: conv_state + temporal_state
+        │   │       │               │           └── sized by SimpleGLACacheParams
+        │   │       │               │                                    [srt/configs/mamba_utils.py:157]
+        │   │       │               │               └── plugged via MiniCPMHybridConfig.mamba2_cache_params
+        │   │       │               │
+        │   │       │               ├── init_attention_backend()          [model_runner.py:1578]
+        │   │       │               │   └── _get_attention_backend()      [model_runner.py:1591]
+        │   │       │               │       │
+        │   │       │               │       ├── server_args.get_attention_backends()
+        │   │       │               │       │   → ("flashinfer", "flashinfer")
+        │   │       │               │       │   (prefill == decode → no HybridAttnBackend wrapper)
+        │   │       │               │       │
+        │   │       │               │       └── _get_attention_backend_from_str("flashinfer")
+        │   │       │               │                                    [model_runner.py:1644]
+        │   │       │               │           │
+        │   │       │               │           ├── ATTENTION_BACKENDS["flashinfer"](runner)
+        │   │       │               │           │   └── create_flashinfer_backend(runner)
+        │   │       │               │           │                        [attention_registry.py:23]
+        │   │       │               │           │       └── [non-MLA model] →
+        │   │       │               │           │           FlashInferAttnBackend(runner)
+        │   │       │               │           │                        [flashinfer_backend.py:112]
+        │   │       │               │           │           │
+        │   │       │               │           │           ├── should_use_tensor_core()
+        │   │       │               │           │           │        [flashinfer_backend.py:1605]
+        │   │       │               │           │           │   └── True (fp8_e5m2 → tensor core path)
+        │   │       │               │           │           │
+        │   │       │               │           │           ├── prefill_wrapper_ragged =
+        │   │       │               │           │           │   BatchPrefillWithRaggedKVCacheWrapper()
+        │   │       │               │           │           │        [flashinfer_backend.py:252]
+        │   │       │               │           │           │
+        │   │       │               │           │           ├── prefill_wrappers_paged =
+        │   │       │               │           │           │   [BatchPrefillWithPagedKVCacheWrapper()]
+        │   │       │               │           │           │        [flashinfer_backend.py:263]
+        │   │       │               │           │           │
+        │   │       │               │           │           ├── decode_wrappers =
+        │   │       │               │           │           │   [BatchDecodeWithPagedKVCacheWrapper()]
+        │   │       │               │           │           │        [flashinfer_backend.py:277]
+        │   │       │               │           │           │
+        │   │       │               │           │           ├── indices_updater_prefill =
+        │   │       │               │           │           │   FlashInferIndicesUpdaterPrefill()
+        │   │       │               │           │           │        [flashinfer_backend.py:1160]
+        │   │       │               │           │           │
+        │   │       │               │           │           └── indices_updater_decode =
+        │   │       │               │           │               FlashInferIndicesUpdaterDecode()
+        │   │       │               │           │                    [flashinfer_backend.py:900]
+        │   │       │               │           │
+        │   │       │               │           └── attn_backend_wrapper(runner, flashinfer_backend)
+        │   │       │               │                                    [attention_registry.py:200]
+        │   │       │               │               │
+        │   │       │               │               └── [minicpm_hybrid_config detected]:
+        │   │       │               │                   │
+        │   │       │               │                   ├── linear_backend =
+        │   │       │               │                   │   SimpleGLAAttnBackend(runner)
+        │   │       │               │                   │        [hybrid_linear_attn_backend.py:1440]
+        │   │       │               │                   │   └── uses parallel_simple_gla() from fla
+        │   │       │               │                   │
+        │   │       │               │                   └── FINAL BACKEND =
+        │   │       │               │                       HybridLinearAttnBackend(
+        │   │       │               │                         full_attn  = FlashInferAttnBackend,
+        │   │       │               │                         linear_attn = SimpleGLAAttnBackend,
+        │   │       │               │                         full_attn_layers = [IDs from
+        │   │       │               │                           config.mixer_types where
+        │   │       │               │                           type=="minicpm4"])
+        │   │       │               │                        [hybrid_linear_attn_backend.py:1228]
+        │   │       │               │
+        │   │       │               │   ┌──────────────────────────────────────────────────┐
+        │   │       │               │   │  Per-layer dispatch at inference time:           │
+        │   │       │               │   │                                                  │
+        │   │       │               │   │  layer in full_attn_layers (minicpm4):           │
+        │   │       │               │   │    → FlashInferAttnBackend.forward_decode/extend │
+        │   │       │               │   │         [hybrid_linear_attn_backend.py:1309/1328]│
+        │   │       │               │   │                                                  │
+        │   │       │               │   │  layer NOT in full_attn_layers (lightning):      │
+        │   │       │               │   │    → SimpleGLAAttnBackend.forward()              │
+        │   │       │               │   │         [hybrid_linear_attn_backend.py:1314/1333]│
+        │   │       │               │   │      → parallel_simple_gla() from fla           │
+        │   │       │               │   │      → state ↔ MambaPool                        │
+        │   │       │               │   └──────────────────────────────────────────────────┘
+        │   │       │               │
+        │   │       │               ├── self.sampler = create_sampler()   [model_runner.py:458]
+        │   │       │               │   └── Sampler()                     [srt/layers/sampler.py:288]
+        │   │       │               │
+        │   │       │               ├── kernel_warmup()
+        │   │       │               │   └── dummy forward passes to JIT-compile kernels
+        │   │       │               │
+        │   │       │               └── init_device_graphs()              [model_runner.py:1961]
+        │   │       │                   └── CudaGraphRunner.__init__()    [cuda_graph_runner.py:235]
+        │   │       │                   │   └── attn_backend.init_cuda_graph_state(max_bs)
+        │   │       │                   │                                [flashinfer_backend.py:507]
+        │   │       │                   │       └── allocates static cuda_graph_kv_indices buffers
+        │   │       │                   │                                [flashinfer_backend.py:522]
+        │   │       │                   │
+        │   │       │                   └── CudaGraphRunner.capture()     [cuda_graph_runner.py:467]
+        │   │       │                       └── for each common batch_size:
+        │   │       │                           capture_one_batch_size(bs)
+        │   │       │                                                    [cuda_graph_runner.py:547]
+        │   │       │                           ├── init_forward_metadata_capture_cuda_graph(bs)
+        │   │       │                           │                        [flashinfer_backend.py:541]
+        │   │       │                           │   ├── BatchDecodeWithPagedKVCacheWrapper(
+        │   │       │                           │   │     use_cuda_graph=True)
+        │   │       │                           │   │                    [flashinfer_backend.py:554]
+        │   │       │                           │   ├── wrapper.begin_forward()
+        │   │       │                           │   │   (FlashInfer "plan" baked into graph)
+        │   │       │                           │   ├── replace begin_forward → fast_decode_plan
+        │   │       │                           │   │                    [flashinfer_backend.py:582]
+        │   │       │                           │   └── store in decode_cuda_graph_metadata[bs]
+        │   │       │                           │                        [flashinfer_backend.py:579]
+        │   │       │                           │
+        │   │       │                           └── torch.cuda.CUDAGraph.capture(model.forward)
+        │   │       │                                                    [cuda_graph_runner.py:729]
+        │   │       │
+        │   │       ├── init_cache_with_memory_pool()
+        │   │       │   └── ChunkCache()                                 [srt/mem_cache/chunk_cache.py:22]
+        │   │       │       (--disable-radix-cache → ChunkCache, no prefix sharing)
+        │   │       │
+        │   │       ├── init_chunked_prefill()
+        │   │       │   └── self.chunked_prefill_size = 32768            [scheduler.py:753]
+        │   │       │
+        │   │       ├── init_schedule_policy()
+        │   │       │
+        │   │       └── init_overlap()
+        │   │           └── self.enable_overlap = True                   [scheduler.py:285]
+        │   │               (unless --disable-overlap-schedule)
+        │   │
+        │   │   └── pipe_writer.send({"status": "ready"})
+        │   │       (signals main process that scheduler is up)
+        │   │
+        │   │   └── ══► enters event_loop_overlap()                      [scheduler.py:1114]
+        │   │           (see PHASE 3 below)
+        │   │
+        │   │
+        │   ├──── PROCESS 3: DetokenizerManager (subprocess) ───────────────────
+        │   │
+        │   └── mp.Process → run_detokenizer_process()                   [srt/managers/detokenizer_manager.py:378]
+        │       └── DetokenizerManager.__init__()                        [detokenizer_manager.py:76]
+        │       │   ├── init_ipc_channels()
+        │       │   │   ├── recv_from_scheduler = ZMQ PULL               [detokenizer_manager.py:93]
+        │       │   │   └── send_to_tokenizer = ZMQ PUSH                 [detokenizer_manager.py:100]
+        │       │   └── init_tokenizer()
+        │       │
+        │       └── ══► enters event_loop()                              [detokenizer_manager.py:136]
+        │               (see PHASE 4 below)
+        │
+        │
+        ╔══════════════════════════════════════════════════════════════════
+        ║  PHASE 2: HTTP SERVER STARTS
+        ╚══════════════════════════════════════════════════════════════════
+        │
+        └── uvicorn.run(app, port=31333, loop="uvloop")
+            └── lifespan(app)                                            [http_server.py:243]
+                ├── init OpenAIServingChat handler
+                ├── init OpenAIServingCompletion handler
+                └── _wait_and_warmup()                                   [http_server.py:1618]
+                    ├── [line 1627] execute_warmup_func(server_args)
+                    │   └── _execute_server_warmup()                     [http_server.py:1470]
+                    │       ├── polls GET /model_info up to 120× (1s sleep)
+                    │       │                                            [line 1477]
+                    │       │   └── waits until scheduler is ready
+                    │       ├── sends warmup request:                     [line 1494]
+                    │       │   POST /generate
+                    │       │     {"text": "The capital city of France is",
+                    │       │      "max_new_tokens": 8, "temperature": 0}
+                    │       │   └── forces first forward pass
+                    │       │       (CUDA kernel compile, cuDNN autotune,
+                    │       │        CUDA graph capture)
+                    │       └── sets server_status = ServerStatus.Up      [line 1560]
+                    │
+                    └── logs "The server is fired up and ready to roll!"  [line 1634]
+
+
+╔══════════════════════════════════════════════════════════════════════════
+║  PHASE 3: SCHEDULER EVENT LOOP (runs forever in subprocess)
+╚══════════════════════════════════════════════════════════════════════════
+
+Scheduler.event_loop_overlap()                                           [scheduler.py:1114]
+│
+│   ┌────────────────────────────────────────────────────────────────┐
+│   │  OVERLAP MODE: processes prev batch result on CPU while        │
+│   │  current batch's GPU kernel is running.                        │
+│   │                                                                │
+│   │  result_queue: Deque holds (batch, result) for deferred CPU    │
+│   │  processing. Sampling also deferred for grammar correctness.   │
+│   │                                                                │
+│   │  vs event_loop_normal() [scheduler.py:1087]:                   │
+│   │    sequential: recv → batch → run → process → repeat           │
+│   │    no pipelining, no result_queue                              │
+│   │                                                                │
+│   │  Overlap disabled per-batch when:                              │
+│   │    - consecutive prefill batches                               │
+│   │      (SGLANG_DISABLE_CONSECUTIVE_PREFILL_OVERLAP)              │
+│   │    - spec-v2 + grammar + decode batches                        │
+│   │                              [scheduler.py:1167-1189]          │
+│   └────────────────────────────────────────────────────────────────┘
+│
+└── while True:
+    │
+    ├── recv_requests()                                                  [scheduler.py:1196]
+    │   └── ZMQ non-blocking poll from TokenizerManager
+    │       └── deserializes (rid, input_text/ids, sampling_params, ...)
+    │
+    ├── process_input_requests()                                         [scheduler.py:1324]
+    │   └── for each new request:
+    │       ├── allocate req_pool_idx from token_to_kv_pool_allocator
+    │       ├── tree_cache.match_prefix(input_ids) → prefix_indices
+    │       └── add to self.waiting_queue
+    │
+    ├── get_next_batch_to_run()                                          [scheduler.py:1797]
+    │   │
+    │   ├── [if self.chunked_req exists]:                                [scheduler.py:1803]
+    │   │   └── tree_cache.cache_unfinished_req(chunked_req, chunked=True)
+    │   │                                                                [scheduler.py:1808]
+    │   │   └── free req_pool_idx (will be reallocated for next chunk)
+    │   │                                                                [scheduler.py:1816]
+    │   │
+    │   ├── merge finished-prefill reqs → self.running_batch             [scheduler.py:1818]
+    │   │
+    │   ├── try get_new_batch_prefill() first (PREFILL PRIORITY)         [scheduler.py:1841]
+    │   │   └── _get_new_batch_prefill_raw()                             [scheduler.py:1881]
+    │   │       │
+    │   │       ├── PrefillAdder(                                        [srt/managers/schedule_policy.py:319]
+    │   │       │     page_size, tree_cache, token_to_kv_pool_allocator,
+    │   │       │     running_batch, new_token_ratio,
+    │   │       │     rem_input_tokens = max_prefill_tokens,
+    │   │       │     rem_chunk_tokens = 32768,   # chunked_prefill_size
+    │   │       │     running_bs, ...)
+    │   │       │
+    │   │       │   Budget tracking:                                     [schedule_policy.py:339]
+    │   │       │   ├── rem_input_tokens: total input token budget
+    │   │       │   ├── rem_chunk_tokens: per-batch chunk cap (32768)
+    │   │       │   └── rem_total_tokens: available KV slots (dynamic)
+    │   │       │                                                        [schedule_policy.py:383]
+    │   │       │       = available_kv + evictable_kv - reserved_for_running_decode
+    │   │       │
+    │   │       │   budget_state():                                      [schedule_policy.py:429]
+    │   │       │   ├── NO_TOKEN → out of KV memory
+    │   │       │   ├── OTHER   → chunk/input budget exhausted
+    │   │       │   └── CONTINUE → room for more
+    │   │       │
+    │   │       ├── [if self.chunked_req]:  resume chunked request       [scheduler.py:1956]
+    │   │       │   └── chunked_req.init_next_round_input()
+    │   │       │   └── adder.add_chunked_req(chunked_req)
+    │   │       │       └── extend_input_len = min(rem_chunk_tokens, rem_total_tokens)
+    │   │       │       └── returns req if still truncated, None if final chunk
+    │   │       │
+    │   │       └── for each req in waiting_queue:                       [scheduler.py:1964]
+    │   │           └── adder.add_one_req(req)                           [schedule_policy.py:571]
+    │   │               ├── [fits entirely]:                             [schedule_policy.py:628]
+    │   │               │   └── add whole request, update budgets
+    │   │               └── [exceeds rem_chunk_tokens]:                  [schedule_policy.py:644]
+    │   │                   ├── trunc_len = rem_chunk_tokens // page_size * page_size
+    │   │                   ├── req.extend_input_len = trunc_len         [schedule_policy.py:651]
+    │   │                   ├── req.is_chunked += 1                      [scheduler.py:2044]
+    │   │                   └── self.chunked_req = req
+    │   │                       (carry to next iteration)
+    │   │
+    │   └── [else]: update_running_batch(running_batch)                  [scheduler.py:1873]
+    │       └── returns decode batch
+    │       └── enforces --max-running-requests 64
+    │
+    ├── pop_and_process()                                                [scheduler.py:1145]
+    │   └── process previous batch result from result_queue
+    │       (CPU work overlapped with current GPU kernel)
+    │       └── see process_batch_result() below
+    │
+    ├── run_batch(batch)                                                 [scheduler.py:2193]
+    │   └── tp_worker.forward_batch_generation()                         [tp_worker.py:427]
+    │       │
+    │       ├── model_runner.forward(forward_batch)                      [model_runner.py:2196]
+    │       │   └── _forward_raw(forward_batch)                          [model_runner.py:2231]
+    │       │       │
+    │       │       │  ┌──────────────────────────────────────────────────────────┐
+    │       │       │  │  FLASHINFER PER-STEP METADATA (before every forward)     │
+    │       │       │  │                                                          │
+    │       │       │  │  init_forward_metadata(forward_batch)                    │
+    │       │       │  │                               [flashinfer_backend.py:420]│
+    │       │       │  │  ├── [DECODE]:                                           │
+    │       │       │  │  │   └── indices_updater_decode.update()                 │
+    │       │       │  │  │       └── call_begin_forward()                        │
+    │       │       │  │  │                        [flashinfer_backend.py:1055]   │
+    │       │       │  │  │           ├── create_flashinfer_kv_indices_triton()   │
+    │       │       │  │  │           │          [flashinfer_backend.py:1082]     │
+    │       │       │  │  │           │   (Triton kernel builds page indices)     │
+    │       │       │  │  │           └── wrapper.begin_forward()                 │
+    │       │       │  │  │                      [flashinfer_backend.py:1118]     │
+    │       │       │  │  │               (FlashInfer "plan" step)                │
+    │       │       │  │  │                                                       │
+    │       │       │  │  └── [PREFILL/EXTEND]:                                   │
+    │       │       │  │      └── indices_updater_prefill.update()                │
+    │       │       │  │          └── call_begin_forward()                        │
+    │       │       │  │                          [flashinfer_backend.py:1339]    │
+    │       │       │  │              ├── wrapper_ragged.begin_forward()          │
+    │       │       │  │              │          [flashinfer_backend.py:1393]     │
+    │       │       │  │              └── wrapper_paged.begin_forward()           │
+    │       │       │  │                         [flashinfer_backend.py:1427]     │
+    │       │       │  └──────────────────────────────────────────────────────────┘
+    │       │       │
+    │       │       │
+    │       │       ├── [DECODE path] ──────────────────────────────────────────
+    │       │       │
+    │       │       │   CudaGraphRunner.replay(forward_batch)            [cuda_graph_runner.py:838]
+    │       │       │   ├── replay_prepare(forward_batch)                [cuda_graph_runner.py:767]
+    │       │       │   │   └── init_forward_metadata_replay_cuda_graph(bs)
+    │       │       │   │                                [flashinfer_backend.py:677]
+    │       │       │   │       └── retrieves wrappers from
+    │       │       │   │           decode_cuda_graph_metadata[bs]
+    │       │       │   │       └── indices_updater_decode.update()
+    │       │       │   │           (KV indices updated in-place)
+    │       │       │   │
+    │       │       │   └── self.graphs[key].replay()                    [cuda_graph_runner.py:857]
+    │       │       │       └── replays captured graph
+    │       │       │           (model.forward baked in as captured ops)
+    │       │       │
+    │       │       │
+    │       │       └── [PREFILL/EXTEND path] ─────────────────────────────────
+    │       │
+    │       │           model.forward() eager (no CUDA graph)
+    │       │           └── MiniCPMForCausalLM.forward()                 [minicpm.py:688]
+    │       │               │
+    │       │               ├── input_embeds * config.scale_emb          [minicpm.py:696]
+    │       │               │   └── μP: scale embeddings
+    │       │               │
+    │       │               └── MiniCPMModel.forward()                   [minicpm.py:604]
+    │       │                   │
+    │       │                   ├── embed_tokens(input_ids) * config.scale_emb
+    │       │                   │                                        [minicpm.py:642]
+    │       │                   │
+    │       │                   ├── for each layer i:
+    │       │                   │   MiniCPMDecoderLayer.forward()         [minicpm.py:541]
+    │       │                   │   │
+    │       │                   │   ├── input_layernorm(hidden_states)
+    │       │                   │   │
+    │       │                   │   │
+    │       │                   │   ├── ┌── [mixer_type == "minicpm4"] ────────────────────┐
+    │       │                   │   │   │   (softmax attention layers)                      │
+    │       │                   │   │   │                                                   │
+    │       │                   │   │   │  MiniCPMAttention.forward()      [minicpm.py:93]  │
+    │       │                   │   │   │  ├── q = q_proj(x)                                │
+    │       │                   │   │   │  ├── k = k_proj(x)                                │
+    │       │                   │   │   │  ├── v = v_proj(x)                                │
+    │       │                   │   │   │  ├── apply_rotary_pos_emb(q, k)                   │
+    │       │                   │   │   │  │                                                │
+    │       │                   │   │   │  └── RadixAttention.forward()                     │
+    │       │                   │   │   │             [srt/layers/radix_attention.py:95]     │
+    │       │                   │   │   │      └── HybridLinearAttnBackend dispatches:      │
+    │       │                   │   │   │          └── [layer in full_attn_layers] →        │
+    │       │                   │   │   │              FlashInferAttnBackend                 │
+    │       │                   │   │   │                                                    │
+    │       │                   │   │   │              ├── forward_extend(q,k,v)             │
+    │       │                   │   │   │              │      [flashinfer_backend.py:743]    │
+    │       │                   │   │   │              │  ├── [ragged, no prefix]:           │
+    │       │                   │   │   │              │  │   prefill_wrapper_ragged         │
+    │       │                   │   │   │              │  │     .forward(q,kv,               │
+    │       │                   │   │   │              │  │       k_scale, v_scale)          │
+    │       │                   │   │   │              │  │      [flashinfer_backend.py:810] │
+    │       │                   │   │   │              │  │                                  │
+    │       │                   │   │   │              │  └── [ragged + paged prefix]:       │
+    │       │                   │   │   │              │      o1,s1 = ragged                 │
+    │       │                   │   │   │              │        .forward_return_lse()        │
+    │       │                   │   │   │              │        [flashinfer_backend.py:825]   │
+    │       │                   │   │   │              │      o2,s2 = paged                  │
+    │       │                   │   │   │              │        .forward_return_lse()        │
+    │       │                   │   │   │              │        [flashinfer_backend.py:833]   │
+    │       │                   │   │   │              │      merge_state(o1,s1,o2,s2)      │
+    │       │                   │   │   │              │        [flashinfer_backend.py:841]   │
+    │       │                   │   │   │              │                                     │
+    │       │                   │   │   │              └── forward_decode(q,k,v)             │
+    │       │                   │   │   │                      [flashinfer_backend.py:850]   │
+    │       │                   │   │   │                 └── decode_wrapper.forward(        │
+    │       │                   │   │   │                       q, kv_buf,                   │
+    │       │                   │   │   │                       k_scale=layer.k_scale_float, │
+    │       │                   │   │   │                       v_scale=layer.v_scale_float) │
+    │       │                   │   │   │                     [flashinfer_backend.py:876]    │
+    │       │                   │   │   │                                                    │
+    │       │                   │   │   │  └── o_proj(attn_output)                          │
+    │       │                   │   │   │                                                    │
+    │       │                   │   │   └──────────────────────────────────────────────────┘
+    │       │                   │   │
+    │       │                   │   │
+    │       │                   │   ├── ┌── [mixer_type == "lightning"] ───────────────────┐
+    │       │                   │   │   │   (linear attention layers via SimpleGLA)         │
+    │       │                   │   │   │                                                   │
+    │       │                   │   │   │  MiniCPMLightningMixer.forward()                  │
+    │       │                   │   │   │                        [minicpm.py:314]            │
+    │       │                   │   │   │  ├── q = q_proj(x)                                │
+    │       │                   │   │   │  ├── k = k_proj(x)                                │
+    │       │                   │   │   │  ├── v = v_proj(x)                                │
+    │       │                   │   │   │  │                                                │
+    │       │                   │   │   │  └── HybridLinearAttnBackend dispatches:          │
+    │       │                   │   │   │      └── [layer NOT in full_attn_layers] →        │
+    │       │                   │   │   │          SimpleGLAAttnBackend.forward()            │
+    │       │                   │   │   │             [hybrid_linear_attn_backend.py:1440]   │
+    │       │                   │   │   │          └── parallel_simple_gla()                 │
+    │       │                   │   │   │              (from fla package, linear attention)  │
+    │       │                   │   │   │          └── state ↔ MambaPool                     │
+    │       │                   │   │   │                        [memory_pool.py:283]        │
+    │       │                   │   │   │                                                   │
+    │       │                   │   │   │  └── o_proj(attn_output)                          │
+    │       │                   │   │   │                                                   │
+    │       │                   │   │   └───────────────────────────────────────────────────┘
+    │       │                   │   │
+    │       │                   │   │
+    │       │                   │   ├── residual += hidden_states *       [minicpm.py:574]
+    │       │                   │   │     (config.scale_depth / sqrt(num_hidden_layers))
+    │       │                   │   │   └── μP: depth-scaled residual connection
+    │       │                   │   │
+    │       │                   │   ├── post_attention_layernorm(hidden_states)
+    │       │                   │   │
+    │       │                   │   ├── MiniCPMMLP.forward()              [minicpm.py:464]
+    │       │                   │   │   ├── gate = gate_proj(x)           # GPTQMarlin int4
+    │       │                   │   │   ├── up   = up_proj(x)             # GPTQMarlin int4
+    │       │                   │   │   ├── x = silu(gate) * up
+    │       │                   │   │   └── x = down_proj(x)              # GPTQMarlin int4
+    │       │                   │   │
+    │       │                   │   └── residual += hidden_states *       [minicpm.py:590]
+    │       │                   │         (config.scale_depth / sqrt(num_hidden_layers))
+    │       │                   │       └── μP: depth-scaled residual (again, after MLP)
+    │       │                   │
+    │       │                   └── final_layernorm(hidden_states)
+    │       │
+    │       │               └── hidden_states / scale_width              [minicpm.py:698]
+    │       │                   └── μP: divide by (hidden_size / dim_model_base)
+    │       │               └── lm_head(hidden_states) → logits          [minicpm.py:688]
+    │       │
+    │       │
+    │       └── ── SAMPLING ──────────────────────────────────────────────────
+    │
+    │           [overlap mode]: sampling may be deferred                  [tp_worker.py:475]
+    │             └── launch_batch_sample_if_needed()                     [scheduler.py:1160]
+    │
+    │           model_runner.sample(logits_output, forward_batch)         [model_runner.py:2316]
+    │           ├── _preprocess_logits()                                  [model_runner.py:2337]
+    │           │   ├── update_regex_vocab_mask()    # grammar constraints
+    │           │   └── apply_logits_bias()          # presence/freq penalty
+    │           │
+    │           └── self.sampler(logits_output, sampling_info)
+    │               └── Sampler.forward()                                [srt/layers/sampler.py:67]
+    │                   │
+    │                   ├── [all greedy]:
+    │                   │   └── torch.argmax(logits, -1)                 [sampler.py:95]
+    │                   │
+    │                   └── [non-greedy]:
+    │                       ├── logits / temperature → softmax           [sampler.py:120]
+    │                       │
+    │                       ├── [no top-k/top-p/min-p]:
+    │                       │   └── sampling_from_probs_torch()          [sampler.py:129]
+    │                       │       └── torch.multinomial
+    │                       │
+    │                       └── [with top-k/top-p]:
+    │                           └── sgl_kernel
+    │                               .top_k_top_p_sampling_from_probs    [sampler.py:137]
+    │                               (flashinfer sampling backend)
+    │
+    │           → batch_result.next_token_ids                            [tp_worker.py:485]
+    │
+    │
+    ├── result_queue.append((batch, batch_result))                       [scheduler.py:1145]
+    │   └── deferred to next iteration's pop_and_process()
+    │
+    └── [next iteration] pop_and_process():
+        └── process_batch_result(prev_batch, prev_result)                [scheduler.py:2349]
+            │
+            ├── [is_decode] → process_batch_result_decode()
+            │       [scheduler_output_processor_mixin.py:357]
+            │   └── for each request in batch:
+            │       ├── append next_token_id to req.output_ids           [line 401]
+            │       ├── req.check_finished()                             [line 410]
+            │       │   └── checks: EOS token, max_new_tokens, stop strings
+            │       ├── [if finished]:
+            │       │   └── release_kv_cache(req, tree_cache)            [line 418]
+            │       │   └── set req.time_stats.completion_time
+            │       └── [optional]: collect logprobs, hidden states
+            │
+            ├── [is_extend] → process_batch_result_prefill()
+            │       [scheduler_output_processor_mixin.py:85]
+            │   └── for each request:
+            │       ├── [if req.is_chunked > 0]:                         [line 130]
+            │       │   └── decrement is_chunked, skip output
+            │       │       (chunk not done yet)
+            │       └── [if req.is_chunked <= 0]:
+            │           └── append next_token_id, check_finished()
+            │               (final chunk or non-chunked request)
+            │
+            └── stream_output(batch.reqs)
+                └── stream_output_generation()
+                        [scheduler_output_processor_mixin.py:831]
+                    │
+                    ├── assemble BatchTokenIDOutput(
+                    │     rids, output_ids, finished_reasons, ...)
+                    │
+                    └── send_to_detokenizer.send_output(...)             [line 1077]
+                        └── ZMQ PUSH → DetokenizerManager
+
+
+╔══════════════════════════════════════════════════════════════════════════
+║  PHASE 4: DETOKENIZER → TOKENIZER → HTTP RESPONSE
+╚══════════════════════════════════════════════════════════════════════════
+
+DetokenizerManager.event_loop()                                          [detokenizer_manager.py:136]
+└── while True:
+    ├── recv_obj = recv_from_scheduler.recv_pyobj()
+    │   (ZMQ PULL, blocks until data arrives)
+    │
+    ├── _request_dispatcher(recv_obj)                                    [detokenizer_manager.py:126]
+    │   └── [BatchTokenIDOutput] →
+    │       handle_batch_token_id_out()                                  [detokenizer_manager.py:309]
+    │       └── _decode_batch_token_id_output(recv_obj)                  [detokenizer_manager.py:177]
+    │           │
+    │           ├── for each request rid:
+    │           │   ├── lookup/create DecodeStatus in self.decode_status
+    │           │   │   └── LimitedCapacityDict(capacity=65536)
+    │           │   │
+    │           │   ├── build read_ids (surr_offset → end)               [line 209]
+    │           │   ├── build surr_ids (surr_offset → read_offset)
+    │           │   │
+    │           │   ├── tokenizer.batch_decode(surr_ids) → surr_texts
+    │           │   ├── tokenizer.batch_decode(read_ids) → read_texts
+    │           │   │
+    │           │   ├── new_text = read_texts[i][len(surr_texts[i]):]    [line 256]
+    │           │   │   └── incremental text extraction
+    │           │   │       (avoid re-sending old text)
+    │           │   │
+    │           │   ├── [incomplete UTF-8 "�"]:
+    │           │   │   └── buffer via find_printable_text()
+    │           │   ├── trim stop-string matches
+    │           │   ├── output_str = accumulated_text[sent_offset:]
+    │           │   └── advance sent_offset
+    │           │
+    │           └── returns BatchStrOutput(
+    │                 rids, output_strs, finished_reasons, ...)
+    │
+    └── send_to_tokenizer.send_pyobj(BatchStrOutput)
+        │   (ZMQ PUSH → TokenizerManager)
+        │
+        ▼
+
+TokenizerManager (main process, async)                                   [tokenizer_manager.py:179]
+├── recv loop: recv_from_detokenizer.recv_pyobj()
+│   └── dispatches BatchStrOutput
+│       └── for each rid in output:
+│           └── rid_to_state[rid].event.set()
+│               (wakes async coroutine)
+│
+└── _wait_one_response(state)                                            [tokenizer_manager.py:1075]
+    └── await state.event.wait()
+        (was sleeping since the HTTP request came in)
+    └── returns response data
+        │
+        ▼
+
+OpenAIServingBase.handle_request()                                       [openai/serving_base.py:86]
+└── formats OpenAI-compatible JSON response
+    └── HTTP 200 → client
+
+
+╔══════════════════════════════════════════════════════════════════════════
+║  APPENDIX A: FP8 KV CACHE SCALE FACTORS
+╚══════════════════════════════════════════════════════════════════════════
+
+Loaded once at init, used every forward pass:
+
+BaseKVCacheMethod.process_weights_after_loading()                        [srt/layers/quantization/kv_cache.py:47]
+└── layer.k_scale_float = k_scale.item()                                 [kv_cache.py:80]
+└── layer.v_scale_float = v_scale.item()
+    └── passed to FlashInfer wrappers as k_scale=, v_scale=
+        └── FlashInfer dequantizes fp8→fp16 on-the-fly during attention kernel
+
+Write path:
+  MHATokenToKVPool.set_kv_buffer()                                       [memory_pool.py:995]
+  └── cache_k /= k_scale → .to(float8_e5m2) → .view(uint8) → index_put
+
+Read path:
+  MHATokenToKVPool.get_key_buffer()                                      [memory_pool.py:967]
+  └── k_buffer[...].view(torch.float8_e5m2)   # reinterpret cast
+
+
+╔══════════════════════════════════════════════════════════════════════════
+║  APPENDIX B: SGLANG_SPARSE_PREFILL (sglang_sala_flashinfer ONLY)
+╚══════════════════════════════════════════════════════════════════════════
+
+NOTE: This feature exists in sglang_sala_flashinfer/, NOT in sglang_sala_cp/.
+
+SPARSE_PREFILL_ENABLED = os.environ.get("SGLANG_SPARSE_PREFILL","0")=="1"
+                                  [sglang_sala_flashinfer/.../sparse_prefill.py:49]
+
+When enabled, in MiniCPMAttention.forward():                             [minicpm.py:204]
+├── [extend mode + layer has _sparse_config]:
+│   └── compute_sparse_prefill_metadata(q, k, forward_batch, attn, sparse_config)
+│                                                                        [sparse_prefill.py:283]
+│       ├── [max_prefix <= dense_len (8192)]:
+│       │   └── return None (full dense attention, sparse not needed)
+│       │
+│       ├── [anchor layer (layer 0)]:
+│       │   ├── read prefix keys from KV cache (_kc1_cache)
+│       │   ├── compress_keys_simple() → KC1/KC2 via max-pooling
+│       │   ├── score Q against KC1 → block scores
+│       │   ├── select top-k blocks
+│       │   └── store in _prefill_block_cache[req_idx]
+│       │
+│       └── [non-anchor layers (9,16,17,22,29,30,31)]:
+│           └── reuse block indices from _prefill_block_cache
+│               (cross-layer sharing — 7/8 of compute eliminated)
+│
+└── FlashInfer ragged extend path:                                       [flashinfer_backend.py:851]
+    └── sparse_meta = kwargs.get("sparse_prefill_metadata")
+    └── [if sparse_meta and layer in MINICPM4_LAYERS]:
+        └── _forward_extend_sparse_paged_lse()
+            └── sparse paged attention (top-k blocks only, not full prefix)
+            └── O(topk × block_size) instead of O(prefix_len)

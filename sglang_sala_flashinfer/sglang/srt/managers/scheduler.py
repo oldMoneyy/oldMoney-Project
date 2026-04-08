@@ -1086,7 +1086,12 @@ class Scheduler(
     @DynamicGradMode()
     def event_loop_normal(self):
         """A normal scheduler loop."""
+        from sglang.srt.managers.scheduler_profiler import is_enabled as _sched_profile_enabled, record_step as _sched_record_step, flush as _sched_flush
+        _do_sched_profile = _sched_profile_enabled()
         while True:
+            if _do_sched_profile:
+                _t_wall_start = time.perf_counter()
+
             # Receive requests
             recv_reqs = self.recv_requests()
             self.process_input_requests(recv_reqs)
@@ -1094,13 +1099,38 @@ class Scheduler(
                 continue
 
             # Get the next batch to run
+            if _do_sched_profile:
+                _t_sched0 = time.perf_counter()
             batch = self.get_next_batch_to_run()
             self.cur_batch = batch
+            if _do_sched_profile:
+                _t_sched1 = time.perf_counter()
 
             # Launch the current batch
             if batch:
+                if _do_sched_profile:
+                    _t_fwd0 = time.perf_counter()
                 result = self.run_batch(batch)
+                if _do_sched_profile:
+                    _t_fwd1 = time.perf_counter()
+                    _t_proc0 = time.perf_counter()
                 self.process_batch_result(batch, result)
+                if _do_sched_profile:
+                    _t_proc1 = time.perf_counter()
+                    _t_wall_end = time.perf_counter()
+                    _mode = "extend" if batch.forward_mode.is_extend() else "decode"
+                    _bs = batch.batch_size() if hasattr(batch, 'batch_size') else len(batch.reqs)
+                    _pfx = sum(getattr(r, 'extend_input_len', 0) for r in batch.reqs) if _mode == "extend" else 0
+                    _sched_record_step(
+                        mode=_mode,
+                        batch_size=_bs,
+                        forward_ms=(_t_fwd1 - _t_fwd0) * 1000,
+                        schedule_ms=(_t_sched1 - _t_sched0) * 1000,
+                        process_ms=(_t_proc1 - _t_proc0) * 1000,
+                        wall_start=_t_wall_start,
+                        wall_end=_t_wall_end,
+                        prefill_tokens=_pfx,
+                    )
             else:
                 # When the server is idle, do self-check and re-init some states
                 self.self_check_during_idle()
@@ -1113,16 +1143,29 @@ class Scheduler(
     @DynamicGradMode()
     def event_loop_overlap(self):
         """A scheduler loop that overlaps the CPU processing and GPU computation."""
+        from sglang.srt.managers.scheduler_profiler import is_enabled as _sched_profile_enabled, record_step as _sched_record_step
+        _do_sched_profile = _sched_profile_enabled()
+
         self.result_queue: Deque[
             Tuple[ScheduleBatch, Union[GenerationBatchResult, EmbeddingBatchResult]]
         ] = deque()
 
+        _t_proc_ms = 0.0  # accumulate process_batch_result time
+
         def pop_and_process():
-            # Process the results of the last batch
+            nonlocal _t_proc_ms
             tmp_batch, tmp_result = self.result_queue.popleft()
+            if _do_sched_profile:
+                _tp0 = time.perf_counter()
             self.process_batch_result(tmp_batch, tmp_result)
+            if _do_sched_profile:
+                _t_proc_ms += (time.perf_counter() - _tp0) * 1000
 
         while True:
+            if _do_sched_profile:
+                _t_wall_start = time.perf_counter()
+                _t_proc_ms = 0.0
+
             # Receive requests
             recv_reqs = self.recv_requests()
             self.process_input_requests(recv_reqs)
@@ -1130,9 +1173,13 @@ class Scheduler(
                 continue
 
             # Get the next batch to run
+            if _do_sched_profile:
+                _t_sched0 = time.perf_counter()
             batch = self.get_next_batch_to_run()
             self.cur_batch = batch
             disable_overlap_for_batch = self.is_disable_overlap_for_batch(batch)
+            if _do_sched_profile:
+                _t_sched1 = time.perf_counter()
 
             # If we do not need to overlap the current batch with the last batch,
             # we can process the last batch immediately.
@@ -1141,7 +1188,11 @@ class Scheduler(
 
             # Launch the current batch
             if batch:
+                if _do_sched_profile:
+                    _t_fwd0 = time.perf_counter()
                 batch_result = self.run_batch(batch)
+                if _do_sched_profile:
+                    _t_fwd1 = time.perf_counter()
                 self.result_queue.append((batch.copy(), batch_result))
             else:
                 batch_result = None
@@ -1158,6 +1209,22 @@ class Scheduler(
             # It depends on the result of the last batch (e.g., grammar), so we run it after the last batch is processed.
             if self.is_generation:
                 self.launch_batch_sample_if_needed(batch_result)
+
+            if _do_sched_profile and batch:
+                _t_wall_end = time.perf_counter()
+                _mode = "extend" if batch.forward_mode.is_extend() else "decode"
+                _bs = batch.batch_size() if hasattr(batch, 'batch_size') else len(batch.reqs)
+                _pfx = sum(getattr(r, 'extend_input_len', 0) for r in batch.reqs) if _mode == "extend" else 0
+                _sched_record_step(
+                    mode=_mode,
+                    batch_size=_bs,
+                    forward_ms=(_t_fwd1 - _t_fwd0) * 1000,
+                    schedule_ms=(_t_sched1 - _t_sched0) * 1000,
+                    process_ms=_t_proc_ms,
+                    wall_start=_t_wall_start,
+                    wall_end=_t_wall_end,
+                    prefill_tokens=_pfx,
+                )
 
             # Update last_batch
             self.last_batch = batch

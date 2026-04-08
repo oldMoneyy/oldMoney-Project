@@ -9,6 +9,13 @@ This file has five sections:
   PART 3: PROGRESS -- experiment log, current status, and next steps
   PART 4: DIFF -- detailed codebase diff (sglang_sala_flashinfer vs official)
 
+RULE: Do NOT propose or discuss server argument tuning (--max-running-requests,
+  --chunked-prefill-size, --mem-fraction-static, etc.) as optimization strategies.
+  All server arg attempts have been exhausted and confirmed marginal. Only CODE-LEVEL
+  modifications (kernel changes, algorithm changes, operator fusion, new implementations)
+  are acceptable optimization proposals. If your suggestion is "try changing arg X",
+  you have failed. Write code or move on.
+
 FIRST: Read PART 0 (persona). It defines HOW you must think
 (first principles, calculate from physics, verify everything against code).
 Internalize it BEFORE reading any opinions below.
@@ -213,63 +220,199 @@ WHAT HAS BEEN TRIED (all exhausted)
 PROFILING DATA -- FLASHINFER BACKEND (actual current setup, 2026-04-03)
 ================================================================================
 Source: sglang_sala_profiling/results/flashinfer/c64/
-Method: --disable-cuda-graph + SGLANG_SALA_PROFILE=1
-Dataset: bench/competition_bench_64.jsonl (actual competition distribution)
-  3.88M input tokens, 410K output tokens, 64 requests
+  sala_timings.csv  -- CUDA event timings per component per layer per mode
+  bench_sala.txt    -- benchmark output (throughput, latency)
+  nsys.txt          -- nsys stats cuda_gpu_kern_sum (kernel-only time)
+  sala_summary.txt.gz -- raw profiler console output
 
-Benchmark duration (no CUDA graph): 1,815.86s
-  (Production with CUDA graph: ~1,036s for Smax)
-125 prefill steps, 30,055 decode steps
+--- HOW DATA WAS COLLECTED ---
 
---- PER-STEP DECODE BREAKDOWN (the key data) ---
+  Run 1 (SALA profiler):
+    Command: SGLANG_SALA_PROFILE=1 --disable-cuda-graph
+    Workload: bench/competition_bench_64.jsonl, 64 requests
+      3.88M input tokens, 410K output tokens
+    Completed: 64/64 requests, 1815.86s wall time
+    125 prefill steps, 30,055 decode steps
+    Instrument: sala_profiler.py wraps each model sub-component with
+      torch.cuda.Event(enable_timing=True) start/end pairs.
+      record() is non-blocking. NO torch.cuda.synchronize() in forward pass.
+      Sync only in print_summary() every N steps (outside forward).
+      Output: GPU-side elapsed ms per region (includes inter-kernel gaps
+      from CPU dispatch within each measured region).
+    CUDA graphs disabled because event recording is incompatible with
+    CUDA graph replay. This is why wall time is ~1.75x slower than
+    production (1816s vs ~1036s with CUDA graph).
+
+  Run 2 (NSYS):
+    Command: nsys profile ... --disable-cuda-graph (sglang_sala_cp build)
+    Completed: 56/64 requests (killed by duration limit)
+    Output: kernel-only execution time. Excludes all gaps between kernels.
+    Different code build (sglang_sala_cp vs sglang_sala_profiling).
+
+  Analysis script: sglang_sala_profiling/analyze_sala_timings.py
+    python3 analyze_sala_timings.py <csv> [--nsys nsys.txt] [--top N] [--per-layer]
+
+--- WHAT SALA PROFILER MEASURES (nesting structure) ---
+
+  CSV key format: L{nn}/{layer_type}/{component}/{mode}
+  layer_type: "minicpm4" (8 dense attn layers) or "lightning-attn"/"lightning" (24 GLA layers)
+  mode: "decode" or "prefill"
+
+  minicpm4 layers (L00, L09, L16, L17, L22, L29, L30, L31):
+    L{nn}/minicpm4/input_norm/{mode}        -- RMSNorm
+    L{nn}/minicpm4/attn/{mode}              -- WRAPPER, contains:
+      L{nn}/minicpm4/qkv_proj/{mode}          -- Marlin INT4 GEMM
+      L{nn}/minicpm4/attn_kernel/{mode}       -- FlashInfer paged attention kernel
+      L{nn}/minicpm4/o_gate/{mode}            -- Marlin GEMM (o_gate proj) + sigmoid + multiply
+      L{nn}/minicpm4/o_proj/{mode}            -- Marlin INT4 GEMM
+    L{nn}/minicpm4/post_attn_norm/{mode}    -- RMSNorm
+    L{nn}/minicpm4/mlp/{mode}               -- Marlin INT4 GEMM (up_proj + gate_proj + down_proj)
+
+  lightning layers (all other 24 layers):
+    L{nn}/lightning-attn/input_norm/{mode}   -- RMSNorm
+    L{nn}/lightning-attn/attn/{mode}         -- WRAPPER, contains:
+      L{nn}/lightning/qkv_proj/{mode}           -- Marlin INT4 GEMM
+      L{nn}/lightning/qk_norm/{mode}            -- RMSNorm (q_norm + k_norm)
+      L{nn}/lightning/rope/{mode}               -- RoPE (float cast + rotary embed + cast back)
+      L{nn}/lightning/fla_kernel/{mode}         -- WRAPPER, contains:
+        L{nn}/lightning/fla_state_load/{mode}     -- load GLA state from MambaCache pool
+        L{nn}/lightning/fused_recurrent_gla/{mode}-- GLA recurrent kernel (decode)
+        L{nn}/lightning/chunk_simple_gla/{mode}   -- GLA chunk kernel (prefill)
+        L{nn}/lightning/fla_state_save/{mode}     -- save GLA state back to MambaCache pool
+      L{nn}/lightning/o_norm/{mode}             -- RMSNorm
+      L{nn}/lightning/sigmoid_gate/{mode}       -- Marlin GEMM (z_proj) + sigmoid + multiply
+      L{nn}/lightning/o_proj/{mode}             -- Marlin INT4 GEMM
+    L{nn}/lightning-attn/post_attn_norm/{mode} -- RMSNorm
+    L{nn}/lightning-attn/mlp/{mode}            -- Marlin INT4 GEMM (up + gate + down)
+
+  model-level:
+    model/embed/{mode}       -- embedding lookup
+    model/final_norm/{mode}  -- final RMSNorm
+    model/logits/{mode}      -- lm_head projection
+
+  To avoid double-counting, analysis decomposes to LEAF nodes only.
+  Overhead = wrapper_time - sum(children_time), tracked separately.
+  Leaf + overhead = top-level total (verified: matches exactly).
+
+--- SALA RESULTS (leaf-level, zero double-counting) ---
+
+  Total measured GPU time: 1,167,960ms = 1168.0s
+    Decode:   621,878ms (53.2%)
+    Prefill:  546,082ms (46.8%)
+
+  TOP 5 DECODE (621.9s, 30,055 steps):
+    #1  minicpm4/attn_kernel       93,385ms  (15.0%)  3.107ms/step  [8L FlashInfer paged attn]
+    #2  lightning/mlp              79,645ms  (12.8%)  2.650ms/step  [24L Marlin GEMM]
+    #3  lightning/fused_recurrent  73,633ms  (11.8%)  2.450ms/step  [24L GLA recurrence]
+    #4  lightning/attn_overhead    40,480ms  ( 6.5%)  1.347ms/step  [dispatch gaps in attn wrapper]
+    #5  lightning/fla_state_load   35,195ms  ( 5.7%)  1.171ms/step  [24L state load from MambaCache]
+
+  TOP 5 PREFILL (546.1s, 125 steps):
+    #1  lightning/mlp             200,827ms  (36.8%)  1606.6ms/step  [24L Marlin GEMM]
+    #2  minicpm4/attn_kernel      150,110ms  (27.5%)  1200.9ms/step  [8L FlashInfer paged attn]
+    #3  minicpm4/mlp               67,125ms  (12.3%)   537.0ms/step  [8L Marlin GEMM]
+    #4  lightning/qkv_proj         44,728ms  ( 8.2%)   357.8ms/step  [24L Marlin GEMM]
+    #5  lightning/sigmoid_gate     17,633ms  ( 3.2%)   141.1ms/step  [24L z_proj GEMM + sigmoid]
+
+  TOP 5 COMBINED (1168.0s):
+    #1  lightning/mlp             280,472ms  (24.0%)  [D: 79,645  P:200,827]
+    #2  minicpm4/attn_kernel      243,495ms  (20.8%)  [D: 93,385  P:150,110]
+    #3  minicpm4/mlp               89,572ms  ( 7.7%)  [D: 22,447  P: 67,125]
+    #4  lightning/fused_recurrent  73,639ms  ( 6.3%)  [D: 73,633  P:      6]
+    #5  lightning/qkv_proj         71,173ms  ( 6.1%)  [D: 26,445  P: 44,728]
+
+  GROUPED VIEW:
+    ALL MLP (32L)                  370,044ms (31.7%)  [D:102,092  P:267,952]
+    minicpm4 attn_kernel (8L)      243,495ms (20.8%)  [D: 93,385  P:150,110]
+    ALL qkv_proj (32L)              84,580ms ( 7.2%)  [D: 34,084  P: 50,496]
+    lightning fused_recurrent (24L) 73,639ms ( 6.3%)  [D: 73,633  P:      6]
+    ALL overhead gaps               65,752ms ( 5.6%)  [D: 65,635  P:    117]
+    lightning state I/O (24L)       65,420ms ( 5.6%)  [D: 65,187  P:    233]
+    ALL norms                       56,423ms ( 4.8%)  [D: 49,286  P:  7,137]
+    lightning sigmoid_gate (24L)    50,723ms ( 4.3%)  [D: 33,090  P: 17,633]
+    ALL o_proj (32L)                50,457ms ( 4.3%)  [D: 30,344  P: 20,113]
+    lightning rope (24L)            40,318ms ( 3.5%)  [D: 29,644  P: 10,674]
+    lightning qk_norm (24L)         33,219ms ( 2.8%)  [D: 24,780  P:  8,439]
+    model (embed+logits+norm)       15,095ms ( 1.3%)  [D: 14,854  P:    241]
+    minicpm4 o_gate (8L)            11,683ms ( 1.0%)  [D:  5,865  P:  5,819]
+    lightning chunk_gla (24L)        7,113ms ( 0.6%)  [D:      0  P:  7,113]
+
+--- NSYS RESULTS (kernel-only, 591.5s total, 56/64 reqs) ---
+
+  Category                      Time (ms)    %     Instances   Avg (ms)
+  Marlin GEMM (all batch sizes)  314,011   53.1%    2.57M       0.122
+    bs=4                         245,782   41.6%     349K       0.704
+    bs=2                          47,456    8.0%    1.47M       0.032
+    bs=1                          13,823    2.3%     568K       0.024
+    bs=3                           6,950    1.2%     183K       0.037
+  FlashInfer attention           161,196   27.3%     116K       1.390
+    BatchPrefill Paged (large)    84,060   14.2%       920     91.37
+    BatchPrefill Paged (small)    52,866    8.9%     114K       0.464
+    BatchPrefill Ragged           23,389    4.0%      1.0K     23.08
+  Index/gather/copy               32,323    5.5%    1.43M       0.023
+  GLA chunk kernel                16,339    2.8%      14K       1.167
+  Norms (RMSNorm)                 13,159    2.2%    1.97M       0.007
+  SiLU activation                  9,388    1.6%     460K       0.020
+  GLA fused recurrent              7,808    1.3%     345K       0.023
+  Cutlass GEMM (bf16)              5,981    1.0%    10.7K       0.559
+  RoPE                             4,910    0.8%      3.1K      1.584
+
+--- NSYS vs SALA ALIGNMENT ---
+
+  NSYS total: 591.5s (kernel-only)  |  SALA total: 1168.0s (region time)
+  Ratio: 1.97x. The gap (576.5s) = time between kernels on the GPU stream
+  (CPU dispatch, Python overhead, memory allocation). This gap exists because
+  CUDA graphs are disabled; in production with CUDA graphs, kernel launches
+  are replayed without CPU dispatch.
+
+  Cross-tool ranking comparison:
+    Category              NSYS%   SALA%   SALA/NSYS ratio
+    Marlin GEMM           53.1%   43.2%   1.61x
+    FlashInfer attn       27.3%   20.8%   1.51x
+    GLA recurrent          1.3%    6.3%   9.43x
+    Norms                  2.2%    7.7%   6.81x
+    RoPE                   0.8%    3.5%   8.21x
+
+  Top 2 (GEMM, attention) agree between tools with low ratios (~1.5x).
+  Small-kernel components (GLA recurrent avg 0.023ms, norms avg 0.007ms)
+  show high ratios (6-9x) because CPU dispatch time between record() and
+  kernel launch is large relative to kernel execution time.
+
+  NSYS components not separately instrumented in SALA:
+    Index/gather/copy (5.5%), SiLU activation (1.6%), Cutlass GEMM (1.0%)
+    -- these execute inside SALA-profiled regions (e.g., SiLU inside mlp)
+
+  SALA components with no direct NSYS equivalent:
+    Dispatch overhead (5.6%) -- gaps between kernels within profiled regions
+    State I/O (5.6%) -- appears as copy/gather kernels in nsys
+
+--- PER-STEP DECODE BREAKDOWN ---
 
   Lightning (24 layers) per decode step:
     fla_kernel:           0.222ms * 24 = 5.33ms
     fused_recurrent_gla:  0.102ms * 24 = 2.45ms
     fla_state_load:       0.049ms * 24 = 1.17ms
-    sigmoid_gate:         0.046ms * 24 = 1.10ms
+    sigmoid_gate:         0.046ms * 24 = 1.10ms  (includes z_proj GEMM)
     fla_state_save:       0.042ms * 24 = 1.00ms
     rope:                 0.041ms * 24 = 0.99ms
     qkv_proj:             0.037ms * 24 = 0.88ms
-    qk_norm:              0.034ms * 24 = 0.82ms
     o_proj:               0.035ms * 24 = 0.85ms
+    qk_norm:              0.034ms * 24 = 0.82ms
     o_norm:               0.023ms * 24 = 0.56ms
     Lightning decode TOTAL:              15.15ms/step (72% of decode)
 
   MiniCPM4 (8 layers) per decode step:
-    attn_kernel:          0.388ms * 8 = 3.11ms  (dense attention!)
-    attn overhead:        0.091ms * 8 = 0.73ms  (FlashInfer setup)
+    attn_kernel:          0.388ms * 8 = 3.11ms
+    attn overhead:        0.091ms * 8 = 0.73ms
     mlp:                  0.093ms * 8 = 0.74ms
-    qkv/o_proj/o_gate:    ~0.076ms * 8 = 0.61ms
+    qkv/o_proj/o_gate:    ~0.076ms * 8 = 0.61ms  (o_gate includes GEMM)
     norms:                ~0.018ms * 8 = 0.14ms
     MiniCPM4 decode TOTAL:               5.33ms/step (25% of decode)
 
   Other: logits 0.43ms + embed 0.06ms = 0.49ms/step (3%)
 
   TOTAL DECODE PER STEP (no CUDA graph): ~21ms
-  (With CUDA graph in production: estimated ~12ms based on 1816s/1036s ratio)
-
---- MINICPM4 ATTENTION TOTALS (the sparse attention target) ---
-
-  attn_kernel (prefill): 150,110ms  (avg 145ms/step, max 389ms on long seq)
-  attn_kernel (decode):   93,385ms  (avg 0.388ms/layer/step * 8 layers)
-  Total:                 243,495ms  = 12.2% of total layer time
-
---- LIGHTNING ATTENTION TOTALS (largest decode component) ---
-
-  fla_kernel (decode):          160,311ms
-  fused_recurrent_gla (decode):  73,633ms
-  fla_state_load (decode):       35,195ms
-  fla_state_save (decode):       29,992ms
-  Lightning decode total:       ~455,000ms = 22.7% of total layer time
-
---- MLP TOTALS (same for all competitors) ---
-
-  MLP prefill (32 layers):     ~268,000ms
-  MLP decode (32 layers):       ~90,000ms
-  MLP total:                   ~358,000ms = 17.9% of total layer time
-
---- OVERALL LAYER TIME: ~2,000,000ms across all components ---
+  (Production with CUDA graph: ~12ms estimated from 1816s/1036s wall time ratio)
 
 ================================================================================
 PROFILING DATA -- MINICPM_FLASHINFER BACKEND (old, for reference only)
@@ -336,10 +479,13 @@ quantization/fast_eval.py                      <- quick eval after quantization
 
 --- Profiling ---
 sglang_sala_profiling/results/flashinfer/c64/  <- CURRENT flashinfer profiling
-  sala_summary.txt.gz, sala_timings.csv, bench_sala.txt
+  sala_summary.txt.gz, sala_timings.csv, bench_sala.txt, nsys.txt
+sglang_sala_profiling/analyze_sala_timings.py  <- Leaf-level bottleneck analysis script
+  Usage: python3 analyze_sala_timings.py <csv> [--nsys <nsys.txt>] [--top N] [--per-layer]
+  Decomposes nested profiling regions to leaves, zero double-counting.
 sglang_sala_profiling/profiling_reference.txt  <- OLD minicpm_flashinfer profiling
 sglang_sala_profiling/run_profile.sh           <- profiling runner
-sglang_sala_profiling/sglang/srt/sala_profiler.py <- instrumentation
+sglang_sala_profiling/sglang/srt/sala_profiler.py <- instrumentation (CUDA events, non-blocking)
 
 --- Evaluation & Benchmarking ---
 SOAR-Toolkit/bench_serving.sh, eval_model.py
