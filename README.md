@@ -22,6 +22,12 @@ from huggingface_hub import snapshot_download
 snapshot_download('borisdotv/model-gptq-int4-dense-smooth', local_dir='/opt/model_gptq_int4_dense_smooth', token='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')
 print('Done!')
 "
+
+# Get uv
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+apt update
+apt install psmisc lsof -y
 ```
 
 Steps to push commits:
@@ -80,26 +86,8 @@ export HF_HUB_ENABLE_HF_TRANSFER=1
 
 # export HF_ENDPOINT=https://hf-mirror.com
 python download_minicpm_sala.py
-
-
-# SOAR-Toolkit is included in the project repo at SOAR-Toolkit/
-
-
-# Get uv
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-apt update
-apt install psmisc lsof -y
 ```
 
-Install SGLang (pick one):
-```bash
-# Optimized version:
-uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_opt
-
-# Baseline version:
-uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
-```
 
 Environment changes we made:
 1. Updated `if model_runner.server_args.fuse_topk:` logic in minicpm_backend.py for JIT redundant compiling.
@@ -122,9 +110,6 @@ python -c "import torch; print(f'PyTorch Version: {torch.__version__}\nCUDA Vers
 
 SALA official start command:
 ```bash
-# uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
-uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_fuse
-# uv pip install --no-deps -e /opt/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python
 fuser -k -9 31333/tcp
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
@@ -176,12 +161,6 @@ Expected answers: `Paris`, `BLUE-TIGER-42`, `Alice Zhang, 1987`.
 ```bash
 cd /opt/oldMoney-Project/quantization && python /opt/oldMoney-Project/quantization/fast_eval.py --mode eval --api-base http://127.0.0.1:31333
 # cd /opt/oldMoney-Project/quantization && python /opt/oldMoney-Project/quantization/fast_eval_quantization.py --mode eval --api-base http://127.0.0.1:31333
-```
-
-### Profiling
-In `MiniCPMSparseBackend.forward_extend`, `MiniCPMSparseBackend.init_forward_metadata`, `MiniCPMDecoderLayer.forward`, `FlashInferKernel.forward` there are profiling codes.
-```bash
-python /opt/oldMoney-Project/bench/profile_prefill.py
 ```
 
 
@@ -260,43 +239,6 @@ nohup python3 /opt/oldMoney-Project/quantization/GPTQ_int4_flashinfer_dense_smoo
 tail -f /opt/oldMoney-Project/logs/model_gptq_int4_dense_smooth.log
 ```
 
-Build a quantized model for minicpm_flashinfer:
-```bash
-source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
-export TRITON_PTXAS_PATH="$(which ptxas)"
-export LD_LIBRARY_PATH=/opt/oldMoney-Project/quantization/venv/lib/python3.10/site-packages/torch/lib:$LD_LIBRARY_PATH
-nohup python3 /opt/oldMoney-Project/quantization/GPTQ_int4_lightning_only_minicpm4_bf16.py \
-    --input /opt/model \
-    --output /opt/model_GPTQ_int4_lightning_only_minicpm4_bf16 \
-    --bits 4 \
-    --group-size 128 \
-    --calib-data /opt/oldMoney-Project/quantization/calibration_dense/calib_dense_96.jsonl \
-    --max-samples 96 \
-    --max-len 131072 \
-    --smooth-alpha 0.5 \
-    > /opt/oldMoney-Project/logs/model_GPTQ_int4_lightning_only_minicpm4_bf16.log 2>&1 &
-
-tail -f /opt/oldMoney-Project/logs/model_GPTQ_int4_lightning_only_minicpm4_bf16.log
-```
-
-Original sparse quantization:
-```bash
-source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
-export TRITON_PTXAS_PATH="$(which ptxas)"
-export LD_LIBRARY_PATH=/opt/oldMoney-Project/quantization/venv/lib/python3.10/site-packages/torch/lib:$LD_LIBRARY_PATH
-nohup python3 /opt/oldMoney-Project/quantization/GPTQ_int4_minicpm_flashinfer_sparse_gpu.py \
-    --input /opt/model \
-    --output /opt/model_gptq_int4_minicpm_flashinfer_sparse \
-    --bits 4 \
-    --group-size 128 \
-    --calib-data /opt/oldMoney-Project/quantization/calibration_dense/calib_dense_96.jsonl \
-    --max-samples 96 \
-    --max-len 131072 \
-    > /opt/oldMoney-Project/logs/model_gptq_int4_minicpm_flashinfer_sparse.log 2>&1 &
-
-tail -f /opt/oldMoney-Project/logs/model_gptq_int4_minicpm_flashinfer_sparse.log
-```
-
 
 ## Deploy GPTQ Models
 
@@ -307,8 +249,8 @@ fuser -k -9 31333/tcp
 # uv pip install --no-deps -e /opt/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python
 # uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_flashinfer
 uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
-# export SGLANG_SPARSE_PREFILL=1
-# export SGLANG_SPARSE_DECODE=1
+export SGLANG_SPARSE_PREFILL=0
+export SGLANG_SPARSE_DECODE=0
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 nohup python3 -m sglang.launch_server \
@@ -376,29 +318,6 @@ sleep 10
 /opt/nvidia/nsight-compute/2025.2.1/host/target-linux-x64/nsys stats \
     --report cuda_gpu_kern_sum --timeunit msec \
     /opt/lightning_profile.nsys-rep
-```
-
-
-Sparse:
-```bash
-export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
-python3 -m sglang.launch_server \
-    --model-path /opt/model_gptq_ultimate_64_sparse \
-    --port 31333 \
-    --quantization gptq_marlin \
-    --dtype float16 \
-    --disable-radix-cache \
-    --kv-cache-dtype fp8_e5m2 \
-    --attention-backend minicpm_flashinfer \
-    --chunked-prefill-size 32768 \
-    --mem-fraction-static 0.6 \
-    --max-mamba-cache-size 32 \
-    --fuse-topk \
-    --max-running-requests 32 \
-    --log-level info \
-    --num-continuous-decode-steps 2 \
-    --enable-mixed-chunk \
-    --enable-torch-compile
 ```
 
 
