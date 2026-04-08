@@ -9,7 +9,6 @@ Each backend supports two operators: extend (i.e. prefill with cached prefix) an
 
 import logging
 import os
-from bisect import bisect_right
 from dataclasses import dataclass
 from enum import Enum, auto
 from functools import partial
@@ -1220,10 +1219,10 @@ class FlashInferIndicesUpdaterDecode:
         elif self.attn_backend.dispatch_reason == WrapperDispatch.SPARSE_DECODE:
             self.update = self.update_sparse_decode
             self._sparse_cfg = None  # Lazy-loaded on first call (model init hasn't run yet)
-            # --- Persistent GPU block pool + CPU caches ---
+            # --- Persistent GPU block pool ---
             # Blocks are deduplicated, sorted, filtered (start >= dense_len).
             # Updated only when block selection changes (rare).
-            # The Triton kernel further clips at window_start (arithmetic, no branch).
+            # CUDA kernel clips at window_start per step.
             max_reqs = self.req_to_token.shape[0]
             _topk_env = int(os.environ.get("SGLANG_SPARSE_TOPK", "0"))
             _effective_topk = _topk_env if _topk_env > 0 else 64
@@ -1235,18 +1234,12 @@ class FlashInferIndicesUpdaterDecode:
             self._sparse_n_blocks = torch.zeros(
                 max_reqs, dtype=torch.int32, device=model_runner.device,
             )
-            # CPU mirrors (for kv_lens computation without GPU sync)
-            self._sparse_blocks_cpu: dict[int, list] = {}   # req_idx -> [block indices with start >= dense_len]
-            self._sparse_blocks_id: dict[int, int] = {}     # req_idx -> id(block_indices)
-            # Precomputed block starts for O(log N) sparse_tokens via bisect
-            self._block_starts_cache: dict[int, list] = {}   # req_idx -> sorted [blk * block_size, ...]
-            # Pre-allocated per-step tensors (avoid alloc every step)
-            max_bs = max_reqs  # upper bound
+            self._sparse_blocks_id: dict[int, int] = {}  # req_idx -> id(block_indices)
+            # Pre-allocated per-step buffers
+            max_bs = max_reqs
             self._is_sparse_buf = torch.zeros(max_bs, dtype=torch.int32, device=model_runner.device)
-            # Pre-allocated CPU buffers (avoid torch.tensor() every step)
-            self._kv_lens_cpu = torch.zeros(max_bs, dtype=torch.int32)
             self._is_sparse_cpu = torch.zeros(max_bs, dtype=torch.int32)
-            self._sparse_indptr_cpu = torch.zeros(max_bs + 1, dtype=torch.int32)
+            self._kv_lens_buf = torch.zeros(max_bs, dtype=torch.int32, device=model_runner.device)
         else:
             assert self.attn_backend.num_wrappers == 1
             self.update = self.update_single_wrapper
@@ -1397,7 +1390,12 @@ class FlashInferIndicesUpdaterDecode:
         Wrapper 1 (sparse): filtered indices for 8 minicpm4 layers using cached
         block selections from _decode_block_cache. Static portions (dense region +
         sparse blocks) are cached per request to avoid redundant GPU ops.
+
+        kv_lens and kv_indices are both computed on GPU via CUDA kernels,
+        eliminating the Python-loop overhead and guaranteeing consistency.
         """
+        import sparse_decode_extension
+
         # Lazy-load sparse config (model init runs after backend init)
         if self._sparse_cfg is None:
             from sglang.srt.layers.attention.sparse_prefill import get_sparse_decode_config
@@ -1439,24 +1437,20 @@ class FlashInferIndicesUpdaterDecode:
         device = seq_lens.device
 
         from sglang.srt.layers.attention.sparse_prefill import _decode_block_cache
-        from sglang.srt.layers.attention.utils import build_sparse_decode_kv_indices_kernel
 
-        # --- CPU-side: update block pool (rare) + compute kv_lens (every step) ---
+        # --- CPU-side: update block pool (rare) + set is_sparse flags ---
         seq_lens_list = seq_lens_cpu.tolist() if seq_lens_cpu is not None else seq_lens.tolist()
         req_pool_list = req_pool_indices.tolist()
 
         # Evict stale cache entries
         active_set = set(req_pool_list)
-        stale = [k for k in self._sparse_blocks_cpu if k not in active_set]
+        stale = [k for k in list(self._sparse_blocks_id) if k not in active_set]
         if stale:
             stale_t = torch.tensor(stale, dtype=torch.int64, device=device)
             self._sparse_n_blocks[stale_t] = 0
             for k in stale:
-                del self._sparse_blocks_cpu[k]
                 del self._sparse_blocks_id[k]
-                self._block_starts_cache.pop(k, None)
 
-        kv_lens_cpu = self._kv_lens_cpu
         is_sparse_cpu = self._is_sparse_cpu
         for b in range(bs):
             req_idx = req_pool_list[b]
@@ -1464,7 +1458,7 @@ class FlashInferIndicesUpdaterDecode:
             cached = _decode_block_cache.get(req_idx)
 
             if sl > dense_len and cached is not None:
-                # Update GPU pool + CPU cache only when blocks change (rare)
+                # Update GPU pool only when blocks change (rare)
                 bid = id(cached.block_indices)
                 if self._sparse_blocks_id.get(req_idx) != bid:
                     all_blocks = torch.cat(cached.block_indices, dim=0).unique()
@@ -1475,60 +1469,61 @@ class FlashInferIndicesUpdaterDecode:
                     n = min(len(filtered), self._max_blocks_per_req)
                     self._sparse_block_pool[req_idx, :n] = filtered[:n].to(torch.int32)
                     self._sparse_n_blocks[req_idx] = n
-                    blk_list = filtered[:n].tolist()
-                    self._sparse_blocks_cpu[req_idx] = blk_list
                     self._sparse_blocks_id[req_idx] = bid
-                    self._block_starts_cache[req_idx] = [blk * block_size for blk in blk_list]
-
-                # O(log N) sparse_tokens via binary search on precomputed block starts
-                window_start = max(dense_len, sl - window_size)
-                block_starts = self._block_starts_cache[req_idx]
-                full_count = bisect_right(block_starts, window_start - block_size)
-                sparse_tokens = full_count * block_size
-                if full_count < len(block_starts) and block_starts[full_count] < window_start:
-                    sparse_tokens += window_start - block_starts[full_count]
-
-                kv_lens_cpu[b] = dense_len + sparse_tokens + (sl - window_start)
                 is_sparse_cpu[b] = 1
             else:
-                kv_lens_cpu[b] = sl
                 is_sparse_cpu[b] = 0
 
-        # --- Build kv_indptr from pre-allocated buffers (no tensor creation) ---
-        kv_indptr = self.kv_indptr[1]
-        sparse_indptr_cpu = self._sparse_indptr_cpu
-        sparse_indptr_cpu[0] = 0
-        sparse_indptr_cpu[1:bs + 1] = torch.cumsum(kv_lens_cpu[:bs], dim=0)
-        kv_indptr[:bs + 1] = sparse_indptr_cpu[:bs + 1].to(device, non_blocking=True)
-
-        # Batch is_sparse to GPU (single copy, no tensor creation)
+        # Batch is_sparse to GPU
         self._is_sparse_buf[:bs] = is_sparse_cpu[:bs].to(device, non_blocking=True)
+
+        # --- CUDA kernel 1: compute kv_lens on GPU ---
+        kv_lens = self._kv_lens_buf[:bs]
+        if bs > 0:
+            kv_lens = sparse_decode_extension.sparse_decode_kv_lens(
+                seq_lens,
+                req_pool_indices.to(torch.int32),
+                self._sparse_block_pool,
+                self._sparse_n_blocks,
+                self._is_sparse_buf[:bs],
+                dense_len,
+                window_size,
+                block_size,
+            )
+
+        # --- Build kv_indptr via GPU cumsum ---
+        kv_indptr = self.kv_indptr[1]
+        kv_indptr[0] = 0
+        if bs > 0:
+            kv_indptr[1:bs + 1] = torch.cumsum(kv_lens, dim=0)
+
+        # Small D2H for FlashInfer begin_forward
+        sparse_indptr_cpu = kv_indptr[:bs + 1].cpu()
 
         # Output buffer
         if decode_wrappers[1].is_cuda_graph_enabled:
             kv_indices = decode_wrappers[1]._paged_kv_indices_buf
         else:
-            total_tokens = sparse_indptr_cpu[bs].item()
+            total_tokens = sparse_indptr_cpu[bs].item() if bs > 0 else 0
             kv_indices = torch.empty(
                 total_tokens, dtype=torch.int32, device=device
             )
 
-        # --- Launch Triton kernel (1 kernel, reads from persistent GPU pool) ---
+        # --- CUDA kernel 2: build kv_indices on GPU ---
         if bs > 0:
-            build_sparse_decode_kv_indices_kernel[(bs,)](
+            sparse_decode_extension.sparse_decode_kv_indices(
                 self.req_to_token,
-                req_pool_indices,
+                req_pool_indices.to(torch.int32),
                 seq_lens,
                 self._sparse_block_pool,
                 self._sparse_n_blocks,
-                self._is_sparse_buf,
+                self._is_sparse_buf[:bs],
+                kv_indptr[:bs + 1],
                 kv_indices,
-                kv_indptr,
-                self.req_to_token.shape[1],
-                self._sparse_block_pool.shape[1],
                 dense_len,
                 window_size,
                 block_size,
+                self._max_blocks_per_req,
             )
 
         # --- begin_forward for wrapper 1 ---
@@ -1541,7 +1536,7 @@ class FlashInferIndicesUpdaterDecode:
 
         fwd_args = [
             kv_indptr[:bs + 1],
-            kv_indices if wrapper.is_cuda_graph_enabled else kv_indices,
+            kv_indices,
             self.kv_last_page_len[:bs],
             self.num_qo_heads,
             self.num_kv_heads,
