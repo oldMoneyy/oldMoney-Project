@@ -49,6 +49,7 @@ payload = {
     "model": "MiniCPM-SALA",
     "messages": [{"role": "user", "content": prompt}],
     "max_tokens": MAX_OUTPUT_TOKENS,
+    "min_tokens": MAX_OUTPUT_TOKENS,
     "temperature": 0.0,
 }
 
