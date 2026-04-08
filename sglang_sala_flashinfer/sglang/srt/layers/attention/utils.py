@@ -53,6 +53,7 @@ def build_sparse_kv_indices_kernel(
     seq_lens_ptr,               # (bs,) int32
     block_pool_ptr,             # (max_reqs, max_blocks_per_req) int32
     n_blocks_ptr,               # (max_reqs,) int32
+    is_sparse_ptr,              # (bs,) int32 — 1=sparse, 0=dense (authoritative)
     # Outputs
     kv_indices_out_ptr,         # (total_buf_size,) int32
     kv_indptr_ptr,              # (bs+1,) int32 — INPUT: cumulative offsets
@@ -79,12 +80,11 @@ def build_sparse_kv_indices_kernel(
     req_pool_idx = tl.load(req_pool_indices_ptr + pid)
     sl = tl.load(seq_lens_ptr + pid).to(tl.int32)
     n_blocks = tl.load(n_blocks_ptr + req_pool_idx).to(tl.int32)
+    is_sparse = tl.load(is_sparse_ptr + pid).to(tl.int32) > 0
     out_offset = tl.load(kv_indptr_ptr + pid).to(tl.int64)
 
     req_base = req_pool_idx.to(tl.int64) * req_to_token_stride
     block_base = req_pool_idx.to(tl.int64) * block_pool_stride
-
-    is_sparse = (n_blocks > 0) & (sl > DENSE_LEN)
 
     if is_sparse:
         # Compute window_start upfront (needed to clip sparse blocks)

@@ -1411,6 +1411,7 @@ class FlashInferIndicesUpdaterDecode:
                 del self._sparse_blocks_id[k]
 
         kv_lens = []
+        is_sparse_list = []
         for b in range(bs):
             req_idx = req_pool_list[b]
             sl = seq_lens_list[b]
@@ -1434,8 +1435,10 @@ class FlashInferIndicesUpdaterDecode:
                         if safe_end > start:
                             static_count += safe_end - start
                 kv_lens.append(static_count + sl - window_start)
+                is_sparse_list.append(1)
             else:
                 kv_lens.append(sl)
+                is_sparse_list.append(0)
 
         # --- Step 2: Build kv_indptr on CPU (no GPU sync) ---
         kv_indptr = self.kv_indptr[1]
@@ -1455,12 +1458,16 @@ class FlashInferIndicesUpdaterDecode:
 
         # --- Step 4: Launch Triton kernel (1 kernel launch) ---
         if bs > 0:
+            is_sparse_gpu = torch.tensor(
+                is_sparse_list, dtype=torch.int32, device=device
+            )
             build_sparse_kv_indices_kernel[(bs,)](
                 self.req_to_token,
                 req_pool_indices,
                 seq_lens,
                 self._sparse_block_pool,
                 self._sparse_n_blocks,
+                is_sparse_gpu,
                 kv_indices,
                 kv_indptr,
                 self.req_to_token.shape[1],
