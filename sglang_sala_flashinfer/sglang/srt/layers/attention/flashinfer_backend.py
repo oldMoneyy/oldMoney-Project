@@ -972,9 +972,10 @@ class FlashInferAttnBackend(AttentionBackend):
         """Run sparse paged attention for the ragged+paged merge path.
 
         Returns (output, lse) for merging with the ragged self-attention.
-        Builds filtered kv_indices directly from req_to_token without
-        redundant Triton kernel calls.
+        Uses Triton kernel to build filtered kv_indices from req_to_token.
         """
+        from sglang.srt.layers.attention.utils import build_sparse_prefill_kv_indices_kernel
+
         updater = self.indices_updater_prefill
         req_to_token = updater.req_to_token
         req_pool_indices = forward_batch.req_pool_indices
@@ -986,61 +987,113 @@ class FlashInferAttnBackend(AttentionBackend):
         prefix_lens = sparse_meta["prefix_lens"]
         dense_len = sparse_meta["dense_len"]
 
-        # Build filtered kv_indices directly from req_to_token
-        all_phys = []
+        # --- CPU-side: pre-filter blocks, compute filtered_lens ---
         filtered_lens = []
+        is_sparse_list = []
+        all_qualifying_blocks = []
+        block_counts = []
+
         for b in range(bs):
-            req_idx = req_pool_indices[b].item()
             plen = prefix_lens[b]
 
             if plen > dense_len and sparse_block_indices[b] is not None:
-                # Sparse: always include first dense_len tokens (dense region)
-                # + topk-selected blocks beyond dense_len
-                dense_positions = torch.arange(0, min(dense_len, plen), device=device)
-
-                # Gather sparse block tokens BEYOND dense_len only
                 all_blocks = torch.cat(sparse_block_indices[b], dim=0).unique()
                 all_blocks = all_blocks[all_blocks >= 0].sort().values
 
                 block_starts = all_blocks.long() * block_size
-                block_ends = torch.clamp(block_starts + block_size, max=plen)
-                # Only include blocks that start at or beyond dense_len
-                sparse_mask = (block_starts >= dense_len) & (block_starts < plen)
+                mask = (block_starts >= dense_len) & (block_starts < plen)
+                qualifying = all_blocks[mask]
 
-                if sparse_mask.any():
-                    sparse_starts = block_starts[sparse_mask]
-                    sparse_ends = block_ends[sparse_mask]
-                    sparse_positions = torch.cat([
-                        torch.arange(s.item(), e.item(), device=device)
-                        for s, e in zip(sparse_starts, sparse_ends)
-                    ])
-                    token_positions = torch.cat([dense_positions, sparse_positions])
-                else:
-                    token_positions = dense_positions
+                dense_end = min(dense_len, plen)
+                sparse_tokens = 0
+                for blk in qualifying.tolist():
+                    start = blk * block_size
+                    sparse_tokens += min(block_size, plen - start)
 
-                phys = req_to_token[req_idx, token_positions]
-                all_phys.append(phys)
-                filtered_lens.append(len(phys))
+                filtered_lens.append(dense_end + sparse_tokens)
+                is_sparse_list.append(1)
+                all_qualifying_blocks.append(qualifying)
+                block_counts.append(len(qualifying))
             elif plen > 0:
                 # Dense: include all prefix tokens
-                phys = req_to_token[req_idx, :plen]
-                all_phys.append(phys)
                 filtered_lens.append(plen)
+                is_sparse_list.append(0)
+                block_counts.append(0)
             else:
                 filtered_lens.append(0)
+                is_sparse_list.append(0)
+                block_counts.append(0)
 
-        # Build indptr
-        filtered_kv_indptr = torch.zeros(bs + 1, dtype=torch.int32, device=device)
+        # --- Build GPU tensors ---
+        block_offsets_cpu = torch.zeros(bs + 1, dtype=torch.int32)
         for b in range(bs):
-            filtered_kv_indptr[b + 1] = filtered_kv_indptr[b] + filtered_lens[b]
+            block_offsets_cpu[b + 1] = block_offsets_cpu[b] + block_counts[b]
+        total_blocks = block_offsets_cpu[bs].item()
 
-        # Concatenate indices
-        if all_phys:
-            filtered_kv_indices = torch.cat(all_phys, dim=0).to(torch.int32)
-            pad = torch.zeros(256, dtype=torch.int32, device=device)
-            filtered_kv_indices = torch.cat([filtered_kv_indices, pad])
+        if total_blocks > 0:
+            block_pool = torch.cat(all_qualifying_blocks, dim=0).to(torch.int32).to(device)
         else:
-            filtered_kv_indices = torch.zeros(256, dtype=torch.int32, device=device)
+            block_pool = torch.zeros(1, dtype=torch.int32, device=device)
+        block_offsets = block_offsets_cpu.to(device)
+
+        indptr_cpu = torch.zeros(bs + 1, dtype=torch.int32)
+        for b in range(bs):
+            indptr_cpu[b + 1] = indptr_cpu[b] + filtered_lens[b]
+        filtered_kv_indptr = indptr_cpu.to(device)
+
+        total_tokens = indptr_cpu[bs].item()
+        is_sparse_gpu = torch.tensor(is_sparse_list, dtype=torch.int32, device=device)
+        prefix_lens_gpu = torch.tensor(prefix_lens[:bs], dtype=torch.int32, device=device)
+
+        filtered_kv_indices = torch.zeros(total_tokens + 256, dtype=torch.int32, device=device)
+
+        # For non-sparse requests: build original indptr from prefix_lens so
+        # the kernel can copy all prefix tokens from req_to_token via the
+        # dense fallback path (reading req_to_token[req_idx, 0:plen]).
+        # We pass req_to_token as both req_to_token and orig_kv_indices —
+        # the dense fallback will read [0, plen) from orig_kv_indptr.
+        orig_indptr_cpu = torch.zeros(bs + 1, dtype=torch.int32)
+        for b in range(bs):
+            if is_sparse_list[b] == 0:
+                orig_indptr_cpu[b + 1] = orig_indptr_cpu[b] + prefix_lens[b]
+            else:
+                orig_indptr_cpu[b + 1] = orig_indptr_cpu[b]
+        # Build a simple original_kv_indices for non-sparse requests
+        # by re-running the standard Triton index builder
+        orig_total = orig_indptr_cpu[bs].item()
+        orig_indptr_gpu = orig_indptr_cpu.to(device)
+        if orig_total > 0:
+            orig_kv_indices = torch.empty(orig_total, dtype=torch.int32, device=device)
+            # Build original indices for non-sparse requests
+            orig_lens_gpu = torch.zeros(bs, dtype=torch.int32, device=device)
+            for b in range(bs):
+                if is_sparse_list[b] == 0 and prefix_lens[b] > 0:
+                    orig_lens_gpu[b] = prefix_lens[b]
+            create_flashinfer_kv_indices_triton[(bs,)](
+                req_to_token, req_pool_indices, orig_lens_gpu,
+                orig_indptr_gpu, None, orig_kv_indices,
+                req_to_token.shape[1],
+            )
+        else:
+            orig_kv_indices = torch.zeros(1, dtype=torch.int32, device=device)
+
+        # --- Launch Triton kernel ---
+        if bs > 0:
+            build_sparse_prefill_kv_indices_kernel[(bs,)](
+                req_to_token,
+                req_pool_indices,
+                prefix_lens_gpu,
+                block_pool,
+                block_offsets,
+                is_sparse_gpu,
+                orig_kv_indices,
+                orig_indptr_gpu,
+                filtered_kv_indices,
+                filtered_kv_indptr,
+                req_to_token.shape[1],
+                dense_len,
+                block_size,
+            )
 
         # Create temporary wrapper
         sparse_wrapper = BatchPrefillWithPagedKVCacheWrapper(

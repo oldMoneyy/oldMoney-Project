@@ -46,6 +46,85 @@ def create_flashinfer_kv_indices_triton(
 
 
 @triton.jit
+def build_sparse_prefill_kv_indices_kernel(
+    # Inputs
+    req_to_token_ptr,           # (max_reqs, max_seq_len) int32
+    req_pool_indices_ptr,       # (bs,) int32/int64
+    prefix_lens_ptr,            # (bs,) int32
+    block_pool_ptr,             # (total_blocks,) int32 — flat, pre-filtered block indices
+    block_offsets_ptr,          # (bs+1,) int32 — indptr into block_pool per request
+    is_sparse_ptr,              # (bs,) int32 — 1=sparse, 0=dense
+    orig_kv_indices_ptr,        # original kv_indices for non-sparse requests
+    orig_kv_indptr_ptr,         # (bs+1,) int32 — original indptr for non-sparse
+    # Outputs
+    kv_indices_out_ptr,         # (total_buf_size,) int32
+    kv_indptr_ptr,              # (bs+1,) int32 — INPUT: pre-computed output offsets
+    # Strides / Constants
+    req_to_token_stride: tl.constexpr,
+    DENSE_LEN: tl.constexpr,
+    BLOCK_SIZE_SPARSE: tl.constexpr,  # sparse block size (e.g. 64)
+):
+    """Build sparse prefill kv_indices for FlashInfer.
+
+    One program per request. For sparse requests: writes dense region [0, dense_end)
+    then copies tokens for each pre-filtered block (unconditionally — no conditional
+    needed because blocks are pre-filtered on CPU to only include qualifying ones).
+    For dense requests: copies from original_kv_indices.
+
+    kv_indptr is an INPUT (pre-computed on CPU) giving each program its output offset.
+    """
+    COPY_BLOCK: tl.constexpr = 512
+    pid = tl.program_id(0)
+
+    req_pool_idx = tl.load(req_pool_indices_ptr + pid)
+    prefix_len = tl.load(prefix_lens_ptr + pid).to(tl.int32)
+    is_sparse = tl.load(is_sparse_ptr + pid).to(tl.int32) > 0
+    out_offset = tl.load(kv_indptr_ptr + pid).to(tl.int64)
+
+    req_base = req_pool_idx.to(tl.int64) * req_to_token_stride
+
+    if is_sparse:
+        # --- 1. Dense region [0, min(DENSE_LEN, prefix_len)) ---
+        dense_end = tl.minimum(DENSE_LEN, prefix_len)
+        for i in range(tl.cdiv(DENSE_LEN, COPY_BLOCK)):
+            offsets = tl.arange(0, COPY_BLOCK).to(tl.int64) + i * COPY_BLOCK
+            mask = offsets < dense_end
+            phys = tl.load(req_to_token_ptr + req_base + offsets, mask=mask, other=0)
+            tl.store(kv_indices_out_ptr + out_offset + offsets, phys, mask=mask)
+        out_offset += dense_end.to(tl.int64)
+
+        # --- 2. Pre-filtered sparse blocks (ALL qualifying, no conditional needed) ---
+        block_start_idx = tl.load(block_offsets_ptr + pid).to(tl.int32)
+        block_end_idx = tl.load(block_offsets_ptr + pid + 1).to(tl.int32)
+        n_blocks = block_end_idx - block_start_idx
+
+        for bi in range(n_blocks):
+            block_idx = tl.load(block_pool_ptr + block_start_idx + bi).to(tl.int32)
+            block_start = block_idx * BLOCK_SIZE_SPARSE
+            # Every block is pre-filtered: block_start >= DENSE_LEN and < prefix_len
+            n_tokens = tl.minimum(BLOCK_SIZE_SPARSE, prefix_len - block_start)
+            # BLOCK_SIZE_SPARSE (64) fits in one COPY_BLOCK (512), single pass
+            offsets = tl.arange(0, BLOCK_SIZE_SPARSE).to(tl.int64)
+            mask = offsets < n_tokens
+            phys = tl.load(
+                req_to_token_ptr + req_base + block_start.to(tl.int64) + offsets,
+                mask=mask, other=0,
+            )
+            tl.store(
+                kv_indices_out_ptr + out_offset + offsets,
+                phys, mask=mask,
+            )
+            out_offset += n_tokens.to(tl.int64)
+    else:
+        # Dense fallback: copy from original_kv_indices
+        orig_start = tl.load(orig_kv_indptr_ptr + pid).to(tl.int64)
+        orig_end = tl.load(orig_kv_indptr_ptr + pid + 1).to(tl.int64)
+        orig_len = orig_end - orig_start
+        for i in range(tl.cdiv(orig_len, COPY_BLOCK)):
+            offsets = tl.arange(0, COPY_BLOCK).to(tl.int64) + i * COPY_BLOCK
+            mask = offsets < orig_len
+            data = tl.load(orig_kv_indices_ptr + orig_start + offsets, mask=mask, other=0)
+            tl.store(kv_indices_out_ptr + out_offset + offsets, data, mask=mask)
 def build_sparse_kv_indices_kernel(
     # Inputs
     req_to_token_ptr,           # (max_reqs, max_seq_len) int32

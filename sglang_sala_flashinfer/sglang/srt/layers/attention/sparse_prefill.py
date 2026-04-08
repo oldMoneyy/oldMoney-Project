@@ -828,7 +828,13 @@ def build_filtered_kv_indices(
     original_kv_indptr: torch.Tensor,
     device: torch.device,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
-    """Build filtered kv_indices that only include selected sparse blocks."""
+    """Build filtered kv_indices that only include selected sparse blocks.
+
+    Uses a Triton kernel for the bulk copy. Blocks are pre-filtered on CPU
+    so the kernel loop has no data-dependent conditionals.
+    """
+    from sglang.srt.layers.attention.utils import build_sparse_prefill_kv_indices_kernel
+
     sparse_block_indices = sparse_metadata["sparse_block_indices"]
     block_size = sparse_metadata["block_size"]
     prefix_lens = sparse_metadata["prefix_lens"]
@@ -836,54 +842,84 @@ def build_filtered_kv_indices(
     dense_len = sparse_metadata["dense_len"]
     batch_size = len(seq_lens)
 
-    all_phys_indices = []
+    # --- CPU-side: pre-filter blocks, compute filtered_lens ---
     filtered_lens = []
+    is_sparse_list = []
+    all_qualifying_blocks = []  # flat list of block indices across all requests
+    block_counts = []           # number of qualifying blocks per request
 
     for b in range(batch_size):
         if prefix_lens[b] > dense_len and sparse_block_indices[b] is not None:
-            req_idx = req_pool_indices[b].item()
             prefix_len = prefix_lens[b]
-
-            dense_positions = torch.arange(0, min(dense_len, prefix_len), device=device)
-
             all_blocks = torch.cat(sparse_block_indices[b], dim=0).unique()
             all_blocks = all_blocks[all_blocks >= 0].sort().values
 
+            # Pre-filter: only blocks with start >= dense_len and start < prefix_len
             block_starts = all_blocks.long() * block_size
-            block_ends = torch.clamp(block_starts + block_size, max=prefix_len)
-            sparse_mask = (block_starts >= dense_len) & (block_starts < prefix_len)
+            mask = (block_starts >= dense_len) & (block_starts < prefix_len)
+            qualifying = all_blocks[mask]
 
-            if sparse_mask.any():
-                sparse_starts = block_starts[sparse_mask]
-                sparse_ends = block_ends[sparse_mask]
-                sparse_positions = torch.cat([
-                    torch.arange(s.item(), e.item(), device=device)
-                    for s, e in zip(sparse_starts, sparse_ends)
-                ])
-                token_positions = torch.cat([dense_positions, sparse_positions])
-            else:
-                token_positions = dense_positions
+            # Compute filtered_len
+            dense_end = min(dense_len, prefix_len)
+            sparse_tokens = 0
+            for blk in qualifying.tolist():
+                start = blk * block_size
+                sparse_tokens += min(block_size, prefix_len - start)
 
-            phys = req_to_token[req_idx, token_positions]
-            all_phys_indices.append(phys)
-            filtered_lens.append(len(phys))
+            filtered_lens.append(dense_end + sparse_tokens)
+            is_sparse_list.append(1)
+            all_qualifying_blocks.append(qualifying)
+            block_counts.append(len(qualifying))
         else:
             orig_start = original_kv_indptr[b].item()
             orig_end = original_kv_indptr[b + 1].item()
-            orig_len = orig_end - orig_start
-            if orig_len > 0:
-                all_phys_indices.append(original_kv_indices[orig_start:orig_end])
-            filtered_lens.append(orig_len)
+            filtered_lens.append(orig_end - orig_start)
+            is_sparse_list.append(0)
+            block_counts.append(0)
 
-    filtered_kv_indptr = torch.zeros(batch_size + 1, dtype=torch.int32, device=device)
+    # --- Build GPU tensors for Triton kernel ---
+    # Flat block pool + indptr
+    block_offsets_cpu = torch.zeros(batch_size + 1, dtype=torch.int32)
     for b in range(batch_size):
-        filtered_kv_indptr[b + 1] = filtered_kv_indptr[b] + filtered_lens[b]
+        block_offsets_cpu[b + 1] = block_offsets_cpu[b] + block_counts[b]
+    total_blocks = block_offsets_cpu[batch_size].item()
 
-    if all_phys_indices:
-        filtered_kv_indices = torch.cat(all_phys_indices, dim=0).to(torch.int32)
-        pad = torch.zeros(256, dtype=torch.int32, device=device)
-        filtered_kv_indices = torch.cat([filtered_kv_indices, pad])
+    if total_blocks > 0:
+        block_pool = torch.cat(all_qualifying_blocks, dim=0).to(torch.int32).to(device)
     else:
-        filtered_kv_indices = torch.zeros(256, dtype=torch.int32, device=device)
+        block_pool = torch.zeros(1, dtype=torch.int32, device=device)
+    block_offsets = block_offsets_cpu.to(device)
+
+    # kv_indptr
+    filtered_kv_indptr = torch.zeros(batch_size + 1, dtype=torch.int32, device=device)
+    indptr_cpu = torch.zeros(batch_size + 1, dtype=torch.int32)
+    for b in range(batch_size):
+        indptr_cpu[b + 1] = indptr_cpu[b] + filtered_lens[b]
+    filtered_kv_indptr[:batch_size + 1] = indptr_cpu.to(device)
+
+    total_tokens = indptr_cpu[batch_size].item()
+    is_sparse_gpu = torch.tensor(is_sparse_list, dtype=torch.int32, device=device)
+    prefix_lens_gpu = torch.tensor(prefix_lens[:batch_size], dtype=torch.int32, device=device)
+
+    # Output buffer
+    filtered_kv_indices = torch.zeros(total_tokens + 256, dtype=torch.int32, device=device)
+
+    # --- Launch Triton kernel ---
+    if batch_size > 0:
+        build_sparse_prefill_kv_indices_kernel[(batch_size,)](
+            req_to_token,
+            req_pool_indices,
+            prefix_lens_gpu,
+            block_pool,
+            block_offsets,
+            is_sparse_gpu,
+            original_kv_indices,
+            original_kv_indptr,
+            filtered_kv_indices,
+            filtered_kv_indptr,
+            req_to_token.shape[1],
+            dense_len,
+            block_size,
+        )
 
     return filtered_kv_indices, filtered_kv_indptr
