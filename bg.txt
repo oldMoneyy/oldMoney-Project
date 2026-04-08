@@ -1984,10 +1984,59 @@ UPDATE (2026-04-08, new session — different server from previous experiments):
     → Recommended sparse activation threshold: 32K (not current 8K)
 
   NEXT STEPS:
-    1. Rewrite update_sparse_decode Python loop → Triton kernel
-       (flashinfer_backend.py lines 1390-1452)
+    1. Fix Triton kernel bug (see TRITON ATTEMPT below), then re-test
     2. Raise sparse activation threshold from 8K to 32K
-    3. Run bench_serving with Triton sparse vs sala_cp baseline (SAME server)
+    3. Run bench_serving with fixed Triton sparse vs sala_cp baseline (SAME server)
     4. If positive: tune topk (try 32), decode_selection_interval (try 64)
     5. Investigate lightning attention kernel optimization (biggest remaining target)
+
+  -----------------------------------------------------------------------
+  TRITON KERNEL ATTEMPT (2026-04-08 afternoon) — FAILED, BUG NOT YET FIXED
+  -----------------------------------------------------------------------
+
+  Commits: aea9cf0, 84d4914, 135085a (all on main branch)
+
+  What was done:
+    - Replaced Python for-loop in update_sparse_decode with a single Triton
+      kernel build_sparse_kv_indices_kernel (utils.py)
+    - Added persistent GPU block pool (_sparse_block_pool, _sparse_n_blocks)
+    - Added CPU-side kv_lens computation to avoid GPU-to-CPU sync
+    - Two follow-up fixes: window overlap clipping (84d4914), is_sparse flag (135085a)
+
+  Result: TRITON KERNEL IS STILL BROKEN ON LONG SEQUENCES.
+    - KL quantization test: UNRELIABLE — re-records baseline each server
+      restart, so always shows KL=0 regardless of bugs. DO NOT USE IT.
+    - Long context Test 2 (Needle in Haystack, 75K input):
+        Python version (8ecc195): "BLUE-TIGER-42" CORRECT
+        Triton version (135085a): repeating garbage "The weather in London..." WRONG
+    - Bug only manifests when sparse decode activates (seq_len > dense_len=8192)
+    - Short prompts work fine (sparse path not triggered)
+
+  Root cause: NOT YET IDENTIFIED. Suspected kv_indices mismatch between
+    Triton kernel output and what FlashInfer expects. Possible issues:
+    - Block pool indexing (req_pool_idx vs batch index)
+    - kv_lens CPU computation not matching kernel actual write count
+    - Triton kernel writing wrong offsets for sparse blocks
+
+  KNOWN GOOD VERSION: commit 8ecc195 (Python sparse, no Triton)
+    - All 4 long context tests pass (Paris, BLUE-TIGER-42, Alice Zhang, essay)
+    - eval_model.py: 78.40% and 78.73% accuracy (two runs)
+    - This is the version to use as baseline for any further optimization
+
+  CRITICAL DEBUGGING NOTES FOR FUTURE AI SESSIONS:
+    1. DO NOT trust the KL quantization test (fast_eval_quantization.py --mode eval).
+       It re-records baselines on each server restart, making it always show KL=0.
+    2. USE long_context_test_case.py as the correctness test. Specifically Test 2
+       (Needle in Haystack, 75K input) must answer "BLUE-TIGER-42".
+    3. Always clear Triton JIT cache when switching code versions:
+         rm -rf ~/.triton/cache
+         find . -type d -name "__pycache__" -exec rm -rf {} +
+    4. The Python sparse version at 8ecc195 is confirmed correct. Start there.
+
+  TO RESUME TRITON WORK:
+    - git checkout 8ecc195 -- sglang_sala_flashinfer/ (known good baseline)
+    - Add debug verification: after Triton kernel runs, recompute indices with
+      the old Python logic, compare element-by-element, print first mismatch
+    - Fix the Triton kernel based on the mismatch findings
+    - Validate with long_context_test_case.py Test 2 before proceeding
 
