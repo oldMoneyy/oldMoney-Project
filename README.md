@@ -245,12 +245,16 @@ tail -f /opt/oldMoney-Project/logs/model_gptq_int4_dense_smooth.log
 
 Dense:
 ```bash
+rm -rf ~/.triton/cache
+rm -rf /opt/oldMoney-Project/sglang_sala_flashinfer/sglang/srt/layers/attention/__pycache__
 fuser -k -9 31333/tcp
+pip install -e vendor_flashinfer/sparse_decode_kernel/ --no-build-isolation
 # uv pip install --no-deps -e /opt/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python
-# uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_flashinfer
-uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
-export SGLANG_SPARSE_PREFILL=0
-export SGLANG_SPARSE_DECODE=0
+uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_flashinfer
+# uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
+export SGLANG_SPARSE_PREFILL=1
+export SGLANG_SPARSE_DECODE=1
+# export SGLANG_SPARSE_TOPK=64
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 nohup python3 -m sglang.launch_server \
