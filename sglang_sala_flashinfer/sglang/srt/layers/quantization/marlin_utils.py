@@ -532,6 +532,92 @@ def apply_gptq_marlin_linear(
     return output.reshape(out_shape)
 
 
+# def apply_gptq_marlin_linear(
+#     input: torch.Tensor,
+#     weight: torch.Tensor,
+#     weight_scale: torch.Tensor,
+#     weight_zp: torch.Tensor,
+#     g_idx: torch.Tensor,
+#     g_idx_sort_indices: torch.Tensor,
+#     workspace: torch.Tensor,
+#     wtype: ScalarType,
+#     output_size_per_partition: int,
+#     input_size_per_partition: int,
+#     is_k_full: bool,
+#     bias: Optional[torch.Tensor] = None,
+#     use_fp32_reduce: bool = USE_FP32_REDUCE_DEFAULT,
+# ) -> torch.Tensor:
+#     reshaped_x = input.reshape(-1, input.shape[-1])
+#     out_shape = input.shape[:-1] + (output_size_per_partition,)
+#     size_m = reshaped_x.shape[0]
+
+#     use_atomic_add = should_use_atomic_add_reduce(
+#         m=size_m,
+#         n=output_size_per_partition,
+#         k=reshaped_x.size(1),
+#         device=input.device,
+#         dtype=input.dtype,
+#     )
+
+#     forward_context = get_forward_context()
+
+#     # ==========================================
+#     # 🌟 MAGIC CHUNKING FIX FOR bs=4 FALLBACK BUG 🌟
+#     # 强制将 4 <= size_m <= 15 的输入切碎成 <= 3 的块，
+#     # 逼迫底层 C++ 走极速 GEMV kernel，避开 0.704ms 的死亡陷阱！
+#     # ==========================================
+#     if 4 <= size_m <= 15:
+#         outputs = []
+#         for i in range(0, size_m, 3):
+#             chunk_x = reshaped_x[i:i+3]
+#             if forward_context is None:
+#                 out = gptq_marlin_gemm(
+#                     chunk_x, None, weight, weight_scale, None, weight_zp,
+#                     g_idx, g_idx_sort_indices, workspace, wtype,
+#                     size_m=chunk_x.shape[0], size_n=output_size_per_partition,
+#                     size_k=input_size_per_partition, is_k_full=is_k_full,
+#                     use_atomic_add=use_atomic_add, use_fp32_reduce=use_fp32_reduce,
+#                     is_zp_float=False,
+#                 )
+#             else:
+#                 out = unified_apply_gptq_marlin_gemm_with_wtype(
+#                     input=chunk_x, weight=weight, weight_scale=weight_scale,
+#                     weight_zp=weight_zp, g_idx=g_idx, g_idx_sort_indices=g_idx_sort_indices,
+#                     workspace=workspace, wtype_id=wtype.id,
+#                     output_size_per_partition=output_size_per_partition,
+#                     input_size_per_partition=input_size_per_partition,
+#                     is_k_full=is_k_full, use_atomic_add=use_atomic_add,
+#                     use_fp32_reduce=use_fp32_reduce, is_zp_float=False,
+#                 )
+#             outputs.append(out)
+#         output = torch.cat(outputs, dim=0)
+#     else:
+#         # --- 原始的调用逻辑 (size_m <= 3 走极速GEMV, size_m >= 16 走正常GEMM) ---
+#         if forward_context is None:
+#             output = gptq_marlin_gemm(
+#                 reshaped_x, None, weight, weight_scale, None, weight_zp,
+#                 g_idx, g_idx_sort_indices, workspace, wtype,
+#                 size_m=size_m, size_n=output_size_per_partition,
+#                 size_k=input_size_per_partition, is_k_full=is_k_full,
+#                 use_atomic_add=use_atomic_add, use_fp32_reduce=use_fp32_reduce,
+#                 is_zp_float=False,
+#             )
+#         else:
+#             output = unified_apply_gptq_marlin_gemm_with_wtype(
+#                 input=reshaped_x, weight=weight, weight_scale=weight_scale,
+#                 weight_zp=weight_zp, g_idx=g_idx, g_idx_sort_indices=g_idx_sort_indices,
+#                 workspace=workspace, wtype_id=wtype.id,
+#                 output_size_per_partition=output_size_per_partition,
+#                 input_size_per_partition=input_size_per_partition,
+#                 is_k_full=is_k_full, use_atomic_add=use_atomic_add,
+#                 use_fp32_reduce=use_fp32_reduce, is_zp_float=False,
+#             )
+
+#     if bias is not None:
+#         output.add_(bias)  # In-place add
+
+#     return output.reshape(out_shape)
+    
 def apply_awq_marlin_linear(
     input: torch.Tensor,
     weight: torch.Tensor,
