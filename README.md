@@ -253,8 +253,8 @@ fuser -k -9 31333/tcp
 uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_lightning
 # uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_flashinfer
 # uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
-export SGLANG_SPARSE_PREFILL=1
-export SGLANG_SPARSE_DECODE=1
+# export SGLANG_SPARSE_PREFILL=1
+# export SGLANG_SPARSE_DECODE=1
 # export SGLANG_SPARSE_TOPK=64
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True

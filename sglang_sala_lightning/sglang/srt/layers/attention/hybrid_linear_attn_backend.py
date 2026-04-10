@@ -1485,6 +1485,9 @@ class SimpleGLAAttnBackend(MambaAttnBackendBase):
                 "Install it or configure the model to use a supported attention backend (e.g., Mamba2)."
             )
 
+        # Pre-allocated buffer for decode state gather (avoids allocation per step)
+        self._decode_state_buf = None
+
     def _get_mamba_indices(self, forward_batch: ForwardBatch) -> torch.Tensor:
         """Get mamba cache indices with fallback logic.
 
@@ -1583,19 +1586,32 @@ class SimpleGLAAttnBackend(MambaAttnBackendBase):
         cu_seqlens = self.forward_metadata.query_start_loc
 
         if is_decode:
-            # === INDEXED PATH: no gather/scatter copies ===
-            # Decode always has valid state in pool (set during prefill)
-            o = fused_recurrent_simple_gla_indexed(
-                q=q,
-                k=k,
-                v=v,
+            # === OPTIMIZED DECODE: pre-allocated gather buffer, no per-call alloc ===
+            N = mamba_indices.shape[0]
+            pool = layer_cache.temporal
+            # Lazy init buffer on first decode call
+            if self._decode_state_buf is None or self._decode_state_buf.shape[1:] != pool.shape[1:]:
+                max_bs = self.req_to_token_pool.mamba_pool.size
+                self._decode_state_buf = torch.empty(
+                    (max_bs,) + pool.shape[1:], dtype=pool.dtype, device=pool.device
+                )
+            # Gather into pre-allocated buffer (no allocation)
+            # Clamp -1 padding indices to 0 (padding results are unused)
+            safe_indices = mamba_indices.clamp(min=0)
+            buf = self._decode_state_buf[:N]
+            torch.index_select(pool, 0, safe_indices, out=buf)
+            # Run unmodified fla kernel
+            o, final_state = fused_recurrent_simple_gla(
+                q=q, k=k, v=v,
                 g_gamma=g_gamma,
                 scale=scale,
-                h0_source=layer_cache.temporal,
-                h0_indices=mamba_indices,
+                initial_state=buf,
                 output_final_state=True,
                 cu_seqlens=cu_seqlens,
             )
+            # Scatter back
+            pool[mamba_indices, :] = final_state
+            o = o.to(q.dtype)
         else:
             # Prefill path: use original fla kernels
             has_initial_state = (
