@@ -1,0 +1,705 @@
+     1	# Copyright (c) 2023-2025, Songlin Yang, Yu Zhang
+     2	
+     3	
+     4	import torch
+     5	import triton
+     6	import triton.language as tl
+     7	
+     8	from fla.ops.utils.op import exp
+     9	from fla.utils import autocast_custom_bwd, autocast_custom_fwd, autotune_cache_kwargs, input_guard
+    10	
+    11	
+    12	@triton.heuristics({
+    13	    'USE_INITIAL_STATE': lambda args: args['h0'] is not None,
+    14	    'STORE_FINAL_STATE': lambda args: args['ht'] is not None,
+    15	    'IS_VARLEN': lambda args: args['cu_seqlens'] is not None,
+    16	})
+    17	@triton.autotune(
+    18	    configs=[
+    19	        triton.Config({}, num_warps=num_warps)
+    20	        for num_warps in [4, 8]
+    21	    ],
+    22	    key=['BK', 'BV', 'USE_G', 'USE_G_GAMMA', 'USE_GK', 'USE_GV'],
+    23	    **autotune_cache_kwargs,
+    24	)
+    25	@triton.jit(do_not_specialize=['B', 'T'])
+    26	def fused_recurrent_fwd_kernel(
+    27	    q,
+    28	    k,
+    29	    v,
+    30	    g,
+    31	    g_gamma,
+    32	    gk,
+    33	    gv,
+    34	    o,
+    35	    h0,
+    36	    ht,
+    37	    cu_seqlens,
+    38	    scale,
+    39	    B,
+    40	    T,
+    41	    H: tl.constexpr,
+    42	    K: tl.constexpr,
+    43	    V: tl.constexpr,
+    44	    BK: tl.constexpr,
+    45	    BV: tl.constexpr,
+    46	    REVERSE: tl.constexpr,
+    47	    USE_G: tl.constexpr,
+    48	    USE_G_GAMMA: tl.constexpr,
+    49	    USE_GK: tl.constexpr,
+    50	    USE_GV: tl.constexpr,
+    51	    USE_INITIAL_STATE: tl.constexpr,
+    52	    STORE_FINAL_STATE: tl.constexpr,
+    53	    IS_VARLEN: tl.constexpr,
+    54	):
+    55	    i_v, i_k, i_nh = tl.program_id(0).to(tl.int64), tl.program_id(1).to(tl.int64), tl.program_id(2).to(tl.int64)
+    56	    i_n, i_h = i_nh // H, i_nh % H
+    57	
+    58	    all = B * T
+    59	    if IS_VARLEN:
+    60	        bos, eos = tl.load(cu_seqlens + i_n).to(tl.int64), tl.load(cu_seqlens + i_n + 1).to(tl.int64)
+    61	        T = eos - bos
+    62	    else:
+    63	        bos, eos = i_n * T, i_n * T + T
+    64	
+    65	    o_k = i_k * BK + tl.arange(0, BK)
+    66	    o_v = i_v * BV + tl.arange(0, BV)
+    67	    p_q = q + (bos + ((T-1) if REVERSE else 0)) * H*K + i_h * K + o_k
+    68	    p_k = k + (bos + ((T-1) if REVERSE else 0)) * H*K + i_h * K + o_k
+    69	    p_v = v + (bos + ((T-1) if REVERSE else 0)) * H*V + i_h * V + o_v
+    70	    p_o = o + ((i_k * all + bos) + ((T-1) if REVERSE else 0)) * H*V + i_h * V + o_v
+    71	    if USE_G:
+    72	        p_g = g + (bos + ((T-1) if REVERSE else 0)) * H + i_h
+    73	    if USE_GK:
+    74	        p_gk = gk + (bos + ((T-1) if REVERSE else 0)) * H*K + i_h * K + o_k
+    75	    if USE_GV:
+    76	        p_gv = gv + (bos + ((T-1) if REVERSE else 0)) * H*V + i_h * V + o_v
+    77	    if USE_G_GAMMA:
+    78	        b_g_gamma = tl.load(g_gamma + i_h)
+    79	
+    80	    m_k = o_k < K
+    81	    m_v = o_v < V
+    82	    m_h = m_k[:, None] & m_v[None, :]
+    83	    b_h = tl.zeros([BK, BV], dtype=tl.float32)
+    84	
+    85	    if USE_INITIAL_STATE:
+    86	        p_h0 = h0 + i_nh * K*V + o_k[:, None] * V + o_v[None, :]
+    87	        b_h += tl.load(p_h0, mask=m_h, other=0).to(tl.float32)
+    88	
+    89	    for _ in range(0, T):
+    90	        b_q = tl.load(p_q, mask=m_k, other=0).to(tl.float32) * scale
+    91	        b_k = tl.load(p_k, mask=m_k, other=0).to(tl.float32)
+    92	        b_v = tl.load(p_v, mask=m_v, other=0).to(tl.float32)
+    93	        if USE_G:
+    94	            b_g = tl.load(p_g).to(tl.float32)
+    95	            b_h = b_h * exp(b_g)
+    96	        if USE_G_GAMMA:
+    97	            b_h = b_h * exp(b_g_gamma)
+    98	        if USE_GK:
+    99	            b_gk = tl.load(p_gk, mask=m_k, other=0).to(tl.float32)
+   100	            b_h = b_h * exp(b_gk[:, None])
+   101	        if USE_GV:
+   102	            b_gv = tl.load(p_gv, mask=m_v, other=0).to(tl.float32)
+   103	            b_h = b_h * exp(b_gv[None, :])
+   104	        b_h += b_k[:, None] * b_v[None, :]
+   105	        b_o = b_h * b_q[:, None]
+   106	        b_o = tl.sum(b_o, axis=0)
+   107	        tl.store(p_o, b_o.to(p_o.dtype.element_ty), mask=m_v)
+   108	        p_q += (-1 if REVERSE else 1) * H*K
+   109	        p_k += (-1 if REVERSE else 1) * H*K
+   110	        p_v += (-1 if REVERSE else 1) * H*V
+   111	        p_o += (-1 if REVERSE else 1) * H*V
+   112	        if USE_G:
+   113	            p_g += (-1 if REVERSE else 1) * H
+   114	        if USE_GK:
+   115	            p_gk += (-1 if REVERSE else 1) * H*K
+   116	        if USE_GV:
+   117	            p_gv += (-1 if REVERSE else 1) * H*V
+   118	
+   119	    if STORE_FINAL_STATE:
+   120	        p_ht = ht + i_nh * K*V + o_k[:, None] * V + o_v[None, :]
+   121	        tl.store(p_ht, b_h.to(p_ht.dtype.element_ty), mask=m_h)
+   122	
+   123	
+   124	@triton.heuristics({
+   125	    'USE_INITIAL_STATE': lambda args: args['h0'] is not None,
+   126	    'STORE_INITIAL_STATE_GRADIENT': lambda args: args['dh0'] is not None,
+   127	    'USE_FINAL_STATE_GRADIENT': lambda args: args['dht'] is not None,
+   128	    'IS_VARLEN': lambda args: args['cu_seqlens'] is not None,
+   129	})
+   130	@triton.autotune(
+   131	    configs=[
+   132	        triton.Config({}, num_warps=num_warps)
+   133	        for num_warps in [4]
+   134	    ],
+   135	    key=['BK', 'BV', 'USE_G', 'USE_G_GAMMA', 'USE_GK', 'USE_GV'],
+   136	    **autotune_cache_kwargs,
+   137	)
+   138	@triton.jit(do_not_specialize=['B', 'T'])
+   139	def fused_recurrent_bwd_kernel(
+   140	    q,
+   141	    k,
+   142	    v,
+   143	    g,
+   144	    g_gamma,
+   145	    gk,
+   146	    gv,
+   147	    o,
+   148	    h0,
+   149	    do,
+   150	    dq,
+   151	    dk,
+   152	    dv,
+   153	    dg,
+   154	    dgk,
+   155	    dgv,
+   156	    dht,
+   157	    dh0,
+   158	    cu_seqlens,
+   159	    scale,
+   160	    B,
+   161	    T,
+   162	    H: tl.constexpr,
+   163	    K: tl.constexpr,
+   164	    V: tl.constexpr,
+   165	    BK: tl.constexpr,
+   166	    BV: tl.constexpr,
+   167	    REVERSE: tl.constexpr,
+   168	    USE_G: tl.constexpr,
+   169	    USE_G_GAMMA: tl.constexpr,
+   170	    USE_GK: tl.constexpr,
+   171	    USE_GV: tl.constexpr,
+   172	    USE_INITIAL_STATE: tl.constexpr,
+   173	    STORE_INITIAL_STATE_GRADIENT: tl.constexpr,
+   174	    USE_FINAL_STATE_GRADIENT: tl.constexpr,
+   175	    IS_VARLEN: tl.constexpr,
+   176	):
+   177	    i_v, i_k, i_nh = tl.program_id(0).to(tl.int64), tl.program_id(1).to(tl.int64), tl.program_id(2).to(tl.int64)
+   178	    i_n, i_h = i_nh // H, i_nh % H
+   179	
+   180	    all = B * T
+   181	    if IS_VARLEN:
+   182	        bos, eos = tl.load(cu_seqlens + i_n).to(tl.int64), tl.load(cu_seqlens + i_n + 1).to(tl.int64)
+   183	        T = eos - bos
+   184	    else:
+   185	        bos, eos = i_n * T, i_n * T + T
+   186	    NV = tl.cdiv(V, BV)
+   187	
+   188	    o_k = i_k * BK + tl.arange(0, BK)
+   189	    o_v = i_v * BV + tl.arange(0, BV)
+   190	    m_k = o_k < K
+   191	    m_v = o_v < V
+   192	    m_h = m_k[:, None] & m_v[None, :]
+   193	
+   194	    p_k = k + (bos + ((T-1) if REVERSE else 0)) * H*K + i_h * K + o_k
+   195	    p_v = v + (bos + ((T-1) if REVERSE else 0)) * H*V + i_h * V + o_v
+   196	    p_do = do + (bos + ((T-1) if REVERSE else 0)) * H*V + i_h * V + o_v
+   197	    p_dq = dq + ((i_v * all + bos) + ((T-1) if REVERSE else 0)) * H*K + i_h * K + o_k
+   198	    if USE_G:
+   199	        p_g = g + (bos + ((T-1) if REVERSE else 0)) * H + i_h
+   200	    if USE_GK:
+   201	        p_gk = gk + (bos + ((T-1) if REVERSE else 0)) * H*K + i_h * K + o_k
+   202	    if USE_GV:
+   203	        p_gv = gv + (bos + ((T-1) if REVERSE else 0)) * H*V + i_h * V + o_v
+   204	    if USE_G_GAMMA:
+   205	        b_g_gamma = tl.load(g_gamma + i_h)
+   206	
+   207	    b_h = tl.zeros([BK, BV], dtype=tl.float32)
+   208	    if USE_INITIAL_STATE:
+   209	        p_h0 = h0 + i_nh * K*V + o_k[:, None] * V + o_v[None, :]
+   210	        b_h += tl.load(p_h0, mask=m_h, other=0).to(tl.float32)
+   211	
+   212	    for _ in range(0, T):
+   213	        b_k = tl.load(p_k, mask=m_k, other=0).to(tl.float32)
+   214	        b_v = tl.load(p_v, mask=m_v, other=0).to(tl.float32)
+   215	        b_do = tl.load(p_do, mask=m_v, other=0).to(tl.float32)
+   216	        if USE_G:
+   217	            b_g = tl.load(p_g).to(tl.float32)
+   218	            b_h = b_h * exp(b_g)
+   219	        if USE_G_GAMMA:
+   220	            b_h = b_h * exp(b_g_gamma)
+   221	        if USE_GK:
+   222	            b_gk = tl.load(p_gk, mask=m_k, other=0).to(tl.float32)
+   223	            b_h = b_h * exp(b_gk[:, None])
+   224	        if USE_GV:
+   225	            b_gv = tl.load(p_gv, mask=m_v, other=0).to(tl.float32)
+   226	            b_h = b_h * exp(b_gv[None, :])
+   227	        b_h += b_k[:, None] * b_v[None, :]
+   228	        b_dq = b_h * b_do[None, :]
+   229	        b_dq = tl.sum(b_dq, axis=1) * scale
+   230	        tl.store(p_dq, b_dq.to(p_dq.dtype.element_ty), mask=m_k)
+   231	
+   232	        p_k += (-1 if REVERSE else 1) * H*K
+   233	        p_v += (-1 if REVERSE else 1) * H*V
+   234	        p_do += (-1 if REVERSE else 1) * H*V
+   235	        p_dq += (-1 if REVERSE else 1) * H*K
+   236	        if USE_G:
+   237	            p_g += (-1 if REVERSE else 1) * H
+   238	        if USE_GK:
+   239	            p_gk += (-1 if REVERSE else 1) * H*K
+   240	        if USE_GV:
+   241	            p_gv += (-1 if REVERSE else 1) * H*V
+   242	
+   243	    # sync threads
+   244	    tl.debug_barrier()
+   245	
+   246	    p_q = q + (bos + ((T - 1) if not REVERSE else 0)) * H*K + i_h * K + o_k
+   247	    p_k = k + (bos + ((T - 1) if not REVERSE else 0)) * H*K + i_h * K + o_k
+   248	    p_v = v + (bos + ((T - 1) if not REVERSE else 0)) * H*V + i_h * V + o_v
+   249	
+   250	    p_do = do + (bos + ((T - 1) if not REVERSE else 0)) * H*V + i_h * V + o_v
+   251	    p_dq = dq + ((i_v * all + bos) + ((T - 1) if not REVERSE else 0)) * H*K + i_h * K + o_k
+   252	    p_dk = dk + ((i_v * all + bos) + ((T - 1) if not REVERSE else 0)) * H*K + i_h * K + o_k
+   253	    p_dv = dv + ((i_k * all + bos) + ((T - 1) if not REVERSE else 0)) * H*V + i_h * V + o_v
+   254	    if USE_G:
+   255	        p_g = g + (bos + ((T - 1) if not REVERSE else 0)) * H + i_h
+   256	        p_dg = dg + ((i_k * NV + i_v) * all + bos + ((T - 1) if not REVERSE else 0)) * H + i_h
+   257	    if USE_GK:
+   258	        p_gk = gk + (bos + ((T - 1) if not REVERSE else 0)) * H*K + i_h * K + o_k
+   259	        p_dgk = dgk + ((i_v * all + bos) + ((T - 1) if not REVERSE else 0)) * H*K + i_h * K + o_k
+   260	    if USE_GV:
+   261	        p_o = o + (bos + ((T - 1) if not REVERSE else 0)) * H*V + i_h * V + o_v
+   262	        p_gv = gv + (bos + ((T - 1) if not REVERSE else 0)) * H*V + i_h * V + o_v
+   263	        p_dgv = dgv + ((i_k * all + bos) + ((T - 1) if not REVERSE else 0)) * H*V + i_h * V + o_v
+   264	
+   265	    b_dh = tl.zeros([BK, BV], dtype=tl.float32)
+   266	    if USE_FINAL_STATE_GRADIENT:
+   267	        p_dht = dht + i_nh * K*V + o_k[:, None] * V + o_v[None, :]
+   268	        b_dh += tl.load(p_dht, mask=m_h, other=0).to(tl.float32)
+   269	
+   270	    if USE_G:
+   271	        b_dg = tl.sum(b_h * b_dh)
+   272	    if USE_GK:
+   273	        b_dgk = tl.sum(b_h * b_dh, 1)
+   274	    if USE_GV:
+   275	        b_dgv = tl.sum(b_h * b_dh, 0)
+   276	
+   277	    for _ in range(T):
+   278	        b_q = tl.load(p_q, mask=m_k, other=0).to(tl.float32)
+   279	        b_k = tl.load(p_k, mask=m_k, other=0).to(tl.float32)
+   280	        b_v = tl.load(p_v, mask=m_v, other=0).to(tl.float32)
+   281	        b_do = tl.load(p_do, mask=m_v, other=0).to(tl.float32)
+   282	        b_dh += (b_q * scale)[:, None] * b_do[None, :]
+   283	        b_dk = tl.sum(b_dh * b_v[None, :], axis=1)
+   284	        b_dv = tl.sum(b_dh * b_k[:, None], axis=0)
+   285	
+   286	        if USE_G:
+   287	            b_g = tl.load(p_g).to(tl.float32)
+   288	            b_dq = tl.load(p_dq, mask=m_k, other=0).to(tl.float32)
+   289	            b_dg += tl.sum(b_q * b_dq - b_k * b_dk)
+   290	            b_dh *= exp(b_g)
+   291	            tl.store(p_dg, b_dg.to(p_dg.dtype.element_ty))
+   292	        if USE_G_GAMMA:
+   293	            b_dh *= exp(b_g_gamma)
+   294	        if USE_GK:
+   295	            b_gk = tl.load(p_gk, mask=m_k, other=0).to(tl.float32)
+   296	            b_dq = tl.load(p_dq, mask=m_k, other=0).to(tl.float32)
+   297	            b_dgk += b_q * b_dq - b_k * b_dk
+   298	            b_dh *= exp(b_gk)[:, None]
+   299	            tl.store(p_dgk, b_dgk.to(p_dgk.dtype.element_ty), mask=m_k)
+   300	        if USE_GV:
+   301	            b_o = tl.load(p_o, mask=m_v, other=0).to(tl.float32)
+   302	            b_gv = tl.load(p_gv, mask=m_v, other=0).to(tl.float32)
+   303	            if i_k == 0:
+   304	                b_dgv += b_o * b_do
+   305	            b_dgv -= b_v * b_dv
+   306	            b_dh *= exp(b_gv)[None, :]
+   307	            tl.store(p_dgv, b_dgv.to(p_dgv.dtype.element_ty), mask=m_v)
+   308	
+   309	        tl.store(p_dk, b_dk.to(p_dk.dtype.element_ty), mask=m_k)
+   310	        tl.store(p_dv, b_dv.to(p_dv.dtype.element_ty), mask=m_v)
+   311	
+   312	        p_q += (1 if REVERSE else -1) * H*K
+   313	        p_k += (1 if REVERSE else -1) * H*K
+   314	        p_v += (1 if REVERSE else -1) * H*V
+   315	
+   316	        p_do += (1 if REVERSE else -1) * H*V
+   317	        p_dq += (1 if REVERSE else -1) * H*K
+   318	        p_dk += (1 if REVERSE else -1) * H*K
+   319	        p_dv += (1 if REVERSE else -1) * H*V
+   320	        if USE_G:
+   321	            p_g += (1 if REVERSE else -1) * H
+   322	            p_dg += (1 if REVERSE else -1) * H
+   323	        if USE_GK:
+   324	            p_gk += (1 if REVERSE else -1) * H*K
+   325	            p_dgk += (1 if REVERSE else -1) * H*K
+   326	        if USE_GV:
+   327	            p_o += (1 if REVERSE else -1) * H*V
+   328	            p_gv += (1 if REVERSE else -1) * H*V
+   329	            p_dgv += (1 if REVERSE else -1) * H*V
+   330	
+   331	    if STORE_INITIAL_STATE_GRADIENT:
+   332	        p_dh0 = dh0 + i_nh * K*V + o_k[:, None] * V + o_v[None, :]
+   333	        tl.store(p_dh0, b_dh.to(p_dh0.dtype.element_ty), mask=m_h)
+   334	
+   335	
+   336	def fused_recurrent_fwd(
+   337	    q: torch.Tensor,
+   338	    k: torch.Tensor,
+   339	    v: torch.Tensor,
+   340	    g: torch.Tensor | None = None,
+   341	    g_gamma: torch.Tensor | None = None,
+   342	    gk: torch.Tensor | None = None,
+   343	    gv: torch.Tensor | None = None,
+   344	    scale: float | None = None,
+   345	    initial_state: torch.Tensor | None = None,
+   346	    output_final_state: bool = False,
+   347	    reverse: bool = False,
+   348	    cu_seqlens: torch.LongTensor | None = None,
+   349	):
+   350	    B, T, H, K, V = *k.shape, v.shape[-1]
+   351	    N = B if cu_seqlens is None else len(cu_seqlens) - 1
+   352	    BK, BV = min(triton.next_power_of_2(K), 64), min(triton.next_power_of_2(V), 64)
+   353	    NK, NV = triton.cdiv(K, BK), triton.cdiv(V, BV)
+   354	
+   355	    h0 = initial_state
+   356	    ht = q.new_empty(N, H, K, V, dtype=torch.float32) if output_final_state else None
+   357	    o = q.new_empty(NK, *v.shape, dtype=torch.float32)
+   358	
+   359	    grid = (NV, NK, N * H)
+   360	    fused_recurrent_fwd_kernel[grid](
+   361	        q=q,
+   362	        k=k,
+   363	        v=v,
+   364	        g=g,
+   365	        g_gamma=g_gamma,
+   366	        gk=gk,
+   367	        gv=gv,
+   368	        o=o,
+   369	        h0=h0,
+   370	        ht=ht,
+   371	        cu_seqlens=cu_seqlens,
+   372	        scale=scale,
+   373	        T=T,
+   374	        B=B,
+   375	        H=H,
+   376	        K=K,
+   377	        V=V,
+   378	        BK=BK,
+   379	        BV=BV,
+   380	        USE_G=g is not None,
+   381	        USE_G_GAMMA=g_gamma is not None,
+   382	        USE_GK=gk is not None,
+   383	        USE_GV=gv is not None,
+   384	        REVERSE=reverse,
+   385	    )
+   386	    o = o.sum(0)
+   387	    return o, ht
+   388	
+   389	
+   390	def fused_recurrent_bwd(
+   391	    q: torch.Tensor,
+   392	    k: torch.Tensor,
+   393	    v: torch.Tensor,
+   394	    g: torch.Tensor | None = None,
+   395	    g_gamma: torch.Tensor | None = None,
+   396	    gk: torch.Tensor | None = None,
+   397	    gv: torch.Tensor | None = None,
+   398	    o: torch.Tensor | None = None,
+   399	    do: torch.Tensor | None = None,
+   400	    dht: torch.Tensor | None = None,
+   401	    scale: float | None = None,
+   402	    initial_state: torch.Tensor | None = None,
+   403	    reverse: bool = False,
+   404	    cu_seqlens: torch.LongTensor | None = None,
+   405	):
+   406	    B, T, H, K, V = *k.shape, v.shape[-1]
+   407	    N = B if cu_seqlens is None else len(cu_seqlens) - 1
+   408	
+   409	    BK, BV = min(triton.next_power_of_2(K), 64), min(triton.next_power_of_2(V), 64)
+   410	    NK, NV = triton.cdiv(K, BK), triton.cdiv(V, BV)
+   411	
+   412	    h0 = initial_state
+   413	    dq = q.new_empty(NV, *q.shape, dtype=torch.float32)
+   414	    dk = q.new_empty(NV, *k.shape, dtype=torch.float32)
+   415	    dv = q.new_empty(NK, *v.shape, dtype=torch.float32)
+   416	    dh0 = torch.empty_like(h0) if h0 is not None else None
+   417	
+   418	    dg, dgk, dgv = None, None, None
+   419	    if g is not None:
+   420	        dg = g.new_empty(NK*NV, *g.shape, dtype=torch.float32)
+   421	    if gk is not None:
+   422	        dgk = gk.new_empty(NV, *gk.shape, dtype=torch.float32)
+   423	    if gv is not None:
+   424	        dgv = gv.new_empty(NK, *gv.shape, dtype=torch.float32)
+   425	
+   426	    grid = (NV, NK, N * H)
+   427	    fused_recurrent_bwd_kernel[grid](
+   428	        q=q,
+   429	        k=k,
+   430	        v=v,
+   431	        g=g,
+   432	        g_gamma=g_gamma,
+   433	        gk=gk,
+   434	        gv=gv,
+   435	        o=o,
+   436	        h0=h0,
+   437	        do=do,
+   438	        dq=dq,
+   439	        dk=dk,
+   440	        dv=dv,
+   441	        dg=dg,
+   442	        dgk=dgk,
+   443	        dgv=dgv,
+   444	        dht=dht,
+   445	        dh0=dh0,
+   446	        cu_seqlens=cu_seqlens,
+   447	        scale=scale,
+   448	        B=B,
+   449	        T=T,
+   450	        H=H,
+   451	        K=K,
+   452	        V=V,
+   453	        BK=BK,
+   454	        BV=BV,
+   455	        USE_G=g is not None,
+   456	        USE_G_GAMMA=g_gamma is not None,
+   457	        USE_GK=gk is not None,
+   458	        USE_GV=gv is not None,
+   459	        REVERSE=reverse,
+   460	    )
+   461	    dq = dq.sum(0)
+   462	    dk = dk.sum(0)
+   463	    dv = dv.sum(0)
+   464	    if g is not None:
+   465	        dg = dg.sum(0).to(g)
+   466	    if gk is not None:
+   467	        dgk = dgk.sum(0).to(gk)
+   468	    if gv is not None:
+   469	        dgv = dgv.sum(0).to(gv)
+   470	
+   471	    return dq, dk, dv, dg, dgk, dgv, dh0
+   472	
+   473	
+   474	class FusedRecurrentFunction(torch.autograd.Function):
+   475	
+   476	    @staticmethod
+   477	    @input_guard
+   478	    @autocast_custom_fwd
+   479	    def forward(
+   480	        ctx,
+   481	        q: torch.Tensor,
+   482	        k: torch.Tensor,
+   483	        v: torch.Tensor,
+   484	        g: torch.Tensor | None = None,
+   485	        g_gamma: torch.Tensor | None = None,
+   486	        gk: torch.Tensor | None = None,
+   487	        gv: torch.Tensor | None = None,
+   488	        scale: float | None = None,
+   489	        initial_state: torch.Tensor | None = None,
+   490	        output_final_state: bool = False,
+   491	        reverse: bool = False,
+   492	        cu_seqlens: torch.LongTensor | None = None,
+   493	    ):
+   494	        o, ht = fused_recurrent_fwd(
+   495	            q=q,
+   496	            k=k,
+   497	            v=v,
+   498	            g=g,
+   499	            g_gamma=g_gamma,
+   500	            gk=gk,
+   501	            gv=gv,
+   502	            scale=scale,
+   503	            initial_state=initial_state,
+   504	            output_final_state=output_final_state,
+   505	            reverse=reverse,
+   506	            cu_seqlens=cu_seqlens,
+   507	        )
+   508	        ctx.save_for_backward(q, k, v, g, g_gamma, gk, gv, initial_state, o)
+   509	        ctx.scale = scale
+   510	        ctx.reverse = reverse
+   511	        ctx.cu_seqlens = cu_seqlens
+   512	        return o.to(q.dtype), ht
+   513	
+   514	    @staticmethod
+   515	    @input_guard
+   516	    @autocast_custom_bwd
+   517	    def backward(ctx, do, dht):
+   518	        q, k, v, g, g_gamma, gk, gv, initial_state, o = ctx.saved_tensors
+   519	        dq, dk, dv, dg, dgk, dgv, dh0 = fused_recurrent_bwd(
+   520	            q=q,
+   521	            k=k,
+   522	            v=v,
+   523	            g=g,
+   524	            g_gamma=g_gamma,
+   525	            gk=gk,
+   526	            gv=gv,
+   527	            o=o,
+   528	            do=do,
+   529	            dht=dht,
+   530	            scale=ctx.scale,
+   531	            initial_state=initial_state,
+   532	            reverse=ctx.reverse,
+   533	            cu_seqlens=ctx.cu_seqlens,
+   534	        )
+   535	        return dq.to(q.dtype), dk.to(k.dtype), dv.to(v.dtype), dg, None, dgk, dgv, None, dh0, None, None, None
+   536	
+   537	
+   538	def fused_recurrent(
+   539	    q: torch.Tensor,
+   540	    k: torch.Tensor,
+   541	    v: torch.Tensor,
+   542	    g: torch.Tensor | None = None,
+   543	    g_gamma: torch.Tensor | None = None,
+   544	    gk: torch.Tensor | None = None,
+   545	    gv: torch.Tensor | None = None,
+   546	    scale: float | None = None,
+   547	    initial_state: torch.Tensor | None = None,
+   548	    output_final_state: bool = False,
+   549	    reverse: bool = False,
+   550	    cu_seqlens: torch.LongTensor | None = None,
+   551	):
+   552	    if scale is None:
+   553	        scale = k.shape[-1] ** -0.5
+   554	    return FusedRecurrentFunction.apply(
+   555	        q,
+   556	        k,
+   557	        v,
+   558	        g,
+   559	        g_gamma,
+   560	        gk,
+   561	        gv,
+   562	        scale,
+   563	        initial_state,
+   564	        output_final_state,
+   565	        reverse,
+   566	        cu_seqlens,
+   567	    )
+===== FILE 2 =====
+     1	# Copyright (c) 2023-2025, Songlin Yang, Yu Zhang
+     2	
+     3	
+     4	import torch
+     5	
+     6	from fla.ops.common.fused_recurrent import fused_recurrent
+     7	
+     8	
+     9	def fused_recurrent_simple_gla(
+    10	    q: torch.Tensor,
+    11	    k: torch.Tensor,
+    12	    v: torch.Tensor,
+    13	    g: torch.Tensor = None,
+    14	    g_gamma: torch.Tensor = None,
+    15	    scale: float | None = None,
+    16	    initial_state: torch.Tensor | None = None,
+    17	    output_final_state: bool = False,
+    18	    reverse: bool = False,
+    19	    cu_seqlens: torch.LongTensor | None = None,
+    20	) -> tuple[torch.Tensor, torch.Tensor]:
+    21	    r"""
+    22	    Args:
+    23	        q (torch.Tensor):
+    24	            queries of shape `[B, T, H, K]`.
+    25	        k (torch.Tensor):
+    26	            keys of shape `[B, T, H, K]`.
+    27	        v (torch.Tensor):
+    28	            values of shape `[B, T, H, V]`.
+    29	        g (torch.Tensor):
+    30	            Forget gates of shape `[B, T, H]`.
+    31	            Compared to GLA, the gating is head-wise instead of elementwise.
+    32	        g_gamma (torch.Tensor):
+    33	            Log decay of shape `[H]`.
+    34	            Head-wise data-independent decay is used if `g_gamma` is provided.
+    35	            Only one of `g` or `g_gamma` should be provided.
+    36	        scale (Optional[float]):
+    37	            Scale factor for the attention scores.
+    38	            If not provided, it will default to `1 / sqrt(K)`. Default: `None`.
+    39	        initial_state (Optional[torch.Tensor]):
+    40	            Initial state of shape `[N, H, K, V]` for `N` input sequences.
+    41	            For equal-length input sequences, `N` equals the batch size `B`.
+    42	            Default: `None`.
+    43	        output_final_state (Optional[bool]):
+    44	            Whether to output the final state of shape `[N, H, K, V]`. Default: `False`.
+    45	        reverse (Optional[bool]):
+    46	            If `True`, process the state passing in reverse order. Default: `False`.
+    47	        cu_seqlens (torch.LongTensor):
+    48	            Cumulative sequence lengths of shape `[N+1]` used for variable-length training,
+    49	            consistent with the FlashAttention API.
+    50	
+    51	    Returns:
+    52	        o (torch.Tensor):
+    53	            Outputs of shape `[B, T, H, V]`.
+    54	        final_state (torch.Tensor):
+    55	            Final state of shape `[N, H, K, V]` if `output_final_state=True` else `None`.
+    56	
+    57	    Examples::
+    58	        >>> import torch
+    59	        >>> import torch.nn.functional as F
+    60	        >>> from einops import rearrange
+    61	        >>> from fla.ops.simple_gla import fused_recurrent_simple_gla
+    62	        # inputs with equal lengths
+    63	        >>> B, T, H, K, V = 4, 2048, 4, 512, 512
+    64	        >>> q = torch.randn(B, T, H, K, device='cuda')
+    65	        >>> k = torch.randn(B, T, H, K, device='cuda')
+    66	        >>> v = torch.randn(B, T, H, V, device='cuda')
+    67	        >>> g = F.logsigmoid(torch.randn(B, T, H, K, device='cuda'))
+    68	        >>> h0 = torch.randn(B, H, K, V, device='cuda')
+    69	        >>> o, ht = fused_recurrent_simple_gla(
+    70	            q, k, v, g,
+    71	            initial_state=h0,
+    72	            output_final_state=True
+    73	        )
+    74	        # for variable-length inputs, the batch size `B` is expected to be 1 and `cu_seqlens` is required
+    75	        >>> q, k, v, g = map(lambda x: rearrange(x, 'b t h d -> 1 (b t) h d'), (q, k, v, g))
+    76	        # for a batch with 4 sequences, `cu_seqlens` with 5 start/end positions are expected
+    77	        >>> cu_seqlens = q.new_tensor([0, 2048, 4096, 6144, 8192], dtype=torch.long)
+    78	        >>> o_var, ht_var = fused_recurrent_simple_gla(
+    79	            q, k, v, g,
+    80	            initial_state=h0,
+    81	            output_final_state=True,
+    82	            cu_seqlens=cu_seqlens
+    83	        )
+    84	    """
+    85	    if cu_seqlens is not None:
+    86	        if q.shape[0] != 1:
+    87	            raise ValueError(
+    88	                f"The batch size is expected to be 1 rather than {q.shape[0]} when using `cu_seqlens`."
+    89	                f"Please flatten variable-length inputs before processing.",
+    90	            )
+    91	        if initial_state is not None and initial_state.shape[0] != len(cu_seqlens) - 1:
+    92	            raise ValueError(
+    93	                f"The number of initial states is expected to be equal to the number of input sequences, "
+    94	                f"i.e., {len(cu_seqlens) - 1} rather than {initial_state.shape[0]}.",
+    95	            )
+    96	    if scale is None:
+    97	        scale = k.shape[-1] ** -0.5
+    98	    o, final_state = fused_recurrent(
+    99	        q=q,
+   100	        k=k,
+   101	        v=v,
+   102	        g=g,
+   103	        g_gamma=g_gamma,
+   104	        scale=scale,
+   105	        initial_state=initial_state,
+   106	        output_final_state=output_final_state,
+   107	        reverse=reverse,
+   108	        cu_seqlens=cu_seqlens,
+   109	    )
+   110	    return o, final_state
+===== FILE 3 DECODE SECTION =====
+     1	import math
+     2	import os
+     3	from typing import Optional, Union
+     4	
+     5	import torch
+     6	import triton
+     7	import triton.language as tl
+     8	from einops import rearrange
+     9	
+    10	from sglang.srt.layers.attention.base_attn_backend import AttentionBackend
+    11	from sglang.srt.layers.attention.fla.chunk import chunk_gated_delta_rule
+    12	from sglang.srt.layers.attention.fla.chunk_delta_h import CHUNK_SIZE as FLA_CHUNK_SIZE
+    13	from sglang.srt.layers.attention.fla.fused_gdn_gating import fused_gdn_gating
+    14	from sglang.srt.layers.attention.fla.fused_recurrent import (
+    15	    fused_recurrent_gated_delta_rule_update,
+    16	)
+    17	from sglang.srt.layers.attention.fla.fused_recurrent_simple_gla_indexed import fused_recurrent_simple_gla_indexed
+    18	from sglang.srt.layers.attention.fla.fused_sigmoid_gating_recurrent import (
+    19	    fused_sigmoid_gating_delta_rule_update,
+    20	)
+...
+17:from sglang.srt.layers.attention.fla.fused_recurrent_simple_gla_indexed import fused_recurrent_simple_gla_indexed
+1588:            o = fused_recurrent_simple_gla_indexed(
+1596:                store_final_state=True,
+1618:                    output_final_state=True,
+1628:                    output_final_state=True,

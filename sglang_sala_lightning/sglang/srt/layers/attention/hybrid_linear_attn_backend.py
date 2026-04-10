@@ -14,7 +14,7 @@ from sglang.srt.layers.attention.fla.fused_gdn_gating import fused_gdn_gating
 from sglang.srt.layers.attention.fla.fused_recurrent import (
     fused_recurrent_gated_delta_rule_update,
 )
-from sglang.srt.layers.attention.fla.fused_recurrent_simple_gla_indexed import fused_recurrent_simple_gla_indexed
+from fla.ops.simple_gla.fused_recurrent import fused_recurrent_simple_gla_indexed
 from sglang.srt.layers.attention.fla.fused_sigmoid_gating_recurrent import (
     fused_sigmoid_gating_delta_rule_update,
 )
@@ -1593,7 +1593,7 @@ class SimpleGLAAttnBackend(MambaAttnBackendBase):
                 scale=scale,
                 h0_source=layer_cache.temporal,
                 h0_indices=mamba_indices,
-                store_final_state=True,
+                output_final_state=True,
                 cu_seqlens=cu_seqlens,
             )
         else:
