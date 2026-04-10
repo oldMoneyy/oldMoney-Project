@@ -248,9 +248,10 @@ Dense:
 rm -rf ~/.triton/cache
 rm -rf /opt/oldMoney-Project/sglang_sala_flashinfer/sglang/srt/layers/attention/__pycache__
 fuser -k -9 31333/tcp
-pip install -e vendor_flashinfer/sparse_decode_kernel/ --no-build-isolation
+# pip install -e vendor_flashinfer/sparse_decode_kernel/ --no-build-isolation
 # uv pip install --no-deps -e /opt/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python
-uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_flashinfer
+uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_lightning
+# uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_flashinfer
 # uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
 export SGLANG_SPARSE_PREFILL=1
 export SGLANG_SPARSE_DECODE=1
@@ -287,7 +288,7 @@ nohup python3 eval_model.py \
   --concurrency 64 \
   --num_samples 150 \
   --verbose \
-  > /opt/oldMoney-Project/logs/eval_sala_flashinfer.log 2>&1 &
+  > /opt/oldMoney-Project/logs/eval_sala_lightning.log 2>&1 &
 
 
 fuser -k -9 31333/tcp
