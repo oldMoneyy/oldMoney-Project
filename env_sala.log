@@ -1,0 +1,1071 @@
+nohup: ignoring input
+================================================
+SALA Environment Setup
+Target: /home/work/compass_max_posttrain_1/.cz/sala
+================================================
+[1/8] Initializing conda...
+accepted Terms of Service for https://repo.anaconda.com/pkgs/main
+accepted Terms of Service for https://repo.anaconda.com/pkgs/r
+[2/8] Creating conda env with Python 3.10...
+2 channel Terms of Service accepted
+Channels:
+ - defaults
+Platform: linux-64
+Collecting package metadata (repodata.json): - \ | / - \ | / - \ | / - \ done
+Solving environment: / done
+
+
+==> WARNING: A newer version of conda exists. <==
+    current version: 25.11.1
+    latest version: 26.3.1
+
+Please update conda by running
+
+    $ conda update -n base -c defaults conda
+
+
+
+## Package Plan ##
+
+  environment location: /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411
+
+  added / updated specs:
+    - python=3.10
+
+
+The following NEW packages will be INSTALLED:
+
+  _libgcc_mutex      pkgs/main/linux-64::_libgcc_mutex-0.1-main 
+  _openmp_mutex      pkgs/main/linux-64::_openmp_mutex-5.1-1_gnu 
+  bzip2              pkgs/main/linux-64::bzip2-1.0.8-h5eee18b_6 
+  ca-certificates    pkgs/main/linux-64::ca-certificates-2026.3.19-h06a4308_0 
+  ld_impl_linux-64   pkgs/main/linux-64::ld_impl_linux-64-2.44-h9e0c5a2_3 
+  libexpat           pkgs/main/linux-64::libexpat-2.7.5-h7354ed3_0 
+  libffi             pkgs/main/linux-64::libffi-3.4.4-h6a678d5_1 
+  libgcc             pkgs/main/linux-64::libgcc-15.2.0-h69a1729_7 
+  libgcc-ng          pkgs/main/linux-64::libgcc-ng-15.2.0-h166f726_7 
+  libgomp            pkgs/main/linux-64::libgomp-15.2.0-h4751f2c_7 
+  libnsl             pkgs/main/linux-64::libnsl-2.0.0-h5eee18b_0 
+  libstdcxx          pkgs/main/linux-64::libstdcxx-15.2.0-h39759b7_7 
+  libstdcxx-ng       pkgs/main/linux-64::libstdcxx-ng-15.2.0-hc03a8fd_7 
+  libuuid            pkgs/main/linux-64::libuuid-1.41.5-h5eee18b_0 
+  libxcb             pkgs/main/linux-64::libxcb-1.17.0-h9b100fa_0 
+  libzlib            pkgs/main/linux-64::libzlib-1.3.1-hb25bd0a_0 
+  ncurses            pkgs/main/linux-64::ncurses-6.5-h7934f7d_0 
+  openssl            pkgs/main/linux-64::openssl-3.5.6-h1b28b03_0 
+  packaging          pkgs/main/linux-64::packaging-26.0-py310h06a4308_0 
+  pip                pkgs/main/noarch::pip-26.0.1-pyhc872135_1 
+  pthread-stubs      pkgs/main/linux-64::pthread-stubs-0.3-h0ce48e5_1 
+  python             pkgs/main/linux-64::python-3.10.20-h741d88c_0 
+  readline           pkgs/main/linux-64::readline-8.3-hc2a1206_0 
+  setuptools         pkgs/main/linux-64::setuptools-82.0.1-py310h06a4308_0 
+  sqlite             pkgs/main/linux-64::sqlite-3.51.2-h3e8d24a_0 
+  tk                 pkgs/main/linux-64::tk-8.6.15-h54e0aa7_0 
+  tzdata             pkgs/main/noarch::tzdata-2026a-he532380_0 
+  wheel              pkgs/main/linux-64::wheel-0.46.3-py310h06a4308_0 
+  xorg-libx11        pkgs/main/linux-64::xorg-libx11-1.8.12-h9b100fa_1 
+  xorg-libxau        pkgs/main/linux-64::xorg-libxau-1.0.12-h9b100fa_0 
+  xorg-libxdmcp      pkgs/main/linux-64::xorg-libxdmcp-1.1.5-h9b100fa_0 
+  xorg-xorgproto     pkgs/main/linux-64::xorg-xorgproto-2024.1-h5eee18b_1 
+  xz                 pkgs/main/linux-64::xz-5.8.2-h448239c_0 
+  zlib               pkgs/main/linux-64::zlib-1.3.1-hb25bd0a_0 
+
+
+
+Downloading and Extracting Packages: ...working... done
+Preparing transaction: \ | / - done
+Verifying transaction: | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / done
+Executing transaction: \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / done
+#
+# To activate this environment, use
+#
+#     $ conda activate /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411
+#
+# To deactivate an active environment, use
+#
+#     $ conda deactivate
+
+Python version: Python 3.10.20
+[3/8] Installing PyTorch 2.9.1+cu128...
+Looking in indexes: https://download.pytorch.org/whl/cu128
+Collecting torch==2.9.1
+  Downloading https://download-r2.pytorch.org/whl/cu128/torch-2.9.1%2Bcu128-cp310-cp310-manylinux_2_28_x86_64.whl.metadata (30 kB)
+Collecting torchvision==0.24.1
+  Downloading https://download-r2.pytorch.org/whl/cu128/torchvision-0.24.1%2Bcu128-cp310-cp310-manylinux_2_28_x86_64.whl.metadata (5.9 kB)
+Collecting torchaudio==2.9.1
+  Downloading https://download-r2.pytorch.org/whl/cu128/torchaudio-2.9.1%2Bcu128-cp310-cp310-manylinux_2_28_x86_64.whl.metadata (6.9 kB)
+Collecting filelock (from torch==2.9.1)
+  Downloading filelock-3.25.2-py3-none-any.whl.metadata (2.0 kB)
+Collecting typing-extensions>=4.10.0 (from torch==2.9.1)
+  Downloading https://download.pytorch.org/whl/typing_extensions-4.15.0-py3-none-any.whl.metadata (3.3 kB)
+Collecting sympy>=1.13.3 (from torch==2.9.1)
+  Downloading sympy-1.14.0-py3-none-any.whl.metadata (12 kB)
+Collecting networkx>=2.5.1 (from torch==2.9.1)
+  Downloading networkx-3.4.2-py3-none-any.whl.metadata (6.3 kB)
+Collecting jinja2 (from torch==2.9.1)
+  Downloading https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl.metadata (2.9 kB)
+Collecting fsspec>=0.8.5 (from torch==2.9.1)
+  Downloading fsspec-2026.2.0-py3-none-any.whl.metadata (10 kB)
+Collecting nvidia-cuda-nvrtc-cu12==12.8.93 (from torch==2.9.1)
+  Downloading https://pypi.nvidia.com/nvidia-cuda-nvrtc-cu12/nvidia_cuda_nvrtc_cu12-12.8.93-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl (88.0 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 88.0/88.0 MB 403.8 MB/s  0:00:00
+Collecting nvidia-cuda-runtime-cu12==12.8.90 (from torch==2.9.1)
+  Downloading https://pypi.nvidia.com/nvidia-cuda-runtime-cu12/nvidia_cuda_runtime_cu12-12.8.90-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (954 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 954.8/954.8 kB 583.7 MB/s  0:00:00
+Collecting nvidia-cuda-cupti-cu12==12.8.90 (from torch==2.9.1)
+  Downloading https://pypi.nvidia.com/nvidia-cuda-cupti-cu12/nvidia_cuda_cupti_cu12-12.8.90-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (10.2 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 10.2/10.2 MB 307.9 MB/s  0:00:00
+Collecting nvidia-cudnn-cu12==9.10.2.21 (from torch==2.9.1)
+  Downloading https://pypi.nvidia.com/nvidia-cudnn-cu12/nvidia_cudnn_cu12-9.10.2.21-py3-none-manylinux_2_27_x86_64.whl (706.8 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 706.8/706.8 MB 626.0 MB/s  0:00:01
+Collecting nvidia-cublas-cu12==12.8.4.1 (from torch==2.9.1)
+  Downloading https://pypi.nvidia.com/nvidia-cublas-cu12/nvidia_cublas_cu12-12.8.4.1-py3-none-manylinux_2_27_x86_64.whl (594.3 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 594.3/594.3 MB 646.7 MB/s  0:00:00
+Collecting nvidia-cufft-cu12==11.3.3.83 (from torch==2.9.1)
+  Downloading https://pypi.nvidia.com/nvidia-cufft-cu12/nvidia_cufft_cu12-11.3.3.83-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (193.1 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 193.1/193.1 MB 561.7 MB/s  0:00:00
+Collecting nvidia-curand-cu12==10.3.9.90 (from torch==2.9.1)
+  Downloading https://pypi.nvidia.com/nvidia-curand-cu12/nvidia_curand_cu12-10.3.9.90-py3-none-manylinux_2_27_x86_64.whl (63.6 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 63.6/63.6 MB 644.5 MB/s  0:00:00
+Collecting nvidia-cusolver-cu12==11.7.3.90 (from torch==2.9.1)
+  Downloading https://pypi.nvidia.com/nvidia-cusolver-cu12/nvidia_cusolver_cu12-11.7.3.90-py3-none-manylinux_2_27_x86_64.whl (267.5 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 267.5/267.5 MB 631.0 MB/s  0:00:00
+Collecting nvidia-cusparse-cu12==12.5.8.93 (from torch==2.9.1)
+  Downloading https://pypi.nvidia.com/nvidia-cusparse-cu12/nvidia_cusparse_cu12-12.5.8.93-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (288.2 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 288.2/288.2 MB 645.3 MB/s  0:00:00
+Collecting nvidia-cusparselt-cu12==0.7.1 (from torch==2.9.1)
+  Downloading https://pypi.nvidia.com/nvidia-cusparselt-cu12/nvidia_cusparselt_cu12-0.7.1-py3-none-manylinux2014_x86_64.whl (287.2 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 287.2/287.2 MB 647.4 MB/s  0:00:00
+Collecting nvidia-nccl-cu12==2.27.5 (from torch==2.9.1)
+  Downloading https://pypi.nvidia.com/nvidia-nccl-cu12/nvidia_nccl_cu12-2.27.5-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (322.3 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 322.3/322.3 MB 639.7 MB/s  0:00:00
+Collecting nvidia-nvshmem-cu12==3.3.20 (from torch==2.9.1)
+  Downloading https://pypi.nvidia.com/nvidia-nvshmem-cu12/nvidia_nvshmem_cu12-3.3.20-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (124.7 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 124.7/124.7 MB 644.5 MB/s  0:00:00
+Collecting nvidia-nvtx-cu12==12.8.90 (from torch==2.9.1)
+  Downloading https://pypi.nvidia.com/nvidia-nvtx-cu12/nvidia_nvtx_cu12-12.8.90-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (89 kB)
+Collecting nvidia-nvjitlink-cu12==12.8.93 (from torch==2.9.1)
+  Downloading https://pypi.nvidia.com/nvidia-nvjitlink-cu12/nvidia_nvjitlink_cu12-12.8.93-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl (39.3 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 39.3/39.3 MB 531.4 MB/s  0:00:00
+Collecting nvidia-cufile-cu12==1.13.1.3 (from torch==2.9.1)
+  Downloading https://pypi.nvidia.com/nvidia-cufile-cu12/nvidia_cufile_cu12-1.13.1.3-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (1.2 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.2/1.2 MB 453.6 MB/s  0:00:00
+Collecting triton==3.5.1 (from torch==2.9.1)
+  Downloading https://download-r2.pytorch.org/whl/triton-3.5.1-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (1.7 kB)
+Collecting numpy (from torchvision==0.24.1)
+  Downloading numpy-2.2.6-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (62 kB)
+Collecting pillow!=8.3.*,>=5.3.0 (from torchvision==0.24.1)
+  Downloading pillow-12.1.1-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (8.8 kB)
+Collecting mpmath<1.4,>=1.1.0 (from sympy>=1.13.3->torch==2.9.1)
+  Downloading mpmath-1.3.0-py3-none-any.whl.metadata (8.6 kB)
+Collecting MarkupSafe>=2.0 (from jinja2->torch==2.9.1)
+  Downloading https://download.pytorch.org/whl/markupsafe-3.0.3-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.7 kB)
+Downloading https://download-r2.pytorch.org/whl/cu128/torch-2.9.1%2Bcu128-cp310-cp310-manylinux_2_28_x86_64.whl (900.9 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 900.9/900.9 MB 262.1 MB/s  0:00:03
+Downloading https://download-r2.pytorch.org/whl/cu128/torchvision-0.24.1%2Bcu128-cp310-cp310-manylinux_2_28_x86_64.whl (8.0 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 8.0/8.0 MB 261.3 MB/s  0:00:00
+Downloading https://download-r2.pytorch.org/whl/cu128/torchaudio-2.9.1%2Bcu128-cp310-cp310-manylinux_2_28_x86_64.whl (2.0 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.0/2.0 MB 535.6 MB/s  0:00:00
+Downloading https://download-r2.pytorch.org/whl/triton-3.5.1-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (170.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 170.3/170.3 MB 200.6 MB/s  0:00:00
+Downloading fsspec-2026.2.0-py3-none-any.whl (202 kB)
+Downloading networkx-3.4.2-py3-none-any.whl (1.7 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.7/1.7 MB 313.0 MB/s  0:00:00
+Downloading pillow-12.1.1-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (7.0 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 7.0/7.0 MB 181.4 MB/s  0:00:00
+Downloading sympy-1.14.0-py3-none-any.whl (6.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.3/6.3 MB 654.2 MB/s  0:00:00
+Downloading mpmath-1.3.0-py3-none-any.whl (536 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 536.2/536.2 kB 634.0 MB/s  0:00:00
+Downloading https://download.pytorch.org/whl/typing_extensions-4.15.0-py3-none-any.whl (44 kB)
+Downloading filelock-3.25.2-py3-none-any.whl (26 kB)
+Downloading https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl (134 kB)
+Downloading https://download.pytorch.org/whl/markupsafe-3.0.3-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (20 kB)
+Downloading numpy-2.2.6-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (16.8 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 16.8/16.8 MB 214.8 MB/s  0:00:00
+Installing collected packages: nvidia-cusparselt-cu12, mpmath, typing-extensions, triton, sympy, pillow, nvidia-nvtx-cu12, nvidia-nvshmem-cu12, nvidia-nvjitlink-cu12, nvidia-nccl-cu12, nvidia-curand-cu12, nvidia-cufile-cu12, nvidia-cuda-runtime-cu12, nvidia-cuda-nvrtc-cu12, nvidia-cuda-cupti-cu12, nvidia-cublas-cu12, numpy, networkx, MarkupSafe, fsspec, filelock, nvidia-cusparse-cu12, nvidia-cufft-cu12, nvidia-cudnn-cu12, jinja2, nvidia-cusolver-cu12, torch, torchvision, torchaudio
+
+Successfully installed MarkupSafe-3.0.3 filelock-3.25.2 fsspec-2026.2.0 jinja2-3.1.6 mpmath-1.3.0 networkx-3.4.2 numpy-2.2.6 nvidia-cublas-cu12-12.8.4.1 nvidia-cuda-cupti-cu12-12.8.90 nvidia-cuda-nvrtc-cu12-12.8.93 nvidia-cuda-runtime-cu12-12.8.90 nvidia-cudnn-cu12-9.10.2.21 nvidia-cufft-cu12-11.3.3.83 nvidia-cufile-cu12-1.13.1.3 nvidia-curand-cu12-10.3.9.90 nvidia-cusolver-cu12-11.7.3.90 nvidia-cusparse-cu12-12.5.8.93 nvidia-cusparselt-cu12-0.7.1 nvidia-nccl-cu12-2.27.5 nvidia-nvjitlink-cu12-12.8.93 nvidia-nvshmem-cu12-3.3.20 nvidia-nvtx-cu12-12.8.90 pillow-12.1.1 sympy-1.14.0 torch-2.9.1+cu128 torchaudio-2.9.1+cu128 torchvision-0.24.1+cu128 triton-3.5.1 typing-extensions-4.15.0
+[4/8] Installing CUDA 12.8 toolkit via conda...
+2 channel Terms of Service accepted
+Channels:
+ - nvidia
+ - defaults
+Platform: linux-64
+Collecting package metadata (repodata.json): - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / done
+Solving environment: \ done
+
+
+==> WARNING: A newer version of conda exists. <==
+    current version: 25.11.1
+    latest version: 26.3.1
+
+Please update conda by running
+
+    $ conda update -n base -c defaults conda
+
+
+
+## Package Plan ##
+
+  environment location: /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411
+
+  added / updated specs:
+    - cuda-toolkit=12.8
+
+
+The following NEW packages will be INSTALLED:
+
+  binutils_impl_lin~ pkgs/main/linux-64::binutils_impl_linux-64-2.44-h78f17ca_3 
+  binutils_linux-64  pkgs/main/linux-64::binutils_linux-64-2.44-hc03a8fd_3 
+  cuda-cccl_linux-64 nvidia/linux-64::cuda-cccl_linux-64-12.8.90-0 
+  cuda-command-line~ nvidia/linux-64::cuda-command-line-tools-12.8.1-0 
+  cuda-compiler      nvidia/linux-64::cuda-compiler-12.8.1-0 
+  cuda-crt-dev_linu~ pkgs/main/noarch::cuda-crt-dev_linux-64-12.8.93-h06a4308_3 
+  cuda-crt-tools     pkgs/main/linux-64::cuda-crt-tools-12.8.93-h06a4308_3 
+  cuda-cudart        nvidia/linux-64::cuda-cudart-12.8.90-0 
+  cuda-cudart-dev    nvidia/linux-64::cuda-cudart-dev-12.8.90-0 
+  cuda-cudart-dev_l~ nvidia/noarch::cuda-cudart-dev_linux-64-12.8.90-0 
+  cuda-cudart-static nvidia/linux-64::cuda-cudart-static-12.8.90-0 
+  cuda-cudart-stati~ nvidia/noarch::cuda-cudart-static_linux-64-12.8.90-0 
+  cuda-cudart_linux~ nvidia/noarch::cuda-cudart_linux-64-12.8.90-0 
+  cuda-cuobjdump     nvidia/linux-64::cuda-cuobjdump-12.8.90-0 
+  cuda-cupti         nvidia/linux-64::cuda-cupti-12.8.90-0 
+  cuda-cupti-dev     nvidia/linux-64::cuda-cupti-dev-12.8.90-0 
+  cuda-cuxxfilt      nvidia/linux-64::cuda-cuxxfilt-12.8.90-0 
+  cuda-driver-dev    nvidia/linux-64::cuda-driver-dev-12.8.90-0 
+  cuda-driver-dev_l~ nvidia/noarch::cuda-driver-dev_linux-64-12.8.90-0 
+  cuda-gdb           nvidia/linux-64::cuda-gdb-12.8.90-0 
+  cuda-libraries     nvidia/linux-64::cuda-libraries-12.8.1-0 
+  cuda-libraries-dev nvidia/linux-64::cuda-libraries-dev-12.8.1-0 
+  cuda-nsight        nvidia/linux-64::cuda-nsight-12.8.90-0 
+  cuda-nvcc          nvidia/linux-64::cuda-nvcc-12.8.93-0 
+  cuda-nvcc-dev_lin~ pkgs/main/noarch::cuda-nvcc-dev_linux-64-12.8.93-he2511ca_3 
+  cuda-nvcc-impl     pkgs/main/linux-64::cuda-nvcc-impl-12.8.93-hd1a145a_3 
+  cuda-nvcc-tools    pkgs/main/linux-64::cuda-nvcc-tools-12.8.93-hbdd6827_3 
+  cuda-nvcc_linux-64 nvidia/linux-64::cuda-nvcc_linux-64-12.8.93-0 
+  cuda-nvdisasm      nvidia/linux-64::cuda-nvdisasm-12.8.90-0 
+  cuda-nvml-dev      nvidia/linux-64::cuda-nvml-dev-12.8.90-0 
+  cuda-nvprof        nvidia/linux-64::cuda-nvprof-12.8.90-0 
+  cuda-nvprune       nvidia/linux-64::cuda-nvprune-12.8.90-0 
+  cuda-nvrtc         nvidia/linux-64::cuda-nvrtc-12.8.93-0 
+  cuda-nvrtc-dev     nvidia/linux-64::cuda-nvrtc-dev-12.8.93-0 
+  cuda-nvtx          nvidia/linux-64::cuda-nvtx-12.8.90-0 
+  cuda-nvvm-dev_lin~ pkgs/main/noarch::cuda-nvvm-dev_linux-64-12.8.93-h06a4308_3 
+  cuda-nvvm-impl     pkgs/main/linux-64::cuda-nvvm-impl-12.8.93-hbdd6827_3 
+  cuda-nvvm-tools    pkgs/main/linux-64::cuda-nvvm-tools-12.8.93-hbdd6827_3 
+  cuda-nvvp          nvidia/linux-64::cuda-nvvp-12.8.93-0 
+  cuda-opencl        nvidia/linux-64::cuda-opencl-12.8.90-0 
+  cuda-opencl-dev    nvidia/linux-64::cuda-opencl-dev-12.8.90-0 
+  cuda-profiler-api  nvidia/linux-64::cuda-profiler-api-12.8.90-0 
+  cuda-sanitizer-api nvidia/linux-64::cuda-sanitizer-api-12.8.93-0 
+  cuda-toolkit       nvidia/linux-64::cuda-toolkit-12.8.1-0 
+  cuda-tools         nvidia/linux-64::cuda-tools-12.8.1-0 
+  cuda-version       nvidia/noarch::cuda-version-12.8-3 
+  cuda-visual-tools  nvidia/linux-64::cuda-visual-tools-12.8.1-0 
+  dbus               pkgs/main/linux-64::dbus-1.16.2-h5bd4931_0 
+  expat              pkgs/main/linux-64::expat-2.7.5-h7354ed3_0 
+  fontconfig         pkgs/main/linux-64::fontconfig-2.15.0-h2c49b7f_0 
+  freetype           pkgs/main/linux-64::freetype-2.14.1-hf5b9546_0 
+  gcc_impl_linux-64  pkgs/main/linux-64::gcc_impl_linux-64-14.3.0-h4943218_4 
+  gcc_linux-64       pkgs/main/linux-64::gcc_linux-64-14.3.0-hda73cce_13 
+  gds-tools          nvidia/linux-64::gds-tools-1.13.1.3-0 
+  gmp                pkgs/main/linux-64::gmp-6.3.0-h6a678d5_0 
+  gxx_impl_linux-64  pkgs/main/linux-64::gxx_impl_linux-64-14.3.0-he634eba_4 
+  gxx_linux-64       pkgs/main/linux-64::gxx_linux-64-14.3.0-hca8765c_13 
+  icu                pkgs/main/linux-64::icu-73.1-h6a678d5_0 
+  kernel-headers_li~ pkgs/main/noarch::kernel-headers_linux-64-4.18.0-h3108a97_1 
+  libcublas          nvidia/linux-64::libcublas-12.8.4.1-0 
+  libcublas-dev      nvidia/linux-64::libcublas-dev-12.8.4.1-0 
+  libcufft           nvidia/linux-64::libcufft-11.3.3.83-0 
+  libcufft-dev       nvidia/linux-64::libcufft-dev-11.3.3.83-0 
+  libcufile          nvidia/linux-64::libcufile-1.13.1.3-0 
+  libcufile-dev      nvidia/linux-64::libcufile-dev-1.13.1.3-0 
+  libcurand          nvidia/linux-64::libcurand-10.3.9.90-0 
+  libcurand-dev      nvidia/linux-64::libcurand-dev-10.3.9.90-0 
+  libcusolver        nvidia/linux-64::libcusolver-11.7.3.90-0 
+  libcusolver-dev    nvidia/linux-64::libcusolver-dev-11.7.3.90-0 
+  libcusparse        nvidia/linux-64::libcusparse-12.5.8.93-0 
+  libcusparse-dev    nvidia/linux-64::libcusparse-dev-12.5.8.93-0 
+  libgcc-devel_linu~ pkgs/main/noarch::libgcc-devel_linux-64-14.3.0-he7458c1_104 
+  libglib            pkgs/main/linux-64::libglib-2.86.3-h8b17d9a_0 
+  libiconv           pkgs/main/linux-64::libiconv-1.18-h75a1612_0 
+  libnpp             nvidia/linux-64::libnpp-12.3.3.100-0 
+  libnpp-dev         nvidia/linux-64::libnpp-dev-12.3.3.100-0 
+  libnvfatbin        nvidia/linux-64::libnvfatbin-12.8.90-0 
+  libnvfatbin-dev    nvidia/linux-64::libnvfatbin-dev-12.8.90-0 
+  libnvjitlink       nvidia/linux-64::libnvjitlink-12.8.93-1 
+  libnvjitlink-dev   nvidia/linux-64::libnvjitlink-dev-12.8.93-1 
+  libnvjpeg          nvidia/linux-64::libnvjpeg-12.3.5.92-0 
+  libnvjpeg-dev      nvidia/linux-64::libnvjpeg-dev-12.3.5.92-0 
+  libpng             pkgs/main/linux-64::libpng-1.6.56-h22898a0_0 
+  libsanitizer       pkgs/main/linux-64::libsanitizer-14.3.0-hd4faa28_4 
+  libstdcxx-devel_l~ pkgs/main/noarch::libstdcxx-devel_linux-64-14.3.0-he7458c1_104 
+  libxkbcommon       pkgs/main/linux-64::libxkbcommon-1.9.1-h69220b7_0 
+  libxml2            pkgs/main/linux-64::libxml2-2.13.9-h2c43086_0 
+  nsight-compute     nvidia/linux-64::nsight-compute-2025.1.1.2-0 
+  nspr               pkgs/main/linux-64::nspr-4.37-h8459abe_0 
+  nss                pkgs/main/linux-64::nss-3.121-h5c1ed2d_0 
+  ocl-icd            pkgs/main/linux-64::ocl-icd-2.3.3-h47b2149_0 
+  opencl-headers     pkgs/main/linux-64::opencl-headers-2025.07.22-hfb20e49_0 
+  pcre2              pkgs/main/linux-64::pcre2-10.46-hf426167_0 
+  sysroot_linux-64   pkgs/main/noarch::sysroot_linux-64-2.28-h3108a97_1 
+  xkeyboard-config   pkgs/main/linux-64::xkeyboard-config-2.44-h382ed1a_1 
+
+
+
+Downloading and Extracting Packages: ...working... done
+Preparing transaction: / - \ | / - \ | / - done
+Verifying transaction: | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | done
+Executing transaction: - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / - \ | / done
+[5/8] Installing sgl-kernel and flashinfer...
+Collecting sgl-kernel==0.3.20
+  Downloading sgl_kernel-0.3.20-cp310-abi3-manylinux2014_x86_64.whl.metadata (18 kB)
+Downloading sgl_kernel-0.3.20-cp310-abi3-manylinux2014_x86_64.whl (535.6 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 535.6/535.6 MB 141.3 MB/s  0:00:03
+Installing collected packages: sgl-kernel
+Successfully installed sgl-kernel-0.3.20
+Collecting flashinfer-python==0.5.3
+  Downloading flashinfer_python-0.5.3-py3-none-any.whl.metadata (11 kB)
+Collecting flashinfer-cubin==0.5.3
+  Downloading flashinfer_cubin-0.5.3-py3-none-any.whl.metadata (1.3 kB)
+Collecting apache-tvm-ffi<0.2,>=0.1 (from flashinfer-python==0.5.3)
+  Downloading apache_tvm_ffi-0.1.10-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (6.1 kB)
+Collecting click (from flashinfer-python==0.5.3)
+  Downloading click-8.3.2-py3-none-any.whl.metadata (2.6 kB)
+Collecting einops (from flashinfer-python==0.5.3)
+  Downloading einops-0.8.2-py3-none-any.whl.metadata (13 kB)
+Collecting ninja (from flashinfer-python==0.5.3)
+  Downloading ninja-1.13.0-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (5.1 kB)
+Requirement already satisfied: numpy in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from flashinfer-python==0.5.3) (2.2.6)
+Collecting nvidia-cudnn-frontend>=1.13.0 (from flashinfer-python==0.5.3)
+  Downloading nvidia_cudnn_frontend-1.22.1-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (7.9 kB)
+Collecting nvidia-cutlass-dsl>=4.2.1 (from flashinfer-python==0.5.3)
+  Downloading nvidia_cutlass_dsl-4.4.2-py3-none-any.whl.metadata (2.7 kB)
+Collecting nvidia-ml-py (from flashinfer-python==0.5.3)
+  Downloading nvidia_ml_py-13.595.45-py3-none-any.whl.metadata (9.7 kB)
+Requirement already satisfied: packaging>=24.2 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from flashinfer-python==0.5.3) (26.0)
+Collecting requests (from flashinfer-python==0.5.3)
+  Downloading requests-2.33.1-py3-none-any.whl.metadata (4.8 kB)
+Collecting tabulate (from flashinfer-python==0.5.3)
+  Downloading tabulate-0.10.0-py3-none-any.whl.metadata (40 kB)
+Requirement already satisfied: torch in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from flashinfer-python==0.5.3) (2.9.1+cu128)
+Collecting tqdm (from flashinfer-python==0.5.3)
+  Downloading tqdm-4.67.3-py3-none-any.whl.metadata (57 kB)
+Requirement already satisfied: typing-extensions>=4.5 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from apache-tvm-ffi<0.2,>=0.1->flashinfer-python==0.5.3) (4.15.0)
+Collecting nvidia-cutlass-dsl-libs-base==4.4.2 (from nvidia-cutlass-dsl>=4.2.1->flashinfer-python==0.5.3)
+  Downloading nvidia_cutlass_dsl_libs_base-4.4.2-cp310-cp310-manylinux_2_28_x86_64.whl.metadata (2.6 kB)
+Collecting cuda-python>=12.8 (from nvidia-cutlass-dsl-libs-base==4.4.2->nvidia-cutlass-dsl>=4.2.1->flashinfer-python==0.5.3)
+  Downloading cuda_python-13.2.0-py3-none-any.whl.metadata (6.5 kB)
+Collecting cuda-bindings~=13.2.0 (from cuda-python>=12.8->nvidia-cutlass-dsl-libs-base==4.4.2->nvidia-cutlass-dsl>=4.2.1->flashinfer-python==0.5.3)
+  Downloading cuda_bindings-13.2.0-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (2.3 kB)
+Collecting cuda-pathfinder~=1.1 (from cuda-python>=12.8->nvidia-cutlass-dsl-libs-base==4.4.2->nvidia-cutlass-dsl>=4.2.1->flashinfer-python==0.5.3)
+  Downloading cuda_pathfinder-1.5.2-py3-none-any.whl.metadata (1.9 kB)
+Collecting charset_normalizer<4,>=2 (from requests->flashinfer-python==0.5.3)
+  Downloading charset_normalizer-3.4.7-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (40 kB)
+Collecting idna<4,>=2.5 (from requests->flashinfer-python==0.5.3)
+  Downloading idna-3.11-py3-none-any.whl.metadata (8.4 kB)
+Collecting urllib3<3,>=1.26 (from requests->flashinfer-python==0.5.3)
+  Downloading urllib3-2.6.3-py3-none-any.whl.metadata (6.9 kB)
+Collecting certifi>=2023.5.7 (from requests->flashinfer-python==0.5.3)
+  Downloading certifi-2026.2.25-py3-none-any.whl.metadata (2.5 kB)
+Requirement already satisfied: filelock in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->flashinfer-python==0.5.3) (3.25.2)
+Requirement already satisfied: sympy>=1.13.3 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->flashinfer-python==0.5.3) (1.14.0)
+Requirement already satisfied: networkx>=2.5.1 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->flashinfer-python==0.5.3) (3.4.2)
+Requirement already satisfied: jinja2 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->flashinfer-python==0.5.3) (3.1.6)
+Requirement already satisfied: fsspec>=0.8.5 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->flashinfer-python==0.5.3) (2026.2.0)
+Requirement already satisfied: nvidia-cuda-nvrtc-cu12==12.8.93 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->flashinfer-python==0.5.3) (12.8.93)
+Requirement already satisfied: nvidia-cuda-runtime-cu12==12.8.90 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->flashinfer-python==0.5.3) (12.8.90)
+Requirement already satisfied: nvidia-cuda-cupti-cu12==12.8.90 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->flashinfer-python==0.5.3) (12.8.90)
+Requirement already satisfied: nvidia-cudnn-cu12==9.10.2.21 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->flashinfer-python==0.5.3) (9.10.2.21)
+Requirement already satisfied: nvidia-cublas-cu12==12.8.4.1 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->flashinfer-python==0.5.3) (12.8.4.1)
+Requirement already satisfied: nvidia-cufft-cu12==11.3.3.83 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->flashinfer-python==0.5.3) (11.3.3.83)
+Requirement already satisfied: nvidia-curand-cu12==10.3.9.90 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->flashinfer-python==0.5.3) (10.3.9.90)
+Requirement already satisfied: nvidia-cusolver-cu12==11.7.3.90 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->flashinfer-python==0.5.3) (11.7.3.90)
+Requirement already satisfied: nvidia-cusparse-cu12==12.5.8.93 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->flashinfer-python==0.5.3) (12.5.8.93)
+Requirement already satisfied: nvidia-cusparselt-cu12==0.7.1 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->flashinfer-python==0.5.3) (0.7.1)
+Requirement already satisfied: nvidia-nccl-cu12==2.27.5 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->flashinfer-python==0.5.3) (2.27.5)
+Requirement already satisfied: nvidia-nvshmem-cu12==3.3.20 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->flashinfer-python==0.5.3) (3.3.20)
+Requirement already satisfied: nvidia-nvtx-cu12==12.8.90 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->flashinfer-python==0.5.3) (12.8.90)
+Requirement already satisfied: nvidia-nvjitlink-cu12==12.8.93 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->flashinfer-python==0.5.3) (12.8.93)
+Requirement already satisfied: nvidia-cufile-cu12==1.13.1.3 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->flashinfer-python==0.5.3) (1.13.1.3)
+Requirement already satisfied: triton==3.5.1 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->flashinfer-python==0.5.3) (3.5.1)
+Requirement already satisfied: mpmath<1.4,>=1.1.0 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from sympy>=1.13.3->torch->flashinfer-python==0.5.3) (1.3.0)
+Requirement already satisfied: MarkupSafe>=2.0 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from jinja2->torch->flashinfer-python==0.5.3) (3.0.3)
+Downloading flashinfer_python-0.5.3-py3-none-any.whl (7.0 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 7.0/7.0 MB 194.9 MB/s  0:00:00
+Downloading flashinfer_cubin-0.5.3-py3-none-any.whl (103.6 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 103.6/103.6 MB 128.8 MB/s  0:00:00
+Downloading apache_tvm_ffi-0.1.10-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (2.6 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.6/2.6 MB 153.2 MB/s  0:00:00
+Downloading nvidia_cudnn_frontend-1.22.1-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (2.9 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.9/2.9 MB 114.6 MB/s  0:00:00
+Downloading nvidia_cutlass_dsl-4.4.2-py3-none-any.whl (10 kB)
+Downloading nvidia_cutlass_dsl_libs_base-4.4.2-cp310-cp310-manylinux_2_28_x86_64.whl (74.4 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 74.4/74.4 MB 142.4 MB/s  0:00:00
+Downloading cuda_python-13.2.0-py3-none-any.whl (8.1 kB)
+Downloading cuda_bindings-13.2.0-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (6.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.3/6.3 MB 300.3 MB/s  0:00:00
+Downloading cuda_pathfinder-1.5.2-py3-none-any.whl (49 kB)
+Downloading click-8.3.2-py3-none-any.whl (108 kB)
+Downloading einops-0.8.2-py3-none-any.whl (65 kB)
+Downloading ninja-1.13.0-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (180 kB)
+Downloading nvidia_ml_py-13.595.45-py3-none-any.whl (51 kB)
+Downloading requests-2.33.1-py3-none-any.whl (64 kB)
+Downloading charset_normalizer-3.4.7-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (216 kB)
+Downloading idna-3.11-py3-none-any.whl (71 kB)
+Downloading urllib3-2.6.3-py3-none-any.whl (131 kB)
+Downloading certifi-2026.2.25-py3-none-any.whl (153 kB)
+Downloading tabulate-0.10.0-py3-none-any.whl (39 kB)
+Downloading tqdm-4.67.3-py3-none-any.whl (78 kB)
+Installing collected packages: nvidia-ml-py, urllib3, tqdm, tabulate, nvidia-cudnn-frontend, ninja, idna, flashinfer-cubin, einops, cuda-pathfinder, click, charset_normalizer, certifi, apache-tvm-ffi, requests, cuda-bindings, cuda-python, nvidia-cutlass-dsl-libs-base, nvidia-cutlass-dsl, flashinfer-python
+
+Successfully installed apache-tvm-ffi-0.1.10 certifi-2026.2.25 charset_normalizer-3.4.7 click-8.3.2 cuda-bindings-13.2.0 cuda-pathfinder-1.5.2 cuda-python-13.2.0 einops-0.8.2 flashinfer-cubin-0.5.3 flashinfer-python-0.5.3 idna-3.11 ninja-1.13.0 nvidia-cudnn-frontend-1.22.1 nvidia-cutlass-dsl-4.4.2 nvidia-cutlass-dsl-libs-base-4.4.2 nvidia-ml-py-13.595.45 requests-2.33.1 tabulate-0.10.0 tqdm-4.67.3 urllib3-2.6.3
+[6/8] Setting up oldMoney-Project and sglang...
+Repo already exists at /home/work/compass_max_posttrain_1/.cz/sala/oldMoney-Project, skipping clone...
+Obtaining file:///home/work/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_cp
+  DEPRECATION: Setting PIP_CONSTRAINT will not affect build constraints in the future, pip 26.2 will enforce this behaviour change. A possible replacement is to specify build constraints using --build-constraint or PIP_BUILD_CONSTRAINT. To disable this warning without any build constraints set --use-feature=build-constraint or PIP_USE_FEATURE="build-constraint".
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Checking if build backend supports build_editable: started
+  Checking if build backend supports build_editable: finished with status 'done'
+  Getting requirements to build editable: started
+  Getting requirements to build editable: finished with status 'done'
+  Preparing editable metadata (pyproject.toml): started
+  Preparing editable metadata (pyproject.toml): finished with status 'done'
+Collecting IPython (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading ipython-8.39.0-py3-none-any.whl.metadata (5.1 kB)
+Collecting aiohttp (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading aiohttp-3.13.5-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (8.1 kB)
+Collecting anthropic>=0.20.0 (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading anthropic-0.94.0-py3-none-any.whl.metadata (3.1 kB)
+Collecting blobfile==3.0.0 (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading blobfile-3.0.0-py3-none-any.whl.metadata (15 kB)
+Collecting build (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading build-1.4.3-py3-none-any.whl.metadata (5.8 kB)
+Collecting compressed-tensors (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading compressed_tensors-0.15.0.1-py3-none-any.whl.metadata (4.7 kB)
+Requirement already satisfied: cuda-python in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from sglang==0.0.0.dev220+gae1de2937.d20260411) (13.2.0)
+Collecting decord2 (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading decord2-3.3.0-cp310-cp310-manylinux_2_28_x86_64.whl.metadata (686 bytes)
+Collecting datasets (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading datasets-4.8.4-py3-none-any.whl.metadata (19 kB)
+Requirement already satisfied: einops in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from sglang==0.0.0.dev220+gae1de2937.d20260411) (0.8.2)
+Collecting fastapi (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading fastapi-0.135.3-py3-none-any.whl.metadata (28 kB)
+Requirement already satisfied: flashinfer_python==0.5.3 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from sglang==0.0.0.dev220+gae1de2937.d20260411) (0.5.3)
+Requirement already satisfied: flashinfer_cubin==0.5.3 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from sglang==0.0.0.dev220+gae1de2937.d20260411) (0.5.3)
+Collecting gguf (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading gguf-0.18.0-py3-none-any.whl.metadata (4.5 kB)
+Collecting hf_transfer (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading hf_transfer-0.1.9-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (1.7 kB)
+Collecting huggingface_hub (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading huggingface_hub-1.10.1-py3-none-any.whl.metadata (14 kB)
+Collecting interegular (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading interegular-0.3.3-py37-none-any.whl.metadata (3.0 kB)
+Collecting llguidance<0.8.0,>=0.7.11 (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading llguidance-0.7.30-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (10 kB)
+Collecting modelscope (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading modelscope-1.35.4-py3-none-any.whl.metadata (43 kB)
+Collecting msgspec (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading msgspec-0.21.0-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (5.4 kB)
+Requirement already satisfied: ninja in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from sglang==0.0.0.dev220+gae1de2937.d20260411) (1.13.0)
+Requirement already satisfied: numpy in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from sglang==0.0.0.dev220+gae1de2937.d20260411) (2.2.6)
+Collecting nvidia-cutlass-dsl==4.2.1 (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading nvidia_cutlass_dsl-4.2.1-cp310-cp310-manylinux_2_28_x86_64.whl.metadata (2.5 kB)
+Requirement already satisfied: nvidia-ml-py in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from sglang==0.0.0.dev220+gae1de2937.d20260411) (13.595.45)
+Collecting openai-harmony==0.0.4 (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading openai_harmony-0.0.4-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (8.0 kB)
+Collecting openai==2.6.1 (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading openai-2.6.1-py3-none-any.whl.metadata (29 kB)
+Collecting orjson (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading orjson-3.11.8-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (41 kB)
+Collecting outlines==0.1.11 (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading outlines-0.1.11-py3-none-any.whl.metadata (17 kB)
+Requirement already satisfied: packaging in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from sglang==0.0.0.dev220+gae1de2937.d20260411) (26.0)
+Collecting partial_json_parser (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading partial_json_parser-0.2.1.1.post7-py3-none-any.whl.metadata (6.1 kB)
+Requirement already satisfied: pillow in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from sglang==0.0.0.dev220+gae1de2937.d20260411) (12.1.1)
+Collecting prometheus-client>=0.20.0 (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading prometheus_client-0.25.0-py3-none-any.whl.metadata (2.1 kB)
+Collecting psutil (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading psutil-7.2.2-cp36-abi3-manylinux2010_x86_64.manylinux_2_12_x86_64.manylinux_2_28_x86_64.whl.metadata (22 kB)
+Collecting py-spy (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading py_spy-0.4.1-py2.py3-none-manylinux_2_5_x86_64.manylinux1_x86_64.whl.metadata (510 bytes)
+Collecting pybase64 (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading pybase64-1.4.3-cp310-cp310-manylinux1_x86_64.manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_5_x86_64.whl.metadata (8.7 kB)
+Collecting pydantic (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading pydantic-2.12.5-py3-none-any.whl.metadata (90 kB)
+Collecting python-multipart (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading python_multipart-0.0.26-py3-none-any.whl.metadata (2.1 kB)
+Collecting pyzmq>=25.1.2 (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading pyzmq-27.1.0-cp310-cp310-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl.metadata (6.0 kB)
+Requirement already satisfied: requests in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from sglang==0.0.0.dev220+gae1de2937.d20260411) (2.33.1)
+Collecting scipy (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading scipy-1.15.3-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (61 kB)
+Collecting sentencepiece (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading sentencepiece-0.2.1-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (10 kB)
+Collecting setproctitle (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading setproctitle-1.3.7-cp310-cp310-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (10 kB)
+Requirement already satisfied: sgl-kernel==0.3.20 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from sglang==0.0.0.dev220+gae1de2937.d20260411) (0.3.20)
+Collecting soundfile==0.13.1 (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading soundfile-0.13.1-py2.py3-none-manylinux_2_28_x86_64.whl.metadata (16 kB)
+Collecting tiktoken (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading tiktoken-0.12.0-cp310-cp310-manylinux_2_28_x86_64.whl.metadata (6.7 kB)
+Collecting timm==1.0.16 (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading timm-1.0.16-py3-none-any.whl.metadata (57 kB)
+Collecting torch_memory_saver==0.0.9 (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading torch_memory_saver-0.0.9-cp39-abi3-manylinux2014_x86_64.whl.metadata (108 bytes)
+Requirement already satisfied: torch==2.9.1 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from sglang==0.0.0.dev220+gae1de2937.d20260411) (2.9.1+cu128)
+Requirement already satisfied: torchaudio==2.9.1 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from sglang==0.0.0.dev220+gae1de2937.d20260411) (2.9.1+cu128)
+Collecting torchcodec==0.8.0 (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading torchcodec-0.8.0-cp310-cp310-manylinux_2_28_x86_64.whl.metadata (9.5 kB)
+Requirement already satisfied: torchvision in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from sglang==0.0.0.dev220+gae1de2937.d20260411) (0.24.1+cu128)
+Collecting torchao==0.9.0 (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading torchao-0.9.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux_2_28_x86_64.whl.metadata (14 kB)
+Requirement already satisfied: tqdm in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from sglang==0.0.0.dev220+gae1de2937.d20260411) (4.67.3)
+Collecting transformers==4.57.1 (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading transformers-4.57.1-py3-none-any.whl.metadata (43 kB)
+Collecting uvicorn (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading uvicorn-0.44.0-py3-none-any.whl.metadata (6.7 kB)
+Collecting uvloop (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading uvloop-0.22.1-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (4.9 kB)
+Collecting xgrammar==0.1.27 (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading xgrammar-0.1.27-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (6.8 kB)
+Collecting grpcio==1.75.1 (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading grpcio-1.75.1-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (3.7 kB)
+Collecting grpcio-tools==1.75.1 (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading grpcio_tools-1.75.1-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (5.3 kB)
+Collecting grpcio-reflection==1.75.1 (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading grpcio_reflection-1.75.1-py3-none-any.whl.metadata (1.1 kB)
+Collecting grpcio-health-checking==1.75.1 (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading grpcio_health_checking-1.75.1-py3-none-any.whl.metadata (1.1 kB)
+Collecting pycryptodomex>=3.8 (from blobfile==3.0.0->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading pycryptodomex-3.23.0-cp37-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (3.4 kB)
+Requirement already satisfied: urllib3<3,>=1.25.3 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from blobfile==3.0.0->sglang==0.0.0.dev220+gae1de2937.d20260411) (2.6.3)
+Collecting lxml>=4.9 (from blobfile==3.0.0->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading lxml-6.0.3-cp310-cp310-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl.metadata (3.8 kB)
+Requirement already satisfied: filelock>=3.0 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from blobfile==3.0.0->sglang==0.0.0.dev220+gae1de2937.d20260411) (3.25.2)
+Requirement already satisfied: apache-tvm-ffi<0.2,>=0.1 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from flashinfer_python==0.5.3->sglang==0.0.0.dev220+gae1de2937.d20260411) (0.1.10)
+Requirement already satisfied: click in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from flashinfer_python==0.5.3->sglang==0.0.0.dev220+gae1de2937.d20260411) (8.3.2)
+Requirement already satisfied: nvidia-cudnn-frontend>=1.13.0 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from flashinfer_python==0.5.3->sglang==0.0.0.dev220+gae1de2937.d20260411) (1.22.1)
+Requirement already satisfied: tabulate in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from flashinfer_python==0.5.3->sglang==0.0.0.dev220+gae1de2937.d20260411) (0.10.0)
+Requirement already satisfied: typing-extensions~=4.12 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from grpcio==1.75.1->sglang==0.0.0.dev220+gae1de2937.d20260411) (4.15.0)
+Collecting protobuf<7.0.0,>=6.31.1 (from grpcio-health-checking==1.75.1->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading protobuf-6.33.6-cp39-abi3-manylinux2014_x86_64.whl.metadata (593 bytes)
+Requirement already satisfied: setuptools in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from grpcio-tools==1.75.1->sglang==0.0.0.dev220+gae1de2937.d20260411) (82.0.1)
+Collecting anyio<5,>=3.5.0 (from openai==2.6.1->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading anyio-4.13.0-py3-none-any.whl.metadata (4.5 kB)
+Collecting distro<2,>=1.7.0 (from openai==2.6.1->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading distro-1.9.0-py3-none-any.whl.metadata (6.8 kB)
+Collecting httpx<1,>=0.23.0 (from openai==2.6.1->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)
+Collecting jiter<1,>=0.10.0 (from openai==2.6.1->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading jiter-0.14.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (5.2 kB)
+Collecting sniffio (from openai==2.6.1->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading sniffio-1.3.1-py3-none-any.whl.metadata (3.9 kB)
+Requirement already satisfied: jinja2 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from outlines==0.1.11->sglang==0.0.0.dev220+gae1de2937.d20260411) (3.1.6)
+Collecting lark (from outlines==0.1.11->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading lark-1.3.1-py3-none-any.whl.metadata (1.8 kB)
+Collecting nest_asyncio (from outlines==0.1.11->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading nest_asyncio-1.6.0-py3-none-any.whl.metadata (2.8 kB)
+Collecting cloudpickle (from outlines==0.1.11->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading cloudpickle-3.1.2-py3-none-any.whl.metadata (7.1 kB)
+Collecting diskcache (from outlines==0.1.11->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading diskcache-5.6.3-py3-none-any.whl.metadata (20 kB)
+Collecting referencing (from outlines==0.1.11->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading referencing-0.37.0-py3-none-any.whl.metadata (2.8 kB)
+Collecting jsonschema (from outlines==0.1.11->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading jsonschema-4.26.0-py3-none-any.whl.metadata (7.6 kB)
+Collecting pycountry (from outlines==0.1.11->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading pycountry-26.2.16-py3-none-any.whl.metadata (12 kB)
+Collecting airportsdata (from outlines==0.1.11->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading airportsdata-20260315-py3-none-any.whl.metadata (8.0 kB)
+Collecting outlines_core==0.1.26 (from outlines==0.1.11->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading outlines_core-0.1.26-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (3.8 kB)
+Collecting cffi>=1.0 (from soundfile==0.13.1->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading cffi-2.0.0-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (2.6 kB)
+Collecting pyyaml (from timm==1.0.16->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading pyyaml-6.0.3-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.4 kB)
+Collecting safetensors (from timm==1.0.16->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading safetensors-0.7.0-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.1 kB)
+Requirement already satisfied: sympy>=1.13.3 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch==2.9.1->sglang==0.0.0.dev220+gae1de2937.d20260411) (1.14.0)
+Requirement already satisfied: networkx>=2.5.1 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch==2.9.1->sglang==0.0.0.dev220+gae1de2937.d20260411) (3.4.2)
+Requirement already satisfied: fsspec>=0.8.5 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch==2.9.1->sglang==0.0.0.dev220+gae1de2937.d20260411) (2026.2.0)
+Requirement already satisfied: nvidia-cuda-nvrtc-cu12==12.8.93 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch==2.9.1->sglang==0.0.0.dev220+gae1de2937.d20260411) (12.8.93)
+Requirement already satisfied: nvidia-cuda-runtime-cu12==12.8.90 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch==2.9.1->sglang==0.0.0.dev220+gae1de2937.d20260411) (12.8.90)
+Requirement already satisfied: nvidia-cuda-cupti-cu12==12.8.90 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch==2.9.1->sglang==0.0.0.dev220+gae1de2937.d20260411) (12.8.90)
+Requirement already satisfied: nvidia-cudnn-cu12==9.10.2.21 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch==2.9.1->sglang==0.0.0.dev220+gae1de2937.d20260411) (9.10.2.21)
+Requirement already satisfied: nvidia-cublas-cu12==12.8.4.1 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch==2.9.1->sglang==0.0.0.dev220+gae1de2937.d20260411) (12.8.4.1)
+Requirement already satisfied: nvidia-cufft-cu12==11.3.3.83 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch==2.9.1->sglang==0.0.0.dev220+gae1de2937.d20260411) (11.3.3.83)
+Requirement already satisfied: nvidia-curand-cu12==10.3.9.90 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch==2.9.1->sglang==0.0.0.dev220+gae1de2937.d20260411) (10.3.9.90)
+Requirement already satisfied: nvidia-cusolver-cu12==11.7.3.90 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch==2.9.1->sglang==0.0.0.dev220+gae1de2937.d20260411) (11.7.3.90)
+Requirement already satisfied: nvidia-cusparse-cu12==12.5.8.93 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch==2.9.1->sglang==0.0.0.dev220+gae1de2937.d20260411) (12.5.8.93)
+Requirement already satisfied: nvidia-cusparselt-cu12==0.7.1 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch==2.9.1->sglang==0.0.0.dev220+gae1de2937.d20260411) (0.7.1)
+Requirement already satisfied: nvidia-nccl-cu12==2.27.5 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch==2.9.1->sglang==0.0.0.dev220+gae1de2937.d20260411) (2.27.5)
+Requirement already satisfied: nvidia-nvshmem-cu12==3.3.20 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch==2.9.1->sglang==0.0.0.dev220+gae1de2937.d20260411) (3.3.20)
+Requirement already satisfied: nvidia-nvtx-cu12==12.8.90 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch==2.9.1->sglang==0.0.0.dev220+gae1de2937.d20260411) (12.8.90)
+Requirement already satisfied: nvidia-nvjitlink-cu12==12.8.93 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch==2.9.1->sglang==0.0.0.dev220+gae1de2937.d20260411) (12.8.93)
+Requirement already satisfied: nvidia-cufile-cu12==1.13.1.3 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch==2.9.1->sglang==0.0.0.dev220+gae1de2937.d20260411) (1.13.1.3)
+Requirement already satisfied: triton==3.5.1 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch==2.9.1->sglang==0.0.0.dev220+gae1de2937.d20260411) (3.5.1)
+Collecting huggingface_hub (from sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading huggingface_hub-0.36.2-py3-none-any.whl.metadata (15 kB)
+Collecting regex!=2019.12.17 (from transformers==4.57.1->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading regex-2026.4.4-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (40 kB)
+Collecting tokenizers<=0.23.0,>=0.22.0 (from transformers==4.57.1->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading tokenizers-0.22.2-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (7.3 kB)
+Collecting exceptiongroup>=1.0.2 (from anyio<5,>=3.5.0->openai==2.6.1->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading exceptiongroup-1.3.1-py3-none-any.whl.metadata (6.7 kB)
+Requirement already satisfied: idna>=2.8 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from anyio<5,>=3.5.0->openai==2.6.1->sglang==0.0.0.dev220+gae1de2937.d20260411) (3.11)
+Requirement already satisfied: certifi in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from httpx<1,>=0.23.0->openai==2.6.1->sglang==0.0.0.dev220+gae1de2937.d20260411) (2026.2.25)
+Collecting httpcore==1.* (from httpx<1,>=0.23.0->openai==2.6.1->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+Collecting h11>=0.16 (from httpcore==1.*->httpx<1,>=0.23.0->openai==2.6.1->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+Collecting hf-xet<2.0.0,>=1.1.3 (from huggingface_hub->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading hf_xet-1.4.3-cp37-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (4.9 kB)
+Collecting annotated-types>=0.6.0 (from pydantic->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading annotated_types-0.7.0-py3-none-any.whl.metadata (15 kB)
+Collecting pydantic-core==2.41.5 (from pydantic->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading pydantic_core-2.41.5-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (7.3 kB)
+Collecting typing-inspection>=0.4.2 (from pydantic->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading typing_inspection-0.4.2-py3-none-any.whl.metadata (2.6 kB)
+Collecting docstring-parser<1,>=0.15 (from anthropic>=0.20.0->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading docstring_parser-0.17.0-py3-none-any.whl.metadata (3.5 kB)
+Collecting pycparser (from cffi>=1.0->soundfile==0.13.1->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading pycparser-3.0-py3-none-any.whl.metadata (8.2 kB)
+Requirement already satisfied: cuda-bindings~=13.2.0 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from cuda-python->sglang==0.0.0.dev220+gae1de2937.d20260411) (13.2.0)
+Requirement already satisfied: cuda-pathfinder~=1.1 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from cuda-python->sglang==0.0.0.dev220+gae1de2937.d20260411) (1.5.2)
+Requirement already satisfied: mpmath<1.4,>=1.1.0 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from sympy>=1.13.3->torch==2.9.1->sglang==0.0.0.dev220+gae1de2937.d20260411) (1.3.0)
+Collecting aiohappyeyeballs>=2.5.0 (from aiohttp->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading aiohappyeyeballs-2.6.1-py3-none-any.whl.metadata (5.9 kB)
+Collecting aiosignal>=1.4.0 (from aiohttp->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading aiosignal-1.4.0-py3-none-any.whl.metadata (3.7 kB)
+Collecting async-timeout<6.0,>=4.0 (from aiohttp->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading async_timeout-5.0.1-py3-none-any.whl.metadata (5.1 kB)
+Collecting attrs>=17.3.0 (from aiohttp->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading attrs-26.1.0-py3-none-any.whl.metadata (8.8 kB)
+Collecting frozenlist>=1.1.1 (from aiohttp->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading frozenlist-1.8.0-cp310-cp310-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (20 kB)
+Collecting multidict<7.0,>=4.5 (from aiohttp->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading multidict-6.7.1-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (5.3 kB)
+Collecting propcache>=0.2.0 (from aiohttp->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading propcache-0.4.1-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (13 kB)
+Collecting yarl<2.0,>=1.17.0 (from aiohttp->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading yarl-1.23.0-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (79 kB)
+Collecting pyproject_hooks (from build->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading pyproject_hooks-1.2.0-py3-none-any.whl.metadata (1.3 kB)
+Collecting tomli>=1.1.0 (from build->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading tomli-2.4.1-py3-none-any.whl.metadata (10 kB)
+Collecting loguru (from compressed-tensors->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading loguru-0.7.3-py3-none-any.whl.metadata (22 kB)
+Collecting pyarrow>=21.0.0 (from datasets->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading pyarrow-23.0.1-cp310-cp310-manylinux_2_28_x86_64.whl.metadata (3.1 kB)
+Collecting dill<0.4.2,>=0.3.0 (from datasets->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading dill-0.4.1-py3-none-any.whl.metadata (10 kB)
+Collecting pandas (from datasets->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading pandas-2.3.3-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (91 kB)
+Collecting xxhash (from datasets->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading xxhash-3.6.0-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (13 kB)
+Collecting multiprocess<0.70.20 (from datasets->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading multiprocess-0.70.19-py310-none-any.whl.metadata (7.5 kB)
+Requirement already satisfied: charset_normalizer<4,>=2 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from requests->sglang==0.0.0.dev220+gae1de2937.d20260411) (3.4.7)
+Collecting starlette>=0.46.0 (from fastapi->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading starlette-1.0.0-py3-none-any.whl.metadata (6.3 kB)
+Collecting annotated-doc>=0.0.2 (from fastapi->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading annotated_doc-0.0.4-py3-none-any.whl.metadata (6.6 kB)
+Collecting decorator (from IPython->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading decorator-5.2.1-py3-none-any.whl.metadata (3.9 kB)
+Collecting jedi>=0.16 (from IPython->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading jedi-0.19.2-py2.py3-none-any.whl.metadata (22 kB)
+Collecting matplotlib-inline (from IPython->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading matplotlib_inline-0.2.1-py3-none-any.whl.metadata (2.3 kB)
+Collecting pexpect>4.3 (from IPython->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading pexpect-4.9.0-py2.py3-none-any.whl.metadata (2.5 kB)
+Collecting prompt_toolkit<3.1.0,>=3.0.41 (from IPython->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading prompt_toolkit-3.0.52-py3-none-any.whl.metadata (6.4 kB)
+Collecting pygments>=2.4.0 (from IPython->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading pygments-2.20.0-py3-none-any.whl.metadata (2.5 kB)
+Collecting stack_data (from IPython->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading stack_data-0.6.3-py3-none-any.whl.metadata (18 kB)
+Collecting traitlets>=5.13.0 (from IPython->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading traitlets-5.14.3-py3-none-any.whl.metadata (10 kB)
+Collecting wcwidth (from prompt_toolkit<3.1.0,>=3.0.41->IPython->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading wcwidth-0.6.0-py3-none-any.whl.metadata (30 kB)
+Collecting parso<0.9.0,>=0.8.4 (from jedi>=0.16->IPython->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading parso-0.8.6-py2.py3-none-any.whl.metadata (8.4 kB)
+Collecting ptyprocess>=0.5 (from pexpect>4.3->IPython->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading ptyprocess-0.7.0-py2.py3-none-any.whl.metadata (1.3 kB)
+Requirement already satisfied: MarkupSafe>=2.0 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from jinja2->outlines==0.1.11->sglang==0.0.0.dev220+gae1de2937.d20260411) (3.0.3)
+Collecting jsonschema-specifications>=2023.03.6 (from jsonschema->outlines==0.1.11->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading jsonschema_specifications-2025.9.1-py3-none-any.whl.metadata (2.9 kB)
+Collecting rpds-py>=0.25.0 (from jsonschema->outlines==0.1.11->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading rpds_py-0.30.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.1 kB)
+Collecting python-dateutil>=2.8.2 (from pandas->datasets->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading python_dateutil-2.9.0.post0-py2.py3-none-any.whl.metadata (8.4 kB)
+Collecting pytz>=2020.1 (from pandas->datasets->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading pytz-2026.1.post1-py2.py3-none-any.whl.metadata (22 kB)
+Collecting tzdata>=2022.7 (from pandas->datasets->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading tzdata-2026.1-py2.py3-none-any.whl.metadata (1.4 kB)
+Collecting six>=1.5 (from python-dateutil>=2.8.2->pandas->datasets->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading six-1.17.0-py2.py3-none-any.whl.metadata (1.7 kB)
+Collecting executing>=1.2.0 (from stack_data->IPython->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading executing-2.2.1-py2.py3-none-any.whl.metadata (8.9 kB)
+Collecting asttokens>=2.1.0 (from stack_data->IPython->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading asttokens-3.0.1-py3-none-any.whl.metadata (4.9 kB)
+Collecting pure-eval (from stack_data->IPython->sglang==0.0.0.dev220+gae1de2937.d20260411)
+  Downloading pure_eval-0.2.3-py3-none-any.whl.metadata (6.3 kB)
+Downloading blobfile-3.0.0-py3-none-any.whl (75 kB)
+Downloading grpcio-1.75.1-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (6.5 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.5/6.5 MB 158.5 MB/s  0:00:00
+Downloading grpcio_health_checking-1.75.1-py3-none-any.whl (18 kB)
+Downloading grpcio_reflection-1.75.1-py3-none-any.whl (22 kB)
+Downloading grpcio_tools-1.75.1-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (2.7 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.7/2.7 MB 183.9 MB/s  0:00:00
+Downloading nvidia_cutlass_dsl-4.2.1-cp310-cp310-manylinux_2_28_x86_64.whl (62.2 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 62.2/62.2 MB 193.0 MB/s  0:00:00
+Downloading openai-2.6.1-py3-none-any.whl (1.0 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.0/1.0 MB 652.3 MB/s  0:00:00
+Downloading openai_harmony-0.0.4-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (3.0 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.0/3.0 MB 300.1 MB/s  0:00:00
+Downloading outlines-0.1.11-py3-none-any.whl (87 kB)
+Downloading outlines_core-0.1.26-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (343 kB)
+Downloading soundfile-0.13.1-py2.py3-none-manylinux_2_28_x86_64.whl (1.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.3/1.3 MB 153.0 MB/s  0:00:00
+Downloading timm-1.0.16-py3-none-any.whl (2.5 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.5/2.5 MB 336.8 MB/s  0:00:00
+Downloading torch_memory_saver-0.0.9-cp39-abi3-manylinux2014_x86_64.whl (488 kB)
+Downloading torchao-0.9.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux_2_28_x86_64.whl (5.7 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 5.7/5.7 MB 182.6 MB/s  0:00:00
+Downloading torchcodec-0.8.0-cp310-cp310-manylinux_2_28_x86_64.whl (1.9 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.9/1.9 MB 310.7 MB/s  0:00:00
+Downloading transformers-4.57.1-py3-none-any.whl (12.0 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 12.0/12.0 MB 309.1 MB/s  0:00:00
+Downloading xgrammar-0.1.27-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (8.9 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 8.9/8.9 MB 239.9 MB/s  0:00:00
+Downloading anyio-4.13.0-py3-none-any.whl (114 kB)
+Downloading distro-1.9.0-py3-none-any.whl (20 kB)
+Downloading httpx-0.28.1-py3-none-any.whl (73 kB)
+Downloading httpcore-1.0.9-py3-none-any.whl (78 kB)
+Downloading huggingface_hub-0.36.2-py3-none-any.whl (566 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 566.4/566.4 kB 654.4 MB/s  0:00:00
+Downloading hf_xet-1.4.3-cp37-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (4.2 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.2/4.2 MB 563.7 MB/s  0:00:00
+Downloading jiter-0.14.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (358 kB)
+Downloading llguidance-0.7.30-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (15.0 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 15.0/15.0 MB 163.8 MB/s  0:00:00
+Downloading protobuf-6.33.6-cp39-abi3-manylinux2014_x86_64.whl (323 kB)
+Downloading pydantic-2.12.5-py3-none-any.whl (463 kB)
+Downloading pydantic_core-2.41.5-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.1 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.1/2.1 MB 130.1 MB/s  0:00:00
+Downloading tokenizers-0.22.2-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (3.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.3/3.3 MB 246.8 MB/s  0:00:00
+Downloading annotated_types-0.7.0-py3-none-any.whl (13 kB)
+Downloading anthropic-0.94.0-py3-none-any.whl (627 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 627.5/627.5 kB 95.4 MB/s  0:00:00
+Downloading docstring_parser-0.17.0-py3-none-any.whl (36 kB)
+Downloading cffi-2.0.0-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (216 kB)
+Downloading exceptiongroup-1.3.1-py3-none-any.whl (16 kB)
+Downloading h11-0.16.0-py3-none-any.whl (37 kB)
+Downloading lxml-6.0.3-cp310-cp310-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl (5.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 5.3/5.3 MB 137.3 MB/s  0:00:00
+Downloading prometheus_client-0.25.0-py3-none-any.whl (64 kB)
+Downloading pycryptodomex-3.23.0-cp37-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.3/2.3 MB 75.4 MB/s  0:00:00
+Downloading pyyaml-6.0.3-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (770 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 770.3/770.3 kB 330.6 MB/s  0:00:00
+Downloading pyzmq-27.1.0-cp310-cp310-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl (854 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 854.1/854.1 kB 637.2 MB/s  0:00:00
+Downloading regex-2026.4.4-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (793 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 793.6/793.6 kB 411.4 MB/s  0:00:00
+Downloading safetensors-0.7.0-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (507 kB)
+Downloading typing_inspection-0.4.2-py3-none-any.whl (14 kB)
+Downloading aiohttp-3.13.5-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (1.7 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.7/1.7 MB 93.1 MB/s  0:00:00
+Downloading async_timeout-5.0.1-py3-none-any.whl (6.2 kB)
+Downloading multidict-6.7.1-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (243 kB)
+Downloading yarl-1.23.0-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (102 kB)
+Downloading aiohappyeyeballs-2.6.1-py3-none-any.whl (15 kB)
+Downloading aiosignal-1.4.0-py3-none-any.whl (7.5 kB)
+Downloading attrs-26.1.0-py3-none-any.whl (67 kB)
+Downloading frozenlist-1.8.0-cp310-cp310-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (219 kB)
+Downloading propcache-0.4.1-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (196 kB)
+Downloading airportsdata-20260315-py3-none-any.whl (935 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 935.4/935.4 kB 677.2 MB/s  0:00:00
+Downloading build-1.4.3-py3-none-any.whl (26 kB)
+Downloading tomli-2.4.1-py3-none-any.whl (14 kB)
+Downloading cloudpickle-3.1.2-py3-none-any.whl (22 kB)
+Downloading compressed_tensors-0.15.0.1-py3-none-any.whl (194 kB)
+Downloading datasets-4.8.4-py3-none-any.whl (526 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 527.0/527.0 kB 350.8 MB/s  0:00:00
+Downloading dill-0.4.1-py3-none-any.whl (120 kB)
+Downloading multiprocess-0.70.19-py310-none-any.whl (134 kB)
+Downloading pyarrow-23.0.1-cp310-cp310-manylinux_2_28_x86_64.whl (47.6 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 47.6/47.6 MB 146.0 MB/s  0:00:00
+Downloading decord2-3.3.0-cp310-cp310-manylinux_2_28_x86_64.whl (27.4 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 27.4/27.4 MB 189.8 MB/s  0:00:00
+Downloading diskcache-5.6.3-py3-none-any.whl (45 kB)
+Downloading fastapi-0.135.3-py3-none-any.whl (117 kB)
+Downloading annotated_doc-0.0.4-py3-none-any.whl (5.3 kB)
+Downloading starlette-1.0.0-py3-none-any.whl (72 kB)
+Downloading gguf-0.18.0-py3-none-any.whl (114 kB)
+Downloading hf_transfer-0.1.9-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (3.6 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.6/3.6 MB 152.6 MB/s  0:00:00
+Downloading interegular-0.3.3-py37-none-any.whl (23 kB)
+Downloading ipython-8.39.0-py3-none-any.whl (831 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 831.8/831.8 kB 102.6 MB/s  0:00:00
+Downloading prompt_toolkit-3.0.52-py3-none-any.whl (391 kB)
+Downloading jedi-0.19.2-py2.py3-none-any.whl (1.6 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.6/1.6 MB 191.6 MB/s  0:00:00
+Downloading parso-0.8.6-py2.py3-none-any.whl (106 kB)
+Downloading pexpect-4.9.0-py2.py3-none-any.whl (63 kB)
+Downloading ptyprocess-0.7.0-py2.py3-none-any.whl (13 kB)
+Downloading pygments-2.20.0-py3-none-any.whl (1.2 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.2/1.2 MB 688.9 MB/s  0:00:00
+Downloading traitlets-5.14.3-py3-none-any.whl (85 kB)
+Downloading decorator-5.2.1-py3-none-any.whl (9.2 kB)
+Downloading jsonschema-4.26.0-py3-none-any.whl (90 kB)
+Downloading jsonschema_specifications-2025.9.1-py3-none-any.whl (18 kB)
+Downloading referencing-0.37.0-py3-none-any.whl (26 kB)
+Downloading rpds_py-0.30.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (390 kB)
+Downloading lark-1.3.1-py3-none-any.whl (113 kB)
+Downloading loguru-0.7.3-py3-none-any.whl (61 kB)
+Downloading matplotlib_inline-0.2.1-py3-none-any.whl (9.5 kB)
+Downloading modelscope-1.35.4-py3-none-any.whl (6.1 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.1/6.1 MB 208.4 MB/s  0:00:00
+Downloading msgspec-0.21.0-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (222 kB)
+Downloading nest_asyncio-1.6.0-py3-none-any.whl (5.2 kB)
+Downloading orjson-3.11.8-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (133 kB)
+Downloading pandas-2.3.3-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (12.8 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 12.8/12.8 MB 304.1 MB/s  0:00:00
+Downloading python_dateutil-2.9.0.post0-py2.py3-none-any.whl (229 kB)
+Downloading pytz-2026.1.post1-py2.py3-none-any.whl (510 kB)
+Downloading six-1.17.0-py2.py3-none-any.whl (11 kB)
+Downloading tzdata-2026.1-py2.py3-none-any.whl (348 kB)
+Downloading partial_json_parser-0.2.1.1.post7-py3-none-any.whl (10 kB)
+Downloading psutil-7.2.2-cp36-abi3-manylinux2010_x86_64.manylinux_2_12_x86_64.manylinux_2_28_x86_64.whl (155 kB)
+Downloading py_spy-0.4.1-py2.py3-none-manylinux_2_5_x86_64.manylinux1_x86_64.whl (2.8 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.8/2.8 MB 174.2 MB/s  0:00:00
+Downloading pybase64-1.4.3-cp310-cp310-manylinux1_x86_64.manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_5_x86_64.whl (68 kB)
+Downloading pycountry-26.2.16-py3-none-any.whl (8.0 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 8.0/8.0 MB 182.5 MB/s  0:00:00
+Downloading pycparser-3.0-py3-none-any.whl (48 kB)
+Downloading pyproject_hooks-1.2.0-py3-none-any.whl (10 kB)
+Downloading python_multipart-0.0.26-py3-none-any.whl (28 kB)
+Downloading scipy-1.15.3-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (37.7 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 37.7/37.7 MB 166.6 MB/s  0:00:00
+Downloading sentencepiece-0.2.1-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (1.4 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.4/1.4 MB 293.5 MB/s  0:00:00
+Downloading setproctitle-1.3.7-cp310-cp310-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (31 kB)
+Downloading sniffio-1.3.1-py3-none-any.whl (10 kB)
+Downloading stack_data-0.6.3-py3-none-any.whl (24 kB)
+Downloading asttokens-3.0.1-py3-none-any.whl (27 kB)
+Downloading executing-2.2.1-py2.py3-none-any.whl (28 kB)
+Downloading pure_eval-0.2.3-py3-none-any.whl (11 kB)
+Downloading tiktoken-0.12.0-cp310-cp310-manylinux_2_28_x86_64.whl (1.2 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.2/1.2 MB 558.4 MB/s  0:00:00
+Downloading uvicorn-0.44.0-py3-none-any.whl (69 kB)
+Downloading uvloop-0.22.1-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (3.7 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.7/3.7 MB 130.2 MB/s  0:00:00
+Downloading wcwidth-0.6.0-py3-none-any.whl (94 kB)
+Downloading xxhash-3.6.0-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (193 kB)
+Building wheels for collected packages: sglang
+  Building editable for sglang (pyproject.toml): started
+  Building editable for sglang (pyproject.toml): finished with status 'done'
+  Created wheel for sglang: filename=sglang-0.0.0.dev220+gae1de2937.d20260411-0.editable-py3-none-any.whl size=5919 sha256=bece9ed38d93946b67567d15530ef812d8af5cdb5c04144b832066b0e860e5d2
+  Stored in directory: /tmp/pip-ephem-wheel-cache-a8g9jv7s/wheels/4d/62/ec/43209211eb0a97321b27bc661ade840905d750a62a04be8bc1
+Successfully built sglang
+Installing collected packages: torchao, pytz, py-spy, pure-eval, ptyprocess, xxhash, wcwidth, uvloop, tzdata, typing-inspection, traitlets, torchcodec, torch_memory_saver, tomli, sniffio, six, setproctitle, sentencepiece, scipy, safetensors, rpds-py, regex, pyzmq, pyyaml, python-multipart, pyproject_hooks, pygments, pydantic-core, pycryptodomex, pycparser, pycountry, pybase64, pyarrow, psutil, protobuf, propcache, prometheus-client, pexpect, partial_json_parser, parso, orjson, nest_asyncio, multidict, msgspec, lxml, loguru, llguidance, lark, jiter, interegular, hf-xet, hf_transfer, h11, grpcio, frozenlist, executing, exceptiongroup, docstring-parser, distro, diskcache, dill, decord2, decorator, cloudpickle, attrs, async-timeout, asttokens, annotated-types, annotated-doc, airportsdata, aiohappyeyeballs, yarl, uvicorn, tiktoken, stack_data, referencing, python-dateutil, pydantic, prompt_toolkit, multiprocess, modelscope, matplotlib-inline, jedi, huggingface_hub, httpcore, grpcio-tools, grpcio-reflection, grpcio-health-checking, gguf, cffi, build, blobfile, anyio, aiosignal, tokenizers, starlette, soundfile, pandas, openai-harmony, nvidia-cutlass-dsl, jsonschema-specifications, IPython, httpx, aiohttp, transformers, openai, jsonschema, fastapi, anthropic, xgrammar, timm, outlines_core, datasets, compressed-tensors, outlines, sglang
+  Attempting uninstall: nvidia-cutlass-dsl
+    Found existing installation: nvidia-cutlass-dsl 4.4.2
+    Uninstalling nvidia-cutlass-dsl-4.4.2:
+      Successfully uninstalled nvidia-cutlass-dsl-4.4.2
+
+Successfully installed IPython-8.39.0 aiohappyeyeballs-2.6.1 aiohttp-3.13.5 aiosignal-1.4.0 airportsdata-20260315 annotated-doc-0.0.4 annotated-types-0.7.0 anthropic-0.94.0 anyio-4.13.0 asttokens-3.0.1 async-timeout-5.0.1 attrs-26.1.0 blobfile-3.0.0 build-1.4.3 cffi-2.0.0 cloudpickle-3.1.2 compressed-tensors-0.15.0.1 datasets-4.8.4 decorator-5.2.1 decord2-3.3.0 dill-0.4.1 diskcache-5.6.3 distro-1.9.0 docstring-parser-0.17.0 exceptiongroup-1.3.1 executing-2.2.1 fastapi-0.135.3 frozenlist-1.8.0 gguf-0.18.0 grpcio-1.75.1 grpcio-health-checking-1.75.1 grpcio-reflection-1.75.1 grpcio-tools-1.75.1 h11-0.16.0 hf-xet-1.4.3 hf_transfer-0.1.9 httpcore-1.0.9 httpx-0.28.1 huggingface_hub-0.36.2 interegular-0.3.3 jedi-0.19.2 jiter-0.14.0 jsonschema-4.26.0 jsonschema-specifications-2025.9.1 lark-1.3.1 llguidance-0.7.30 loguru-0.7.3 lxml-6.0.3 matplotlib-inline-0.2.1 modelscope-1.35.4 msgspec-0.21.0 multidict-6.7.1 multiprocess-0.70.19 nest_asyncio-1.6.0 nvidia-cutlass-dsl-4.2.1 openai-2.6.1 openai-harmony-0.0.4 orjson-3.11.8 outlines-0.1.11 outlines_core-0.1.26 pandas-2.3.3 parso-0.8.6 partial_json_parser-0.2.1.1.post7 pexpect-4.9.0 prometheus-client-0.25.0 prompt_toolkit-3.0.52 propcache-0.4.1 protobuf-6.33.6 psutil-7.2.2 ptyprocess-0.7.0 pure-eval-0.2.3 py-spy-0.4.1 pyarrow-23.0.1 pybase64-1.4.3 pycountry-26.2.16 pycparser-3.0 pycryptodomex-3.23.0 pydantic-2.12.5 pydantic-core-2.41.5 pygments-2.20.0 pyproject_hooks-1.2.0 python-dateutil-2.9.0.post0 python-multipart-0.0.26 pytz-2026.1.post1 pyyaml-6.0.3 pyzmq-27.1.0 referencing-0.37.0 regex-2026.4.4 rpds-py-0.30.0 safetensors-0.7.0 scipy-1.15.3 sentencepiece-0.2.1 setproctitle-1.3.7 sglang-0.0.0.dev220+gae1de2937.d20260411 six-1.17.0 sniffio-1.3.1 soundfile-0.13.1 stack_data-0.6.3 starlette-1.0.0 tiktoken-0.12.0 timm-1.0.16 tokenizers-0.22.2 tomli-2.4.1 torch_memory_saver-0.0.9 torchao-0.9.0 torchcodec-0.8.0 traitlets-5.14.3 transformers-4.57.1 typing-inspection-0.4.2 tzdata-2026.1 uvicorn-0.44.0 uvloop-0.22.1 wcwidth-0.6.0 xgrammar-0.1.27 xxhash-3.6.0 yarl-1.23.0
+[7/8] Building vendor CUDA extensions...
+Obtaining file:///home/work/compass_max_posttrain_1/.cz/sala/oldMoney-Project/vendor/infllmv2_cuda_impl
+  Checking if build backend supports build_editable: started
+  Checking if build backend supports build_editable: finished with status 'done'
+  Preparing editable metadata (pyproject.toml): started
+  Preparing editable metadata (pyproject.toml): finished with status 'done'
+Requirement already satisfied: torch in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from infllm_v2==0.0.0) (2.9.1+cu128)
+Requirement already satisfied: packaging in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from infllm_v2==0.0.0) (26.0)
+Requirement already satisfied: psutil in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from infllm_v2==0.0.0) (7.2.2)
+Requirement already satisfied: filelock in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (3.25.2)
+Requirement already satisfied: typing-extensions>=4.10.0 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (4.15.0)
+Requirement already satisfied: sympy>=1.13.3 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (1.14.0)
+Requirement already satisfied: networkx>=2.5.1 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (3.4.2)
+Requirement already satisfied: jinja2 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (3.1.6)
+Requirement already satisfied: fsspec>=0.8.5 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (2026.2.0)
+Requirement already satisfied: nvidia-cuda-nvrtc-cu12==12.8.93 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (12.8.93)
+Requirement already satisfied: nvidia-cuda-runtime-cu12==12.8.90 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (12.8.90)
+Requirement already satisfied: nvidia-cuda-cupti-cu12==12.8.90 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (12.8.90)
+Requirement already satisfied: nvidia-cudnn-cu12==9.10.2.21 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (9.10.2.21)
+Requirement already satisfied: nvidia-cublas-cu12==12.8.4.1 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (12.8.4.1)
+Requirement already satisfied: nvidia-cufft-cu12==11.3.3.83 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (11.3.3.83)
+Requirement already satisfied: nvidia-curand-cu12==10.3.9.90 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (10.3.9.90)
+Requirement already satisfied: nvidia-cusolver-cu12==11.7.3.90 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (11.7.3.90)
+Requirement already satisfied: nvidia-cusparse-cu12==12.5.8.93 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (12.5.8.93)
+Requirement already satisfied: nvidia-cusparselt-cu12==0.7.1 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (0.7.1)
+Requirement already satisfied: nvidia-nccl-cu12==2.27.5 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (2.27.5)
+Requirement already satisfied: nvidia-nvshmem-cu12==3.3.20 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (3.3.20)
+Requirement already satisfied: nvidia-nvtx-cu12==12.8.90 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (12.8.90)
+Requirement already satisfied: nvidia-nvjitlink-cu12==12.8.93 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (12.8.93)
+Requirement already satisfied: nvidia-cufile-cu12==1.13.1.3 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (1.13.1.3)
+Requirement already satisfied: triton==3.5.1 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->infllm_v2==0.0.0) (3.5.1)
+Requirement already satisfied: mpmath<1.4,>=1.1.0 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from sympy>=1.13.3->torch->infllm_v2==0.0.0) (1.3.0)
+Requirement already satisfied: MarkupSafe>=2.0 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from jinja2->torch->infllm_v2==0.0.0) (3.0.3)
+Building wheels for collected packages: infllm_v2
+  Building editable for infllm_v2 (pyproject.toml): started
+  Building editable for infllm_v2 (pyproject.toml): still running...
+  Building editable for infllm_v2 (pyproject.toml): still running...
+  Building editable for infllm_v2 (pyproject.toml): finished with status 'done'
+  Created wheel for infllm_v2: filename=infllm_v2-0.0.0-0.editable-cp310-cp310-linux_x86_64.whl size=2843 sha256=f41f6d50c01a176607440f9d7d2ed05732a3fe929da0b579b7fee41c4cf27d53
+  Stored in directory: /tmp/pip-ephem-wheel-cache-w6oto_zz/wheels/4a/8d/ef/42ce4ba8ec9c4922415b621fbbac91e0f86d72a20b7db45704
+Successfully built infllm_v2
+Installing collected packages: infllm_v2
+Successfully installed infllm_v2-0.0.0
+Obtaining file:///home/work/compass_max_posttrain_1/.cz/sala/oldMoney-Project/vendor/sparse_kernel
+  Checking if build backend supports build_editable: started
+  Checking if build backend supports build_editable: finished with status 'done'
+  Preparing editable metadata (pyproject.toml): started
+  Preparing editable metadata (pyproject.toml): finished with status 'done'
+Building wheels for collected packages: sparse_kernel_extension
+  Building editable for sparse_kernel_extension (pyproject.toml): started
+  Building editable for sparse_kernel_extension (pyproject.toml): still running...
+  Building editable for sparse_kernel_extension (pyproject.toml): finished with status 'done'
+  Created wheel for sparse_kernel_extension: filename=sparse_kernel_extension-0.0.0-0.editable-cp310-cp310-linux_x86_64.whl size=2908 sha256=8dad0f6b6c44d853511f871a859cd5d6074d38364969ba8b61c630cb4abae87c
+  Stored in directory: /tmp/pip-ephem-wheel-cache-g94w_tyc/wheels/4c/b1/fc/257675dc9b8307881770715b94b9912631375fbbdaa5a4932f
+Successfully built sparse_kernel_extension
+Installing collected packages: sparse_kernel_extension
+Successfully installed sparse_kernel_extension-0.0.0
+[8/8] Installing remaining dependencies...
+Collecting flash-linear-attention==0.4.1
+  Downloading flash_linear_attention-0.4.1-py3-none-any.whl.metadata (39 kB)
+Collecting fla-core==0.4.1
+  Downloading fla_core-0.4.1-py3-none-any.whl.metadata (38 kB)
+Collecting compressed-tensors==0.13.0
+  Downloading compressed_tensors-0.13.0-py3-none-any.whl.metadata (7.0 kB)
+Requirement already satisfied: torchao==0.9.0 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (0.9.0)
+Requirement already satisfied: xgrammar==0.1.27 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (0.1.27)
+Collecting tilelang==0.1.8
+  Downloading tilelang-0.1.8-cp38-abi3-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (15 kB)
+Requirement already satisfied: transformers==4.57.1 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (4.57.1)
+Requirement already satisfied: torch_memory_saver==0.0.9 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (0.0.9)
+Requirement already satisfied: nvidia-cutlass-dsl==4.2.1 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (4.2.1)
+Collecting nvidia-cudnn-frontend==1.18.0
+  Downloading nvidia_cudnn_frontend-1.18.0-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (4.4 kB)
+Requirement already satisfied: torch in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from fla-core==0.4.1) (2.9.1+cu128)
+Requirement already satisfied: einops in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from fla-core==0.4.1) (0.8.2)
+Requirement already satisfied: pydantic>=2.0 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from compressed-tensors==0.13.0) (2.12.5)
+Requirement already satisfied: loguru in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from compressed-tensors==0.13.0) (0.7.3)
+Requirement already satisfied: triton in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from xgrammar==0.1.27) (3.5.1)
+Requirement already satisfied: ninja in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from xgrammar==0.1.27) (1.13.0)
+Requirement already satisfied: numpy in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from xgrammar==0.1.27) (2.2.6)
+Requirement already satisfied: typing-extensions>=4.9.0 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from xgrammar==0.1.27) (4.15.0)
+Requirement already satisfied: apache-tvm-ffi>=0.1.2,~=0.1.0 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from tilelang==0.1.8) (0.1.10)
+Collecting torch-c-dlpack-ext (from tilelang==0.1.8)
+  Downloading torch_c_dlpack_ext-0.1.5-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (14 kB)
+Requirement already satisfied: cloudpickle in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from tilelang==0.1.8) (3.1.2)
+Collecting ml-dtypes (from tilelang==0.1.8)
+  Downloading ml_dtypes-0.5.4-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (8.9 kB)
+Requirement already satisfied: psutil in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from tilelang==0.1.8) (7.2.2)
+Requirement already satisfied: tqdm>=4.62.3 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from tilelang==0.1.8) (4.67.3)
+Collecting z3-solver<4.15.5,>=4.13.0 (from tilelang==0.1.8)
+  Downloading z3_solver-4.15.4.0-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (602 bytes)
+Requirement already satisfied: filelock in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from transformers==4.57.1) (3.25.2)
+Requirement already satisfied: huggingface-hub<1.0,>=0.34.0 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from transformers==4.57.1) (0.36.2)
+Requirement already satisfied: packaging>=20.0 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from transformers==4.57.1) (26.0)
+Requirement already satisfied: pyyaml>=5.1 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from transformers==4.57.1) (6.0.3)
+Requirement already satisfied: regex!=2019.12.17 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from transformers==4.57.1) (2026.4.4)
+Requirement already satisfied: requests in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from transformers==4.57.1) (2.33.1)
+Requirement already satisfied: tokenizers<=0.23.0,>=0.22.0 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from transformers==4.57.1) (0.22.2)
+Requirement already satisfied: safetensors>=0.4.3 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from transformers==4.57.1) (0.7.0)
+Requirement already satisfied: cuda-python>=12.8 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from nvidia-cutlass-dsl==4.2.1) (13.2.0)
+Requirement already satisfied: fsspec>=2023.5.0 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from huggingface-hub<1.0,>=0.34.0->transformers==4.57.1) (2026.2.0)
+Requirement already satisfied: hf-xet<2.0.0,>=1.1.3 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from huggingface-hub<1.0,>=0.34.0->transformers==4.57.1) (1.4.3)
+Requirement already satisfied: cuda-bindings~=13.2.0 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from cuda-python>=12.8->nvidia-cutlass-dsl==4.2.1) (13.2.0)
+Requirement already satisfied: cuda-pathfinder~=1.1 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from cuda-python>=12.8->nvidia-cutlass-dsl==4.2.1) (1.5.2)
+Requirement already satisfied: annotated-types>=0.6.0 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from pydantic>=2.0->compressed-tensors==0.13.0) (0.7.0)
+Requirement already satisfied: pydantic-core==2.41.5 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from pydantic>=2.0->compressed-tensors==0.13.0) (2.41.5)
+Requirement already satisfied: typing-inspection>=0.4.2 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from pydantic>=2.0->compressed-tensors==0.13.0) (0.4.2)
+Requirement already satisfied: sympy>=1.13.3 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->fla-core==0.4.1) (1.14.0)
+Requirement already satisfied: networkx>=2.5.1 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->fla-core==0.4.1) (3.4.2)
+Requirement already satisfied: jinja2 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->fla-core==0.4.1) (3.1.6)
+Requirement already satisfied: nvidia-cuda-nvrtc-cu12==12.8.93 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->fla-core==0.4.1) (12.8.93)
+Requirement already satisfied: nvidia-cuda-runtime-cu12==12.8.90 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->fla-core==0.4.1) (12.8.90)
+Requirement already satisfied: nvidia-cuda-cupti-cu12==12.8.90 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->fla-core==0.4.1) (12.8.90)
+Requirement already satisfied: nvidia-cudnn-cu12==9.10.2.21 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->fla-core==0.4.1) (9.10.2.21)
+Requirement already satisfied: nvidia-cublas-cu12==12.8.4.1 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->fla-core==0.4.1) (12.8.4.1)
+Requirement already satisfied: nvidia-cufft-cu12==11.3.3.83 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->fla-core==0.4.1) (11.3.3.83)
+Requirement already satisfied: nvidia-curand-cu12==10.3.9.90 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->fla-core==0.4.1) (10.3.9.90)
+Requirement already satisfied: nvidia-cusolver-cu12==11.7.3.90 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->fla-core==0.4.1) (11.7.3.90)
+Requirement already satisfied: nvidia-cusparse-cu12==12.5.8.93 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->fla-core==0.4.1) (12.5.8.93)
+Requirement already satisfied: nvidia-cusparselt-cu12==0.7.1 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->fla-core==0.4.1) (0.7.1)
+Requirement already satisfied: nvidia-nccl-cu12==2.27.5 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->fla-core==0.4.1) (2.27.5)
+Requirement already satisfied: nvidia-nvshmem-cu12==3.3.20 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->fla-core==0.4.1) (3.3.20)
+Requirement already satisfied: nvidia-nvtx-cu12==12.8.90 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->fla-core==0.4.1) (12.8.90)
+Requirement already satisfied: nvidia-nvjitlink-cu12==12.8.93 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->fla-core==0.4.1) (12.8.93)
+Requirement already satisfied: nvidia-cufile-cu12==1.13.1.3 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from torch->fla-core==0.4.1) (1.13.1.3)
+Requirement already satisfied: mpmath<1.4,>=1.1.0 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from sympy>=1.13.3->torch->fla-core==0.4.1) (1.3.0)
+Requirement already satisfied: MarkupSafe>=2.0 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from jinja2->torch->fla-core==0.4.1) (3.0.3)
+Requirement already satisfied: charset_normalizer<4,>=2 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from requests->transformers==4.57.1) (3.4.7)
+Requirement already satisfied: idna<4,>=2.5 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from requests->transformers==4.57.1) (3.11)
+Requirement already satisfied: urllib3<3,>=1.26 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from requests->transformers==4.57.1) (2.6.3)
+Requirement already satisfied: certifi>=2023.5.7 in /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/site-packages (from requests->transformers==4.57.1) (2026.2.25)
+Downloading flash_linear_attention-0.4.1-py3-none-any.whl (287 kB)
+Downloading fla_core-0.4.1-py3-none-any.whl (437 kB)
+Downloading compressed_tensors-0.13.0-py3-none-any.whl (192 kB)
+Downloading tilelang-0.1.8-cp38-abi3-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (43.5 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 43.5/43.5 MB 139.5 MB/s  0:00:00
+Downloading nvidia_cudnn_frontend-1.18.0-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (2.2 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.2/2.2 MB 678.0 MB/s  0:00:00
+Downloading z3_solver-4.15.4.0-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (29.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 29.3/29.3 MB 193.1 MB/s  0:00:00
+Downloading ml_dtypes-0.5.4-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (5.0 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 5.0/5.0 MB 125.8 MB/s  0:00:00
+Downloading torch_c_dlpack_ext-0.1.5-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (879 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 879.5/879.5 kB 603.3 MB/s  0:00:00
+Installing collected packages: z3-solver, nvidia-cudnn-frontend, ml-dtypes, torch-c-dlpack-ext, fla-core, tilelang, flash-linear-attention, compressed-tensors
+  Attempting uninstall: nvidia-cudnn-frontend
+    Found existing installation: nvidia-cudnn-frontend 1.22.1
+    Uninstalling nvidia-cudnn-frontend-1.22.1:
+      Successfully uninstalled nvidia-cudnn-frontend-1.22.1
+  Attempting uninstall: compressed-tensors
+    Found existing installation: compressed-tensors 0.15.0.1
+    Uninstalling compressed-tensors-0.15.0.1:
+      Successfully uninstalled compressed-tensors-0.15.0.1
+
+Successfully installed compressed-tensors-0.13.0 fla-core-0.4.1 flash-linear-attention-0.4.1 ml-dtypes-0.5.4 nvidia-cudnn-frontend-1.18.0 tilelang-0.1.8 torch-c-dlpack-ext-0.1.5 z3-solver-4.15.4.0
+
+================================================
+Verifying installation...
+================================================
+PyTorch: 2.9.1+cu128
+CUDA available: True
+GPU count: 1
+  GPU 0: NVIDIA H100 80GB HBM3
+All imports OK!
+
+================================================
+Setup complete!
+
+To activate:
+  source /home/work/compass_max_posttrain_1/miniconda3/bin/activate
+  conda activate /home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411
+
+To run server:
+  fuser -k -9 31333/tcp
+  export PYTORCH_ALLOC_CONF=expandable_segments:True
+  export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+  python -m sglang.launch_server \
+      --model /path/to/model \
+      --trust-remote-code \
+      --disable-radix-cache \
+      --attention-backend minicpm_flashinfer \
+      --chunked-prefill-size 8192 \
+      --max-running-requests 32 \
+      --port 31333 \
+      --dense-as-sparse \
+      --mem-fraction-static 0.82
+================================================
