@@ -2235,30 +2235,28 @@ class MHATokenToKVPoolFP4Compressed(MHATokenToKVPool):
                 ]
 
                 # FP8 scratch buffers (shared across layers, reused each call)
-                # store_dtype is uint8 (for fp8_e4m3fn)
-                self.k_buffer = [
-                    torch.zeros((m, n, k), dtype=torch.uint8, device=self.device)
-                ]
-                self.v_buffer = [
-                    torch.zeros((m, n, k), dtype=torch.uint8, device=self.device)
-                ]
+                # One physical buffer, but k_buffer/v_buffer lists must have layer_num
+                # entries so parent class indexing by [layer_id - start_layer] works.
+                self._k_scratch = torch.zeros((m, n, k), dtype=torch.uint8, device=self.device)
+                self._v_scratch = torch.zeros((m, n, k), dtype=torch.uint8, device=self.device)
 
-                # For parent class compatibility (data_ptrs, strides for move_kv_cache)
-                # Point all layers to the scratch buffers (they'll be overwritten each layer)
-                self._k_scratch = self.k_buffer[0]
-                self._v_scratch = self.v_buffer[0]
+                # All layers share the same scratch tensor
+                self.k_buffer = [self._k_scratch for _ in range(self.layer_num)]
+                self.v_buffer = [self._v_scratch for _ in range(self.layer_num)]
 
         # Build data_ptrs for compatibility
         self.k_data_ptrs = torch.tensor(
-            [self._k_scratch.data_ptr()], dtype=torch.uint64, device=self.device,
-        ).repeat(self.layer_num)
+            [self._k_scratch.data_ptr()] * self.layer_num,
+            dtype=torch.uint64, device=self.device,
+        )
         self.v_data_ptrs = torch.tensor(
-            [self._v_scratch.data_ptr()], dtype=torch.uint64, device=self.device,
-        ).repeat(self.layer_num)
+            [self._v_scratch.data_ptr()] * self.layer_num,
+            dtype=torch.uint64, device=self.device,
+        )
         self.data_ptrs = torch.cat([self.k_data_ptrs, self.v_data_ptrs], dim=0)
+        stride_val = int(np.prod(self._k_scratch.shape[1:]) * self._k_scratch.dtype.itemsize)
         self.data_strides = torch.tensor(
-            [np.prod(self._k_scratch.shape[1:]) * self._k_scratch.dtype.itemsize]
-            * (2 * self.layer_num),
+            [stride_val] * (2 * self.layer_num),
             device=self.device,
         )
 
@@ -2304,10 +2302,20 @@ class MHATokenToKVPoolFP4Compressed(MHATokenToKVPool):
         v_scale=None,
         layer_id_override=None,
     ):
-        from sglang.srt.layers.quantization.kvfp4_tensor import KVFP4QuantizeUtil
+        from sglang.srt.model_executor.cuda_graph_runner import get_is_capture_mode
 
         layer_id = layer_id_override if layer_id_override is not None else layer.layer_id
         idx = layer_id - self.start_layer
+
+        if get_is_capture_mode():
+            # During CUDA graph capture, just write FP8 to scratch (shapes matter, not values)
+            cache_k_fp8 = cache_k.to(self.dtype).view(torch.uint8)
+            cache_v_fp8 = cache_v.to(self.dtype).view(torch.uint8)
+            self._k_scratch[loc] = cache_k_fp8
+            self._v_scratch[loc] = cache_v_fp8
+            return
+
+        from sglang.srt.layers.quantization.kvfp4_tensor import KVFP4QuantizeUtil
 
         if k_scale is not None:
             cache_k = cache_k / k_scale

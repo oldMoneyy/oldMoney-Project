@@ -769,6 +769,11 @@ class FlashInferAttnBackend(AttentionBackend):
                         layer, cache_loc, k, v, layer.k_scale, layer.v_scale
                     )
 
+            # Dequant FP4 -> FP8 for prefill (full buffer)
+            from sglang.srt.model_executor.cuda_graph_runner import get_is_capture_mode
+            if hasattr(forward_batch.token_to_kv_pool, 'prepare_for_layer') and not get_is_capture_mode():
+                forward_batch.token_to_kv_pool.prepare_for_layer(layer.layer_id)
+
             o = prefill_wrapper_paged.forward(
                 q.view(-1, layer.tp_q_head_num, layer.head_dim),
                 forward_batch.token_to_kv_pool.get_kv_buffer(layer.layer_id),
@@ -830,6 +835,11 @@ class FlashInferAttnBackend(AttentionBackend):
                     sm_scale=layer.scaling,
                     logits_soft_cap=logits_soft_cap,
                 )
+                # Dequant FP4 -> FP8 for prefill paged
+                from sglang.srt.model_executor.cuda_graph_runner import get_is_capture_mode
+                if hasattr(forward_batch.token_to_kv_pool, 'prepare_for_layer') and not get_is_capture_mode():
+                    forward_batch.token_to_kv_pool.prepare_for_layer(layer.layer_id)
+
                 o2, s2 = prefill_wrapper_paged.forward_return_lse(
                     q.view(-1, layer.tp_q_head_num, layer.head_dim),
                     forward_batch.token_to_kv_pool.get_kv_buffer(layer.layer_id),
@@ -871,6 +881,25 @@ class FlashInferAttnBackend(AttentionBackend):
                 forward_batch.token_to_kv_pool.set_kv_buffer(
                     layer, cache_loc, k, v, layer.k_scale, layer.v_scale
                 )
+
+        # Dequant FP4 -> FP8 for active tokens only (if pool supports it)
+        from sglang.srt.model_executor.cuda_graph_runner import get_is_capture_mode
+        kv_pool = forward_batch.token_to_kv_pool
+        if hasattr(kv_pool, 'prepare_for_layer') and not get_is_capture_mode():
+            req_pool_indices = forward_batch.req_pool_indices
+            seq_lens = forward_batch.seq_lens
+            if req_pool_indices is not None and seq_lens is not None:
+                req_pool = forward_batch.req_to_token_pool
+                active_locs = []
+                num_reqs = min(len(req_pool_indices), len(seq_lens))
+                for i in range(num_reqs):
+                    rid = req_pool_indices[i].item()
+                    slen = seq_lens[i].item()
+                    if slen > 0:
+                        active_locs.append(req_pool.req_to_token[rid, :slen].long())
+                if active_locs:
+                    all_locs = torch.cat(active_locs).unique()
+                    kv_pool.prepare_for_layer(layer.layer_id, all_locs)
 
         # Call the wrapped function
         o = decode_wrapper.forward(
