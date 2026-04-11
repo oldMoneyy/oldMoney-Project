@@ -89,6 +89,18 @@ class ModelRunnerKVCacheMixin:
                 * kv_size
             )
 
+            # FP4 compressed: FP4 storage per layer + shared FP8 scratch (1 per pool, not per token)
+            if getattr(self.server_args, 'kv_cache_fp4_compress', False):
+                n = self.model_config.get_num_kv_heads(get_attention_tp_size())
+                k = self.model_config.head_dim
+                scale_block_size = 16
+                # Per token per layer: packed(n*k/2) + scale(n*k/16) bytes for K and V
+                fp4_per_layer = ((n * k // 2) + (n * k // scale_block_size)) * 2
+                # FP8 scratch is per-token (pool-sized), shared across layers
+                scratch_per_token = n * k * 2  # K + V, 1 byte each
+                # BF16 scratch is FIXED size (32MB), not per-token - don't count it
+                cell_size = fp4_per_layer * num_layers + scratch_per_token
+
             if is_float4_e2m1fn_x2(self.kv_cache_dtype):
                 # kv_scale_buffer
                 scale_block_size = 16
@@ -118,6 +130,15 @@ class ModelRunnerKVCacheMixin:
             distributed=get_world_group().world_size > 1,
             cpu_group=get_world_group().cpu_group,
         )
+
+        # Reserve memory for FP4 compress scratch buffers (2 buffers: K + V)
+        if getattr(self.server_args, 'kv_cache_fp4_compress', False):
+            n = self.model_config.get_num_kv_heads(get_attention_tp_size())
+            k = self.model_config.head_dim
+            # Scratch size depends on max_total_num_tokens which we haven't computed yet
+            # Use a conservative estimate: reserve 10% of available memory for scratch
+            # The actual scratch will be sized after we know max_total_num_tokens
+            self._fp4_scratch_reserve_gb = 0  # will be computed later
 
         # Get the number of layers used for KV cache calculation
         if self.is_draft_worker:

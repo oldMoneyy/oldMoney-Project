@@ -250,9 +250,9 @@ rm -rf /opt/oldMoney-Project/sglang_sala_flashinfer/sglang/srt/layers/attention/
 fuser -k -9 31333/tcp
 # pip install -e vendor_flashinfer/sparse_decode_kernel/ --no-build-isolation
 # uv pip install --no-deps -e /opt/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python
-uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_lightning
+# uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_lightning
 # uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_flashinfer
-# uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
+uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
 # export SGLANG_SPARSE_PREFILL=1
 # export SGLANG_SPARSE_DECODE=1
 # export SGLANG_SPARSE_TOPK=64
@@ -360,9 +360,10 @@ uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 nohup python3 -m sglang.launch_server \
-    --model-path /opt/model_nvfp4_w4a4_gptq \
+    --model-path /opt/model_gptq_w4a16_llmcompressor \
     --port 31333 \
     --kv-cache-dtype fp8_e5m2 \
+    --quantization compressed-tensors \
     --dtype bfloat16 \
     --disable-radix-cache \
     --max-running-requests 64 \
@@ -373,6 +374,16 @@ nohup python3 -m sglang.launch_server \
     --trust-remote-code \
     --log-level info \
     > /opt/server.log 2>&1 &
+
+cd /opt/oldMoney-Project/SOAR-Toolkit
+nohup python3 eval_model.py \
+  --api_base http://127.0.0.1:31333 \
+  --model_path /opt/model_gptq_w4a16_llmcompressor \
+  --data_path eval_dataset/perf_public_set.jsonl \
+  --concurrency 64 \
+  --num_samples 150 \
+  --verbose \
+  > /opt/oldMoney-Project/logs/eval_llm_compressor_gptq.log 2>&1 &
 ```
     
 ## GPTQ Findings

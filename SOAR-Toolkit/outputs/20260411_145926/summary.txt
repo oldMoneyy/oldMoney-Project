@@ -1,0 +1,10 @@
+Model: /opt/model_gptq_w4a16_llmcompressor
+Data: eval_dataset/perf_public_set.jsonl
+Original Accuracy: 76.71%
+Normalized Accuracy: 95.89%
+Num Samples: 150
+Total Duration: 1862.46 s
+Total Output Tokens: 1062859
+Average Input Tokens: 57628.8
+Average Output Tokens: 7085.7
+TPS: 570.68

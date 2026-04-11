@@ -1,0 +1,626 @@
+nohup: ignoring input
+Auto-detected model name: /opt/model_gptq_w4a16_llmcompressor
+API Base: http://127.0.0.1:31333
+Model Name: /opt/model_gptq_w4a16_llmcompressor
+Model Path: /opt/model_gptq_w4a16_llmcompressor
+Data Path: eval_dataset/perf_public_set.jsonl
+Saving results to outputs/20260411_145926
+Testing with 150 samples.
+Initializing model client...
+Generating responses...
+2026-04-11 14:59:28,940 - SGLANG_INFERENCE - INFO - mid truncation: max_out_len=65536, max_seq_len=262144, max_prompt_len=128000
+2026-04-11 14:59:41,181 - SGLANG_INFERENCE - INFO - SGLang sampling kwargs: {'temperature': 0.0, 'max_tokens': 65536, 'stop': ['</s>', '<|im_end|>']}
+  Sending 150 requests to SGLang API (concurrency=64)...
+Generating:   0%|                                                                                                                              | 0/150 [00:00<?, ?it/s]Generating:   1%|▊                                                                                                                 | 1/150 [04:30<11:12:15, 270.71s/it]Generating:   1%|█▌                                                                                                                 | 2/150 [04:33<4:39:27, 113.29s/it]Generating:   3%|███                                                                                                                 | 4/150 [04:40<1:47:43, 44.27s/it]Generating:   3%|███▊                                                                                                                | 5/150 [04:43<1:16:37, 31.70s/it]Generating:   4%|████▋                                                                                                                 | 6/150 [04:47<55:26, 23.10s/it]Generating:   5%|█████▌                                                                                                                | 7/150 [04:50<40:36, 17.04s/it]Generating:   5%|██████▎                                                                                                               | 8/150 [04:57<32:38, 13.79s/it]Generating:   7%|███████▊                                                                                                             | 10/150 [05:09<24:04, 10.32s/it]Generating:   7%|████████▌                                                                                                            | 11/150 [05:09<18:02,  7.79s/it]Generating:   9%|██████████▏                                                                                                          | 13/150 [05:29<19:43,  8.64s/it]Generating:   9%|██████████▉                                                                                                          | 14/150 [05:29<15:10,  6.70s/it]Generating:  10%|███████████▋                                                                                                         | 15/150 [05:43<18:50,  8.38s/it]Generating:  11%|████████████▍                                                                                                        | 16/150 [05:50<18:06,  8.11s/it]Generating:  11%|█████████████▎                                                                                                       | 17/150 [05:57<17:15,  7.79s/it]Generating:  12%|██████████████                                                                                                       | 18/150 [05:57<12:31,  5.70s/it]Generating:  13%|██████████████▊                                                                                                      | 19/150 [06:27<27:42, 12.69s/it]Generating:  14%|████████████████▍                                                                                                    | 21/150 [06:28<15:21,  7.14s/it]Generating:  17%|███████████████████▌                                                                                                 | 25/150 [08:04<34:26, 16.53s/it]Generating:  17%|████████████████████▎                                                                                                | 26/150 [08:04<28:35, 13.83s/it]Generating:  20%|███████████████████████▍                                                                                             | 30/150 [08:04<14:14,  7.12s/it]Generating:  21%|████████████████████████▏                                                                                            | 31/150 [08:47<24:38, 12.42s/it]Generating:  21%|████████████████████████▉                                                                                            | 32/150 [08:50<21:10, 10.76s/it]Generating:  22%|█████████████████████████▋                                                                                           | 33/150 [08:53<17:57,  9.21s/it]Generating:  23%|███████████████████████████▎                                                                                         | 35/150 [08:59<13:19,  6.95s/it]Generating:  24%|████████████████████████████                                                                                         | 36/150 [09:03<12:04,  6.35s/it]Generating:  25%|████████████████████████████▊                                                                                        | 37/150 [09:06<10:34,  5.62s/it]Generating:  25%|█████████████████████████████▋                                                                                       | 38/150 [09:12<10:25,  5.59s/it]Generating:  26%|██████████████████████████████▍                                                                                      | 39/150 [09:18<10:30,  5.68s/it]Generating:  27%|███████████████████████████████▏                                                                                     | 40/150 [09:24<10:31,  5.74s/it]Generating:  28%|████████████████████████████████▊                                                                                    | 42/150 [09:35<10:24,  5.78s/it]Generating:  30%|███████████████████████████████████                                                                                  | 45/150 [09:38<06:07,  3.50s/it]Generating:  31%|███████████████████████████████████▉                                                                                 | 46/150 [09:59<11:41,  6.74s/it]Generating:  31%|████████████████████████████████████▋                                                                                | 47/150 [10:05<11:24,  6.65s/it]Generating:  33%|██████████████████████████████████████▏                                                                              | 49/150 [10:33<15:49,  9.40s/it]Generating:  33%|███████████████████████████████████████                                                                              | 50/150 [10:34<12:23,  7.43s/it]Generating:  34%|███████████████████████████████████████▊                                                                             | 51/150 [11:02<20:27, 12.40s/it]Generating:  35%|████████████████████████████████████████▌                                                                            | 52/150 [11:18<21:33, 13.20s/it]Generating:  35%|█████████████████████████████████████████▎                                                                           | 53/150 [11:33<22:02, 13.64s/it]Generating:  36%|██████████████████████████████████████████                                                                           | 54/150 [11:48<22:24, 14.01s/it]Generating:  37%|██████████████████████████████████████████▉                                                                          | 55/150 [12:04<22:59, 14.52s/it]Generating:  38%|████████████████████████████████████████████▍                                                                        | 57/150 [12:37<23:51, 15.39s/it]Generating:  39%|█████████████████████████████████████████████▏                                                                       | 58/150 [12:40<19:09, 12.50s/it]Generating:  39%|██████████████████████████████████████████████                                                                       | 59/150 [12:43<15:18, 10.10s/it]Generating:  40%|██████████████████████████████████████████████▊                                                                      | 60/150 [12:47<12:34,  8.38s/it]Generating:  41%|███████████████████████████████████████████████▌                                                                     | 61/150 [12:55<12:12,  8.23s/it]Generating:  41%|████████████████████████████████████████████████▎                                                                    | 62/150 [12:58<10:05,  6.88s/it]Generating:  42%|█████████████████████████████████████████████████▏                                                                   | 63/150 [13:04<09:29,  6.54s/it]Generating:  43%|█████████████████████████████████████████████████▉                                                                   | 64/150 [13:07<07:56,  5.54s/it]Generating:  43%|██████████████████████████████████████████████████▋                                                                  | 65/150 [13:11<07:12,  5.09s/it]Generating:  44%|███████████████████████████████████████████████████▍                                                                 | 66/150 [13:14<06:20,  4.53s/it]Generating:  45%|████████████████████████████████████████████████████▎                                                                | 67/150 [13:17<05:44,  4.16s/it]Generating:  45%|█████████████████████████████████████████████████████                                                                | 68/150 [13:26<07:27,  5.46s/it]Generating:  46%|█████████████████████████████████████████████████████▊                                                               | 69/150 [13:34<08:12,  6.07s/it]Generating:  47%|███████████████████████████████████████████████████████▍                                                             | 71/150 [13:48<08:33,  6.51s/it]Generating:  48%|████████████████████████████████████████████████████████▏                                                            | 72/150 [13:55<08:47,  6.77s/it]Generating:  49%|█████████████████████████████████████████████████████████▋                                                           | 74/150 [14:09<08:41,  6.87s/it]Generating:  51%|███████████████████████████████████████████████████████████▎                                                         | 76/150 [14:23<08:27,  6.86s/it]Generating:  51%|████████████████████████████████████████████████████████████                                                         | 77/150 [14:30<08:22,  6.89s/it]Generating:  52%|████████████████████████████████████████████████████████████▊                                                        | 78/150 [14:47<11:03,  9.21s/it]Generating:  53%|█████████████████████████████████████████████████████████████▌                                                       | 79/150 [15:03<13:02, 11.02s/it]Generating:  53%|██████████████████████████████████████████████████████████████▍                                                      | 80/150 [15:20<14:42, 12.61s/it]Generating:  54%|███████████████████████████████████████████████████████████████▏                                                     | 81/150 [15:21<10:36,  9.22s/it]Generating:  55%|████████████████████████████████████████████████████████████████▋                                                    | 83/150 [15:21<05:51,  5.24s/it]Generating:  56%|█████████████████████████████████████████████████████████████████▌                                                   | 84/150 [16:26<21:24, 19.47s/it]Generating:  57%|██████████████████████████████████████████████████████████████████▎                                                  | 85/150 [16:43<20:29, 18.92s/it]Generating:  57%|███████████████████████████████████████████████████████████████████                                                  | 86/150 [17:00<19:34, 18.35s/it]Generating:  58%|███████████████████████████████████████████████████████████████████▊                                                 | 87/150 [17:00<13:59, 13.33s/it]Generating:  59%|████████████████████████████████████████████████████████████████████▋                                                | 88/150 [17:17<14:57, 14.48s/it]Generating:  60%|██████████████████████████████████████████████████████████████████████▏                                              | 90/150 [17:18<08:06,  8.11s/it]Generating:  61%|██████████████████████████████████████████████████████████████████████▉                                              | 91/150 [17:22<06:58,  7.10s/it]Generating:  61%|███████████████████████████████████████████████████████████████████████▊                                             | 92/150 [17:22<05:11,  5.37s/it]Generating:  62%|████████████████████████████████████████████████████████████████████████▌                                            | 93/150 [17:23<03:58,  4.19s/it]Generating:  63%|█████████████████████████████████████████████████████████████████████████▎                                           | 94/150 [17:24<03:01,  3.23s/it]Generating:  63%|██████████████████████████████████████████████████████████████████████████                                           | 95/150 [17:24<02:13,  2.42s/it]Generating:  64%|██████████████████████████████████████████████████████████████████████████▉                                          | 96/150 [17:27<02:13,  2.47s/it]Generating:  65%|███████████████████████████████████████████████████████████████████████████▋                                         | 97/150 [17:27<01:34,  1.78s/it]Generating:  66%|█████████████████████████████████████████████████████████████████████████████▏                                       | 99/150 [17:28<00:58,  1.14s/it]Generating:  67%|█████████████████████████████████████████████████████████████████████████████▎                                      | 100/150 [17:28<00:52,  1.05s/it]Generating:  67%|██████████████████████████████████████████████████████████████████████████████                                      | 101/150 [17:29<00:40,  1.20it/s]Generating:  68%|██████████████████████████████████████████████████████████████████████████████▉                                     | 102/150 [17:30<00:49,  1.04s/it]Generating:  69%|███████████████████████████████████████████████████████████████████████████████▋                                    | 103/150 [17:31<00:40,  1.15it/s]Generating:  69%|████████████████████████████████████████████████████████████████████████████████▍                                   | 104/150 [17:31<00:34,  1.35it/s]Generating:  70%|█████████████████████████████████████████████████████████████████████████████████▏                                  | 105/150 [17:34<01:08,  1.51s/it]Generating:  71%|█████████████████████████████████████████████████████████████████████████████████▉                                  | 106/150 [17:35<00:51,  1.17s/it]Generating:  72%|███████████████████████████████████████████████████████████████████████████████████▌                                | 108/150 [17:35<00:33,  1.27it/s]Generating:  73%|████████████████████████████████████████████████████████████████████████████████████▎                               | 109/150 [17:40<01:07,  1.65s/it]Generating:  73%|█████████████████████████████████████████████████████████████████████████████████████                               | 110/150 [17:41<01:00,  1.51s/it]Generating:  74%|█████████████████████████████████████████████████████████████████████████████████████▊                              | 111/150 [17:42<00:51,  1.32s/it]Generating:  75%|██████████████████████████████████████████████████████████████████████████████████████▌                             | 112/150 [17:47<01:32,  2.42s/it]Generating:  75%|███████████████████████████████████████████████████████████████████████████████████████▍                            | 113/150 [18:03<03:54,  6.33s/it]Generating:  76%|████████████████████████████████████████████████████████████████████████████████████████▏                           | 114/150 [18:09<03:43,  6.22s/it]Generating:  77%|████████████████████████████████████████████████████████████████████████████████████████▉                           | 115/150 [18:18<04:02,  6.93s/it]Generating:  77%|█████████████████████████████████████████████████████████████████████████████████████████▋                          | 116/150 [18:19<03:03,  5.39s/it]Generating:  78%|██████████████████████████████████████████████████████████████████████████████████████████▍                         | 117/150 [18:20<02:14,  4.07s/it]Generating:  79%|███████████████████████████████████████████████████████████████████████████████████████████▎                        | 118/150 [18:23<01:56,  3.64s/it]Generating:  80%|████████████████████████████████████████████████████████████████████████████████████████████▊                       | 120/150 [18:25<01:14,  2.47s/it]Generating:  81%|█████████████████████████████████████████████████████████████████████████████████████████████▌                      | 121/150 [18:45<03:18,  6.85s/it]Generating:  81%|██████████████████████████████████████████████████████████████████████████████████████████████▎                     | 122/150 [18:55<03:31,  7.54s/it]Generating:  82%|███████████████████████████████████████████████████████████████████████████████████████████████                     | 123/150 [18:58<02:54,  6.48s/it]Generating:  83%|███████████████████████████████████████████████████████████████████████████████████████████████▉                    | 124/150 [19:14<03:52,  8.96s/it]Generating:  83%|████████████████████████████████████████████████████████████████████████████████████████████████▋                   | 125/150 [19:17<03:01,  7.28s/it]Generating:  84%|█████████████████████████████████████████████████████████████████████████████████████████████████▍                  | 126/150 [19:27<03:15,  8.14s/it]Generating:  85%|██████████████████████████████████████████████████████████████████████████████████████████████████▏                 | 127/150 [19:35<03:07,  8.17s/it]Generating:  85%|██████████████████████████████████████████████████████████████████████████████████████████████████▉                 | 128/150 [19:40<02:33,  6.99s/it]Generating:  86%|███████████████████████████████████████████████████████████████████████████████████████████████████▊                | 129/150 [19:58<03:39, 10.45s/it]Generating:  87%|████████████████████████████████████████████████████████████████████████████████████████████████████▌               | 130/150 [20:27<05:19, 15.95s/it]Generating:  87%|█████████████████████████████████████████████████████████████████████████████████████████████████████▎              | 131/150 [20:28<03:37, 11.47s/it]Generating:  88%|██████████████████████████████████████████████████████████████████████████████████████████████████████              | 132/150 [20:46<03:59, 13.32s/it]Generating:  89%|██████████████████████████████████████████████████████████████████████████████████████████████████████▊             | 133/150 [21:02<04:01, 14.22s/it]Generating:  89%|███████████████████████████████████████████████████████████████████████████████████████████████████████▋            | 134/150 [21:06<02:59, 11.19s/it]Generating:  90%|████████████████████████████████████████████████████████████████████████████████████████████████████████▍           | 135/150 [21:18<02:52, 11.48s/it]Generating:  91%|█████████████████████████████████████████████████████████████████████████████████████████████████████████▏          | 136/150 [21:28<02:32, 10.91s/it]Generating:  91%|█████████████████████████████████████████████████████████████████████████████████████████████████████████▉          | 137/150 [21:33<02:00,  9.30s/it]Generating:  92%|██████████████████████████████████████████████████████████████████████████████████████████████████████████▋         | 138/150 [23:13<07:15, 36.26s/it]Generating:  93%|███████████████████████████████████████████████████████████████████████████████████████████████████████████▍        | 139/150 [24:13<07:59, 43.56s/it]Generating:  93%|███████████████████████████████████████████████████████████████████████████████████████████████████████████▎       | 140/150 [30:41<24:27, 146.78s/it]Generating:  94%|████████████████████████████████████████████████████████████████████████████████████████████████████████████       | 141/150 [30:43<15:29, 103.28s/it]Generating:  95%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████▊      | 142/150 [30:44<09:41, 72.63s/it]Generating:  95%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████▌     | 143/150 [30:47<06:01, 51.67s/it]Generating:  96%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████▎    | 144/150 [30:48<03:39, 36.60s/it]Generating:  97%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████▏   | 145/150 [30:48<02:08, 25.69s/it]Generating:  97%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████▉   | 146/150 [30:49<01:12, 18.06s/it]Generating:  99%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████▍ | 148/150 [30:49<00:19,  9.76s/it]Generating:  99%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████▏| 149/150 [30:49<00:07,  7.49s/it]Generating: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 150/150 [30:49<00:00, 12.33s/it]
+2026-04-11 15:30:31,330 - SGLANG_INFERENCE - INFO - Processing time: 1850.15s
+
+Generation completed in 1862.46 seconds
+
+--- Evaluation Results ---
+
+[Sample 1] Task: mcq
+Gold: D, Extracted: A, Score: 0
+Tokens: In=104, Out=7946
+
+[Sample 2] Task: mcq
+Gold: C, Extracted: D, Score: 0
+Tokens: In=104, Out=5887
+
+[Sample 3] Task: mcq
+Gold: C, Extracted: C, Score: 1
+Tokens: In=139, Out=6743
+
+[Sample 4] Task: mcq
+Gold: A, Extracted: C, Score: 0
+Tokens: In=142, Out=124
+
+[Sample 5] Task: mcq
+Gold: A, Extracted: C, Score: 0
+Tokens: In=144, Out=8620
+
+[Sample 6] Task: mcq
+Gold: A, Extracted: D, Score: 0
+Tokens: In=158, Out=4432
+
+[Sample 7] Task: mcq
+Gold: C, Extracted: A, Score: 0
+Tokens: In=159, Out=3360
+
+[Sample 8] Task: mcq
+Gold: B, Extracted: A, Score: 0
+Tokens: In=168, Out=32392
+
+[Sample 9] Task: mcq
+Gold: D, Extracted: C, Score: 0
+Tokens: In=172, Out=2492
+
+[Sample 10] Task: mcq
+Gold: C, Extracted: A, Score: 0
+Tokens: In=173, Out=9502
+
+[Sample 11] Task: mcq
+Gold: A, Extracted: A, Score: 1
+Tokens: In=181, Out=2206
+
+[Sample 12] Task: mcq
+Gold: B, Extracted: B, Score: 1
+Tokens: In=181, Out=4146
+
+[Sample 13] Task: mcq
+Gold: C, Extracted: C, Score: 1
+Tokens: In=183, Out=7744
+
+[Sample 14] Task: mcq
+Gold: A, Extracted: A, Score: 1
+Tokens: In=203, Out=3681
+
+[Sample 15] Task: mcq
+Gold: D, Extracted: D, Score: 1
+Tokens: In=246, Out=12890
+
+[Sample 16] Task: mcq
+Gold: A, Extracted: A, Score: 1
+Tokens: In=252, Out=4573
+
+[Sample 17] Task: mcq
+Gold: A, Extracted: A, Score: 1
+Tokens: In=280, Out=10831
+
+[Sample 18] Task: mcq
+Gold: D, Extracted: A, Score: 0
+Tokens: In=283, Out=15680
+
+[Sample 19] Task: mcq
+Gold: D, Extracted: C, Score: 0
+Tokens: In=299, Out=17608
+
+[Sample 20] Task: mcq
+Gold: A, Extracted: A, Score: 1
+Tokens: In=299, Out=16761
+
+[Sample 21] Task: mcq
+Gold: D, Extracted: C, Score: 0
+Tokens: In=300, Out=4285
+
+[Sample 22] Task: mcq
+Gold: C, Extracted: B, Score: 0
+Tokens: In=334, Out=14217
+
+[Sample 23] Task: mcq
+Gold: B, Extracted: B, Score: 1
+Tokens: In=345, Out=9206
+
+[Sample 24] Task: mcq
+Gold: B, Extracted: D, Score: 0
+Tokens: In=352, Out=18105
+
+[Sample 25] Task: mcq
+Gold: B, Extracted: None, Score: 0
+Tokens: In=380, Out=26892
+
+[Sample 26] Task: mcq
+Gold: B, Extracted: B, Score: 1
+Tokens: In=420, Out=4425
+
+[Sample 27] Task: mcq
+Gold: D, Extracted: D, Score: 1
+Tokens: In=425, Out=12955
+
+[Sample 28] Task: mcq
+Gold: B, Extracted: B, Score: 1
+Tokens: In=447, Out=4238
+
+[Sample 29] Task: mcq
+Gold: C, Extracted: C, Score: 1
+Tokens: In=590, Out=6506
+
+[Sample 30] Task: mcq
+Gold: B, Extracted: A, Score: 0
+Tokens: In=665, Out=15385
+
+[Sample 31] Task: niah
+Gold: ['f320a0f9-006c-4031-9cec-c89c6f8486bc'], Extracted: None, Score: 1.0
+Tokens: In=30208, Out=422
+
+[Sample 32] Task: niah
+Gold: ['9725206'], Extracted: None, Score: 1.0
+Tokens: In=31026, Out=252
+
+[Sample 33] Task: niah
+Gold: ['6347182', '5380995', '2756994', '2244876'], Extracted: None, Score: 1.0
+Tokens: In=31088, Out=564
+
+[Sample 34] Task: niah
+Gold: ['2173318', '2505169', '3063211', '3708116'], Extracted: None, Score: 1.0
+Tokens: In=31103, Out=477
+
+[Sample 35] Task: niah
+Gold: ['1914794'], Extracted: None, Score: 1.0
+Tokens: In=31328, Out=292
+
+[Sample 36] Task: niah
+Gold: ['9633492'], Extracted: None, Score: 1.0
+Tokens: In=31669, Out=386
+
+[Sample 37] Task: niah
+Gold: ['1a50aec3-aabc-45fa-bfe1-2e47ae9bec36'], Extracted: None, Score: 1.0
+Tokens: In=31693, Out=279
+
+[Sample 38] Task: niah
+Gold: ['1954456'], Extracted: None, Score: 1.0
+Tokens: In=31735, Out=193
+
+[Sample 39] Task: niah
+Gold: ['9801946'], Extracted: None, Score: 1.0
+Tokens: In=31743, Out=271
+
+[Sample 40] Task: niah
+Gold: ['6241427'], Extracted: None, Score: 1.0
+Tokens: In=31749, Out=287
+
+[Sample 41] Task: niah
+Gold: ['3ebdb86b-2d43-48ee-b1f9-df11c8d38c59'], Extracted: None, Score: 1.0
+Tokens: In=62324, Out=540
+
+[Sample 42] Task: niah
+Gold: ['2882551'], Extracted: None, Score: 1.0
+Tokens: In=63203, Out=402
+
+[Sample 43] Task: niah
+Gold: ['8143951'], Extracted: None, Score: 1.0
+Tokens: In=63224, Out=214
+
+[Sample 44] Task: niah
+Gold: ['8223877'], Extracted: None, Score: 1.0
+Tokens: In=63420, Out=193
+
+[Sample 45] Task: niah
+Gold: ['9633492'], Extracted: None, Score: 1.0
+Tokens: In=63611, Out=388
+
+[Sample 46] Task: niah
+Gold: ['af36b8cc-1308-4974-ac95-b3ac0beb7c34'], Extracted: None, Score: 1.0
+Tokens: In=63637, Out=535
+
+[Sample 47] Task: niah
+Gold: ['6311628', '6028724', '6109503', '8293509'], Extracted: None, Score: 1.0
+Tokens: In=63675, Out=492
+
+[Sample 48] Task: niah
+Gold: ['1954456'], Extracted: None, Score: 1.0
+Tokens: In=63677, Out=276
+
+[Sample 49] Task: niah
+Gold: ['4085559'], Extracted: None, Score: 1.0
+Tokens: In=63686, Out=310
+
+[Sample 50] Task: niah
+Gold: ['2173318', '2505169', '3063211', '3708116'], Extracted: None, Score: 1.0
+Tokens: In=63691, Out=491
+
+[Sample 51] Task: niah
+Gold: ['46657a44-ecf5-41db-b4d7-4256f08a4a2d'], Extracted: None, Score: 1.0
+Tokens: In=126605, Out=520
+
+[Sample 52] Task: niah
+Gold: ['9150078'], Extracted: None, Score: 1.0
+Tokens: In=127071, Out=261
+
+[Sample 53] Task: niah
+Gold: ['c8edabdd-4ef0-4f80-9d91-fe39d8014004'], Extracted: None, Score: 1.0
+Tokens: In=127105, Out=483
+
+[Sample 54] Task: niah
+Gold: ['6311628', '6028724', '6109503', '8293509'], Extracted: None, Score: 1.0
+Tokens: In=127143, Out=725
+
+[Sample 55] Task: niah
+Gold: ['7371160'], Extracted: None, Score: 1.0
+Tokens: In=127146, Out=292
+
+[Sample 56] Task: niah
+Gold: ['1002847'], Extracted: None, Score: 1.0
+Tokens: In=127153, Out=396
+
+[Sample 57] Task: niah
+Gold: ['2173318', '2505169', '3063211', '3708116'], Extracted: None, Score: 1.0
+Tokens: In=127159, Out=464
+
+[Sample 58] Task: niah
+Gold: ['7021437'], Extracted: None, Score: 1.0
+Tokens: In=127342, Out=177
+
+[Sample 59] Task: niah
+Gold: ['8149041'], Extracted: None, Score: 1.0
+Tokens: In=127578, Out=375
+
+[Sample 60] Task: niah
+Gold: ['9633492'], Extracted: None, Score: 1.0
+Tokens: In=127720, Out=216
+
+[Sample 61] Task: qa
+Gold: ['The Walt Disney Company', 'The Walt Disney Company', 'The Walt Disney Company'], Extracted: None, Score: 1.0
+Tokens: In=25036, Out=82
+
+[Sample 62] Task: qa
+Gold: ['chosen machine model', 'the chosen machine model', 'the chosen machine model'], Extracted: None, Score: 1.0
+Tokens: In=27012, Out=99
+
+[Sample 63] Task: qa
+Gold: ['various deities, beings, and heroes'], Extracted: None, Score: 1.0
+Tokens: In=27211, Out=149
+
+[Sample 64] Task: qa
+Gold: ['Battle of Hastings', 'the Battle of Hastings', 'at the Battle of Hastings'], Extracted: None, Score: 1.0
+Tokens: In=27498, Out=97
+
+[Sample 65] Task: qa
+Gold: ['William of Volpiano and John of Ravenna', 'William of Volpiano and John of Ravenna', 'William of Volpiano and John of Ravenna'], Extracted: None, Score: 1.0
+Tokens: In=28130, Out=95
+
+[Sample 66] Task: qa
+Gold: ['Edgar', 'Edgar', 'Edgar Atheling'], Extracted: None, Score: 0.0
+Tokens: In=29412, Out=113
+
+[Sample 67] Task: qa
+Gold: ["Hey Pa! There's a Goat on the Roof"], Extracted: None, Score: 1.0
+Tokens: In=29900, Out=111
+
+[Sample 68] Task: qa
+Gold: ['The Battle of Belleau Wood'], Extracted: None, Score: 0.0
+Tokens: In=30530, Out=88
+
+[Sample 69] Task: qa
+Gold: ['author'], Extracted: None, Score: 0.0
+Tokens: In=31150, Out=86
+
+[Sample 70] Task: qa
+Gold: ['"Teach the Controversy" campaign'], Extracted: None, Score: 0.0
+Tokens: In=31653, Out=94
+
+[Sample 71] Task: qa
+Gold: ['Gerard "Gerry" Adams'], Extracted: None, Score: 0.0
+Tokens: In=56399, Out=98
+
+[Sample 72] Task: qa
+Gold: ['the general number field sieve', 'RSA', 'general number field sieve'], Extracted: None, Score: 1.0
+Tokens: In=57460, Out=86
+
+[Sample 73] Task: qa
+Gold: ['NP-hard', 'NP-hard', 'NP-hard problems'], Extracted: None, Score: 0.0
+Tokens: In=60641, Out=104
+
+[Sample 74] Task: qa
+Gold: ['James Packer'], Extracted: None, Score: 1.0
+Tokens: In=61209, Out=80
+
+[Sample 75] Task: qa
+Gold: ['seven', 'seven', 'seven'], Extracted: None, Score: 0.0
+Tokens: In=61414, Out=118
+
+[Sample 76] Task: qa
+Gold: ['Computational complexity theory', 'Computational complexity theory', 'Computational complexity theory'], Extracted: None, Score: 1.0
+Tokens: In=62138, Out=91
+
+[Sample 77] Task: qa
+Gold: ['Battle of Guam'], Extracted: None, Score: 1.0
+Tokens: In=62176, Out=88
+
+[Sample 78] Task: qa
+Gold: ['Beijing'], Extracted: None, Score: 1.0
+Tokens: In=62869, Out=106
+
+[Sample 79] Task: qa
+Gold: ['Decision problems', 'Decision problems', 'Decision'], Extracted: None, Score: 0.0
+Tokens: In=63006, Out=77
+
+[Sample 80] Task: qa
+Gold: ['Kansas Song'], Extracted: None, Score: 1.0
+Tokens: In=63541, Out=74
+
+[Sample 81] Task: qa
+Gold: ['nineteenth'], Extracted: None, Score: 0.0
+Tokens: In=119920, Out=131
+
+[Sample 82] Task: qa
+Gold: ['10 counties', '10', '10'], Extracted: None, Score: 0.0
+Tokens: In=120882, Out=129
+
+[Sample 83] Task: qa
+Gold: ['probabilistic Turing machines, non-deterministic Turing machines', 'probabilistic Turing machines, non-deterministic Turing machines'], Extracted: None, Score: 0.0
+Tokens: In=124535, Out=107
+
+[Sample 84] Task: qa
+Gold: ['Ferdi Taygan'], Extracted: None, Score: 0.0
+Tokens: In=124601, Out=81
+
+[Sample 85] Task: qa
+Gold: ['yes', 'yes', 'yes'], Extracted: None, Score: 1.0
+Tokens: In=125363, Out=111
+
+[Sample 86] Task: qa
+Gold: ['1987'], Extracted: None, Score: 1.0
+Tokens: In=125915, Out=85
+
+[Sample 87] Task: qa
+Gold: ['Bethencourt', 'Bethencourt', 'Bethencourt'], Extracted: None, Score: 1.0
+Tokens: In=126222, Out=89
+
+[Sample 88] Task: qa
+Gold: ['the Parthian Empire'], Extracted: None, Score: 0.0
+Tokens: In=126721, Out=108
+
+[Sample 89] Task: qa
+Gold: ['Hereford', 'Hereford', 'Hereford'], Extracted: None, Score: 1.0
+Tokens: In=127057, Out=113
+
+[Sample 90] Task: qa
+Gold: ['Richmond'], Extracted: None, Score: 0.0
+Tokens: In=127501, Out=105
+
+[Sample 91] Task: fwe
+Gold: ['svlmts', 'oiavmz', 'ewfbpu'], Extracted: None, Score: 1.0
+Tokens: In=28032, Out=688
+
+[Sample 92] Task: fwe
+Gold: ['tfxufs', 'pllpwy', 'gkptee'], Extracted: None, Score: 1.0
+Tokens: In=28250, Out=581
+
+[Sample 93] Task: fwe
+Gold: ['tkrjdw', 'pqcvgu', 'fkoiwn'], Extracted: None, Score: 1.0
+Tokens: In=28465, Out=587
+
+[Sample 94] Task: fwe
+Gold: ['sqkzru', 'pdgvuj', 'fddmnk'], Extracted: None, Score: 1.0
+Tokens: In=28720, Out=595
+
+[Sample 95] Task: fwe
+Gold: ['tgjcri', 'pdmjix', 'fhymzc'], Extracted: None, Score: 1.0
+Tokens: In=28978, Out=654
+
+[Sample 96] Task: fwe
+Gold: ['tqyavk', 'prvnvo', 'ftpogb'], Extracted: None, Score: 0.6666666666666666
+Tokens: In=29848, Out=434
+
+[Sample 97] Task: fwe
+Gold: ['tbodqp', 'pkkryn', 'fyuaob'], Extracted: None, Score: 1.0
+Tokens: In=30695, Out=741
+
+[Sample 98] Task: fwe
+Gold: ['trthvg', 'pnudya', 'glsxdc'], Extracted: None, Score: 1.0
+Tokens: In=31037, Out=65546
+
+[Sample 99] Task: fwe
+Gold: ['scsqsu', 'ovsdrt', 'ffdzev'], Extracted: None, Score: 1.0
+Tokens: In=31316, Out=519
+
+[Sample 100] Task: fwe
+Gold: ['rrcsxl', 'ocrple', 'etzmor'], Extracted: None, Score: 1.0
+Tokens: In=31647, Out=484
+
+[Sample 101] Task: fwe
+Gold: ['szygym', 'reckcf', 'muynld'], Extracted: None, Score: 1.0
+Tokens: In=52715, Out=624
+
+[Sample 102] Task: fwe
+Gold: ['snaxoz', 'qrscsa', 'mphaxd'], Extracted: None, Score: 1.0
+Tokens: In=54638, Out=871
+
+[Sample 103] Task: fwe
+Gold: ['tdsuly', 'rghkvb', 'mykxta'], Extracted: None, Score: 1.0
+Tokens: In=55259, Out=724
+
+[Sample 104] Task: fwe
+Gold: ['tevdtf', 'qywyiw', 'mthmvw'], Extracted: None, Score: 1.0
+Tokens: In=55689, Out=798
+
+[Sample 105] Task: fwe
+Gold: ['slsbwx', 'qfmdjo', 'mlqyph'], Extracted: None, Score: 1.0
+Tokens: In=56180, Out=1006
+
+[Sample 106] Task: fwe
+Gold: ['sqaagq', 'qtxdbz', 'mxodwl'], Extracted: None, Score: 1.0
+Tokens: In=56838, Out=750
+
+[Sample 107] Task: fwe
+Gold: ['tdcnlb', 'qztfku', 'mmekhj'], Extracted: None, Score: 1.0
+Tokens: In=57354, Out=673
+
+[Sample 108] Task: fwe
+Gold: ['tcczbn', 'rgdegt', 'nqlibn'], Extracted: None, Score: 1.0
+Tokens: In=57713, Out=648
+
+[Sample 109] Task: fwe
+Gold: ['srceaa', 'qxnukn', 'mpyheo'], Extracted: None, Score: 1.0
+Tokens: In=58143, Out=679
+
+[Sample 110] Task: fwe
+Gold: ['srmwjq', 'qommdn', 'meovca'], Extracted: None, Score: 1.0
+Tokens: In=59196, Out=843
+
+[Sample 111] Task: fwe
+Gold: ['wnilti', 'hybmcm', 'qkaxwx'], Extracted: None, Score: 1.0
+Tokens: In=112520, Out=799
+
+[Sample 112] Task: fwe
+Gold: ['wpekzy', 'idrhnb', 'qqbtri'], Extracted: None, Score: 1.0
+Tokens: In=113682, Out=639
+
+[Sample 113] Task: fwe
+Gold: ['wuibpb', 'idlbjm', 'qotdyg'], Extracted: None, Score: 1.0
+Tokens: In=114580, Out=670
+
+[Sample 114] Task: fwe
+Gold: ['wzgcnt', 'hxngtq', 'qisogu'], Extracted: None, Score: 1.0
+Tokens: In=115314, Out=734
+
+[Sample 115] Task: fwe
+Gold: ['wsiwka', 'hvmeic', 'qmmegt'], Extracted: None, Score: 1.0
+Tokens: In=116008, Out=715
+
+[Sample 116] Task: fwe
+Gold: ['wvhkku', 'igfygz', 'qgqkpy'], Extracted: None, Score: 1.0
+Tokens: In=116867, Out=65546
+
+[Sample 117] Task: fwe
+Gold: ['wqgncv', 'hxafnw', 'pxkmwk'], Extracted: None, Score: 1.0
+Tokens: In=118904, Out=718
+
+[Sample 118] Task: fwe
+Gold: ['wrpcbm', 'ibwgfd', 'qetudu'], Extracted: None, Score: 1.0
+Tokens: In=123567, Out=935
+
+[Sample 119] Task: fwe
+Gold: ['wrpwas', 'hvdhnx', 'qcyvkk'], Extracted: None, Score: 1.0
+Tokens: In=125594, Out=754
+
+[Sample 120] Task: fwe
+Gold: ['wvkpal', 'iibnne', 'qmpqcq'], Extracted: None, Score: 1.0
+Tokens: In=126893, Out=615
+
+[Sample 121] Task: cwe
+Gold: ['garb', 'teach', 'violin', 'rot', 'blow', 'bewildered', 'obscene', 'morbidity', 'array', 'crude'], Extracted: None, Score: 0.9
+Tokens: In=31174, Out=625
+
+[Sample 122] Task: cwe
+Gold: ['dive', 'emery', 'accordance', 'fishnet', 'subject', 'norm', 'workforce', 'realize', 'farming', 'bare'], Extracted: None, Score: 0.8
+Tokens: In=31434, Out=613
+
+[Sample 123] Task: cwe
+Gold: ['youth', 'friend', 'carpeting', 'chafe', 'publication', 'dispatch', 'press', 'dwarf', 'harpooner', 'immigrant'], Extracted: None, Score: 0.9
+Tokens: In=31484, Out=466
+
+[Sample 124] Task: cwe
+Gold: ['moor', 'symptomatic', 'boy', 'raisin', 'abundant', 'dune', 'sleep', 'metabolite', 'bloomer', 'soulmate'], Extracted: None, Score: 0.8
+Tokens: In=31523, Out=65546
+
+[Sample 125] Task: cwe
+Gold: ['irrigation', 'heir', 'comradeship', 'privilege', 'assassination', 'artichoke', 'adrenaline', 'street', 'viewer', 'leap'], Extracted: None, Score: 1.0
+Tokens: In=31555, Out=715
+
+[Sample 126] Task: cwe
+Gold: ['blot', 'duffel', 'elbow', 'wilderness', 'spacing', 'dish', 'romaine', 'webmail', 'survey', 'obedient'], Extracted: None, Score: 1.0
+Tokens: In=31593, Out=630
+
+[Sample 127] Task: cwe
+Gold: ['victory', 'airplane', 'elimination', 'application', 'garb', 'honorable', 'gorilla', 'mature', 'airspace', 'prepare'], Extracted: None, Score: 0.9
+Tokens: In=31621, Out=65546
+
+[Sample 128] Task: cwe
+Gold: ['bagel', 'stick', 'tarragon', 'ignorance', 'beauty', 'glen', 'pantry', 'riverbed', 'waiting', 'vanity'], Extracted: None, Score: 1.0
+Tokens: In=31659, Out=1281
+
+[Sample 129] Task: cwe
+Gold: ['wolf', 'fertile', 'summer', 'groan', 'legislature', 'questioner', 'catamaran', 'cash', 'porter', 'rim'], Extracted: None, Score: 0.9
+Tokens: In=31698, Out=747
+
+[Sample 130] Task: cwe
+Gold: ['obtain', 'reproduce', 'sour', 'missionary', 'trapezoid', 'vaulting', 'billing', 'jam', 'pompom', 'capon'], Extracted: None, Score: 1.0
+Tokens: In=31751, Out=705
+
+[Sample 131] Task: cwe
+Gold: ['resident', 'excellence', 'software', 'dispute', 'arch-rival', 'block', 'mangle', 'manufacturer', 'college', 'sweet'], Extracted: None, Score: 1.0
+Tokens: In=63070, Out=571
+
+[Sample 132] Task: cwe
+Gold: ['stay', 'marble', 'flick', 'democracy', 'morale', 'larder', 'lode', 'various', 'passport', 'reference'], Extracted: None, Score: 0.8
+Tokens: In=63304, Out=606
+
+[Sample 133] Task: cwe
+Gold: ['nasal', 'sock', 'diam', 'yin', 'dialogue', 'rainbow', 'rye', 'reflect', 'barbecue', 'flesh'], Extracted: None, Score: 0.8
+Tokens: In=63358, Out=65546
+
+[Sample 134] Task: cwe
+Gold: ['shaw', 'source', 'rib', 'clave', 'comb', 'enigma', 'mill', 'batting', 'chance', 'beard'], Extracted: None, Score: 0.9
+Tokens: In=63394, Out=701
+
+[Sample 135] Task: cwe
+Gold: ['brainy', 'merciful', 'associate', 'cleaner', 'reporter', 'hen', 'bacon', 'selective', 'record', 'subconscious'], Extracted: None, Score: 0.8
+Tokens: In=63431, Out=65546
+
+[Sample 136] Task: cwe
+Gold: ['furniture', 'lanai', 'curly', 'hockey', 'steal', 'inversion', 'psychiatrist', 'academics', 'creek', 'ugliest'], Extracted: None, Score: 0.9
+Tokens: In=63467, Out=65546
+
+[Sample 137] Task: cwe
+Gold: ['anorak', 'jicama', 'outfit', 'confirmation', 'sickness', 'yourself', 'stimulation', 'tummy', 'blinker', 'oval'], Extracted: None, Score: 1.0
+Tokens: In=63499, Out=65546
+
+[Sample 138] Task: cwe
+Gold: ['stallion', 'individual', 'clockwork', 'contest', 'diversity', 'dugout', 'gaudy', 'saffron', 'tub', 'rubric'], Extracted: None, Score: 0.9
+Tokens: In=63539, Out=837
+
+[Sample 139] Task: cwe
+Gold: ['enjoyment', 'fast', 'ambition', 'receptive', 'airship', 'cloudy', 'rid', 'bathhouse', 'ossified', 'modernist'], Extracted: None, Score: 0.2
+Tokens: In=63585, Out=65546
+
+[Sample 140] Task: cwe
+Gold: ['inglenook', 'brassiere', 'hydrolysis', 'examiner', 'honor', 'puzzled', 'opera', 'whirl', 'cello', 'payment'], Extracted: None, Score: 1.0
+Tokens: In=63667, Out=498
+
+[Sample 141] Task: cwe
+Gold: ['hulking', 'panther', 'fang', 'dose', 'deeply', 'contract', 'quaint', 'religion', 'capability', 'screening'], Extracted: None, Score: 0.9
+Tokens: In=127093, Out=479
+
+[Sample 142] Task: cwe
+Gold: ['cent', 'moon', 'kingfish', 'boundary', 'good-bye', 'evaluator', 'discretion', 'bake', 'rare', 'legend'], Extracted: None, Score: 0.8
+Tokens: In=127396, Out=517
+
+[Sample 143] Task: cwe
+Gold: ['flower', 'separate', 'party', 'explorer', 'herbs', 'fight', 'pupa', 'silly', 'composer', 'hydrocarbon'], Extracted: None, Score: 0.8
+Tokens: In=127440, Out=781
+
+[Sample 144] Task: cwe
+Gold: ['advance', 'charlatan', 'virus', 'sunshine', 'intelligence', 'parachute', 'permafrost', 'burning', 'pinot', 'mess'], Extracted: None, Score: 1.0
+Tokens: In=127484, Out=783
+
+[Sample 145] Task: cwe
+Gold: ['occur', 'rhinoceros', 'means', 'invite', 'entertain', 'illustrate', 'spectrum', 'cutover', 'middleman', 'decorous'], Extracted: None, Score: 0.6
+Tokens: In=127516, Out=584
+
+[Sample 146] Task: cwe
+Gold: ['truck', 'choice', 'rain', 'hapless', 'carrier', 'endothelium', 'formulate', 'bestseller', 'accident', 'snowsuit'], Extracted: None, Score: 0.5
+Tokens: In=127562, Out=566
+
+[Sample 147] Task: cwe
+Gold: ['pipe', 'evil', 'birdbath', 'abbey', 'trapezoid', 'appendix', 'drake', 'idiom', 'add', 'digger'], Extracted: None, Score: 0.9
+Tokens: In=127590, Out=65546
+
+[Sample 148] Task: cwe
+Gold: ['suck', 'licence', 'maternity', 'pickax', 'apathetic', 'pipe', 'kennel', 'damaged', 'dearest', 'stake'], Extracted: None, Score: 0.7
+Tokens: In=127629, Out=65546
+
+[Sample 149] Task: cwe
+Gold: ['footstool', 'website', 'gauntlet', 'explode', 'courtroom', 'plowman', 'continent', 'mortal', 'caribou', 'onion'], Extracted: None, Score: 0.8
+Tokens: In=127677, Out=996
+
+[Sample 150] Task: cwe
+Gold: ['evanescent', 'snowmobiling', 'insert', 'info', 'grate', 'gosling', 'loquat', 'south', 'erosion', 'ozone'], Extracted: None, Score: 0.9
+Tokens: In=127739, Out=674
+
+Average Score: 76.71%
+Total Duration: 1862.46 s
+Total Tokens: In=8644316, Out=1062859
+Average Tokens/Sample: In=57628.8, Out=7085.7
+Overall TPS (Output): 570.68 tokens/s
+Detailed results saved to outputs/20260411_145926/predictions.jsonl
