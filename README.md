@@ -46,6 +46,8 @@ conda activate ~/compass_max_posttrain_1/.cz/sala/sglang_env
 cd ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project
 nvidia-smi --id=7 --query-compute-apps=pid --format=csv,noheader | xargs -r kill -9
 fuser -k -9 31335/tcp 2>/dev/null
+export PYTORCH_ALLOC_CONF=expandable_segments:True
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
 CUDA_VISIBLE_DEVICES=7 LD_PRELOAD=/usr/local/cuda/lib64/libcudart.so.12 \
 nohup python -m sglang.launch_server \
@@ -64,6 +66,15 @@ tail -f ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/server_7.log
 
 # simple long context cases tests
 python ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/bench/long_context_test_case.py --port 31335
+
+curl http://localhost:31335/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "MiniCPM-SALA",
+    "messages": [{"role": "user", "content": "Answer the following multiple choice question. The last line of your response should be of the following format: '\''ANSWER: $LETTER'\'' (without quotes) where LETTER is one of ABCD. Think step by step before answering. Which of the following (effective) particles is not associated with a spontaneously-broken symmetry? A) Phonon B) Magnon C) Pion D) Skyrmion "}],
+    "max_tokens": 8192,
+    "temperature": 0.0
+  }'
 
 # 64 concurrency test
 echo "=== Smax (unlimited) ==="
@@ -120,27 +131,6 @@ python -c "import torch; print(f'PyTorch Version: {torch.__version__}\nCUDA Vers
 ```
 
 
-## Start Serving
-
-SALA official start command:
-```bash
-fuser -k -9 31333/tcp
-export PYTORCH_ALLOC_CONF=expandable_segments:True
-export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
-cd /opt
-nohup python3 -m sglang.launch_server \
-    --model /opt/model \
-    --trust-remote-code \
-    --disable-radix-cache \
-    --attention-backend minicpm_flashinfer \
-    --chunked-prefill-size 8192 \
-    --max-running-requests 32 \
-    --port 31333 \
-    --dense-as-sparse \
-    --mem-fraction-static 0.82 \
-    > /opt/server.log 2>&1 &
-```
-
 
 ## Testing
 
@@ -155,14 +145,7 @@ curl http://localhost:31333/v1/chat/completions \
     "temperature": 0.0
   }'
 
-curl http://localhost:31335/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "MiniCPM-SALA",
-    "messages": [{"role": "user", "content": "Answer the following multiple choice question. The last line of your response should be of the following format: '\''ANSWER: $LETTER'\'' (without quotes) where LETTER is one of ABCD. Think step by step before answering. Which of the following (effective) particles is not associated with a spontaneously-broken symmetry? A) Phonon B) Magnon C) Pion D) Skyrmion "}],
-    "max_tokens": 8192,
-    "temperature": 0.0
-  }'
+
 ```
 
 
