@@ -6,7 +6,7 @@ Homepage: https://oldmoneyy.github.io/soar/
 
 ## Server Setup
 
-Once access the server:
+Once access the h100 server:
 ```bash
 echo "root:123456" | chpasswd
 sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
@@ -14,12 +14,12 @@ sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd
 sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
 service ssh restart
 
-cd /opt
+cd ~/compass_max_posttrain_1/.cz/sala
 git clone https://oldMoneyy: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@github.com/oldMoneyy/oldMoney-Project.git
 
 python3 -c "
 from huggingface_hub import snapshot_download
-snapshot_download('borisdotv/model-gptq-int4-dense-smooth', local_dir='/opt/model_gptq_int4_dense_smooth', token='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')
+snapshot_download('borisdotv/model-gptq-int4-dense-smooth', local_dir='~/compass_max_posttrain_1/.cz/sala/model_gptq_int4_dense_smooth', token='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')
 print('Done!')
 "
 
@@ -28,20 +28,44 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 apt update
 apt install psmisc lsof -y
-```
 
-Steps to push commits:
-```bash
 git config --global user.name "boris-dotv"
 git config --global user.email "1322553126@qq.com"
 
-cd /opt/oldMoney-Project
-git pull
-git add .
-git commit -m "What are the commits about"
-git remote set-url origin https://oldMoneyy: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@github.com/oldMoneyy/oldMoney-Project.git
-git push -u origin main
+cd ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project
+nohup bash env_sala.sh > env_sala.log 2>&1 &
+tail -f env_sala.log
+# Wait until "Setup complete!"
 ```
+
+Launch the model:
+```bash
+source ~/compass_max_posttrain_1/miniconda3/bin/activate
+conda activate ~/compass_max_posttrain_1/.cz/sala/sglang_env
+
+cd ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project
+nvidia-smi --id=7 --query-compute-apps=pid --format=csv,noheader | xargs -r kill -9
+fuser -k -9 31335/tcp 2>/dev/null
+
+CUDA_VISIBLE_DEVICES=7 LD_PRELOAD=/usr/local/cuda/lib64/libcudart.so.12 \
+nohup python -m sglang.launch_server \
+    --model ~/compass_max_posttrain_1/.cz/sala/model \
+    --trust-remote-code \
+    --disable-radix-cache \
+    --attention-backend minicpm_flashinfer \
+    --chunked-prefill-size 8192 \
+    --max-running-requests 32 \
+    --port 31335 \
+    --dense-as-sparse \
+    --mem-fraction-static 0.82 \
+    > server_7.log 2>&1 &
+
+tail -f server_7.log
+
+python ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/bench/long_context_test_case.py --port 31333
+
+```
+
 
 Mock the process on SOAR official server:
 ```bash
@@ -50,14 +74,6 @@ Mock the process on SOAR official server:
 cd /opt/oldMoney-Project/submissions
 bash simulate_soar.sh submission_20260322.tar.gz
 ```
-
-
-## TODO
-
-1. Support `--kv-cache-dtype fp8_e5m2` for minicpm backend (**DONE**).
-2. Test original model's smax performance with minicpm_flashinfer and flashinfer.
-3. Test dense, sparse GPTQ W4 and original model's smax performance and accuracy.
-4. Create an attention backend router that process short inputs by flashinfer and long inputs by minicpm_flashinfer.
 
 
 
@@ -69,7 +85,7 @@ bash simulate_soar.sh submission_20260322.tar.gz
 Download model, toolkit and uv:
 ```bash
 # Download MiniCPM-SALA model:
-cd /opt
+cd ~/compass_max_posttrain_1/.cz/sala
 cat << 'EOF' > download_minicpm_sala.py
 from huggingface_hub import snapshot_download
 
@@ -89,17 +105,9 @@ python download_minicpm_sala.py
 ```
 
 
-Environment changes we made:
-1. Updated `if model_runner.server_args.fuse_topk:` logic in minicpm_backend.py for JIT redundant compiling.
-2. Added fp8_e5m2 KV Cache support.
-3. Fixed minicpm_fuse_kernel.py import error.
-4. Optimized `build_sparse_prefill_metadata`, `build_token_mappings`.
 
 Useful commands:
 ```bash
-# Kill sglang
-pkill -f sglang.launch
-
 # GPU info
 python -c "import torch; print(f'GPU: {torch.cuda.get_device_name(0)}\nCompute Capability: SM{torch.cuda.get_device_capability(0)[0]}{torch.cuda.get_device_capability(0)[1]}')"
 python -c "import torch; print(f'PyTorch Version: {torch.__version__}\nCUDA Version: {torch.version.cuda}\nHas FP8 E4M3: {hasattr(torch, \"float8_e4m3fn\")}')"

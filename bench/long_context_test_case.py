@@ -1,5 +1,10 @@
+import argparse
 import requests
 import time
+
+parser = argparse.ArgumentParser(description='Long-context benchmark')
+parser.add_argument('--port', type=int, default=31335, help='Server port (default: 31335)')
+args = parser.parse_args()
 
 # Define the tests
 tests = []
@@ -51,7 +56,7 @@ for test_name, prompt in tests:
 
     try:
         r = requests.post(
-            'http://localhost:31333/v1/chat/completions',
+            f'http://localhost:{args.port}/v1/chat/completions',
             json={
                 'model': 'MiniCPM-SALA',
                 'messages': [{'role': 'user', 'content': prompt}],

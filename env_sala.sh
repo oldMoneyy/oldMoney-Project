@@ -103,6 +103,13 @@ pip install \
     nvidia-cutlass-dsl==4.2.1 \
     nvidia-cudnn-frontend==1.18.0
 
+# 9. Fix tilelang libcudart stub
+STUB="$ENV_DIR/lib/python3.10/site-packages/tilelang/lib/libcudart_stub.so"
+if [ -f "$STUB" ] && [ ! -L "$STUB" ]; then
+    mv "$STUB" "${STUB}.bak"
+    ln -s /usr/local/cuda/lib64/libcudart.so.12 "$STUB"
+fi
+
 # ------------------------------------------------------------
 # Verify
 # ------------------------------------------------------------
