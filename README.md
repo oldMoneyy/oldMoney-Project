@@ -60,10 +60,16 @@ nohup python -m sglang.launch_server \
     --mem-fraction-static 0.82 \
     > server_7.log 2>&1 &
 
-tail -f server_7.log
+tail -f ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/server_7.log
 
-python ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/bench/long_context_test_case.py --port 31333
+# simple long context cases tests
+python ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/bench/long_context_test_case.py --port 31335
 
+# 64 concurrency test
+echo "=== Smax (unlimited) ==="
+python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31335 \
+    --dataset-name custom --dataset-path ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/bench/competition_bench_64.jsonl \
+    --num-prompts 64 --flush-cache
 ```
 
 
@@ -149,7 +155,7 @@ curl http://localhost:31333/v1/chat/completions \
     "temperature": 0.0
   }'
 
-curl http://localhost:31333/v1/chat/completions \
+curl http://localhost:31335/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "MiniCPM-SALA",
@@ -159,11 +165,6 @@ curl http://localhost:31333/v1/chat/completions \
   }'
 ```
 
-### Long context test (5k, 40k, 60k tokens)
-```bash
-python /opt/oldMoney-Project/bench/long_context_test_case.py
-```
-Expected answers: `Paris`, `BLUE-TIGER-42`, `Alice Zhang, 1987`.
 
 ### KL divergence test
 ```bash
@@ -192,7 +193,7 @@ python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31333 \
     --num-prompts 32 --flush-cache --max-concurrency 8
 
 echo "=== Smax (unlimited) ==="
-python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31333 \
+python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31335 \
     --dataset-name custom --dataset-path /opt/oldMoney-Project/bench/competition_bench_64.jsonl \
     --num-prompts 64 --flush-cache
 ```
