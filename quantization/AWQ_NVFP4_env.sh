@@ -35,7 +35,6 @@ python3 -c "import flash_attn; print(flash_attn.__version__)"
 echo "===== INSTALL PYTHON DEPS ====="
 apt-get update && apt-get install -y libpcre3-dev
 uv pip install python-pcre regex
-uv pip install nvidia-modelopt
 uv pip install flash-linear-attention
 uv pip install flashinfer-python
 uv pip install tokenicer
