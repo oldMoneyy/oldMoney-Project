@@ -46,10 +46,13 @@ conda activate ~/compass_max_posttrain_1/.cz/sala/sglang_env
 cd ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project
 nvidia-smi --id=7 --query-compute-apps=pid --format=csv,noheader | xargs -r kill -9
 fuser -k -9 31335/tcp 2>/dev/null
+sleep 2
+
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
-CUDA_VISIBLE_DEVICES=7 LD_PRELOAD=/usr/local/cuda/lib64/libcudart.so.12 \
+CUDA_VISIBLE_DEVICES=7 \
+LD_PRELOAD=$(python -c "import nvidia.cuda_runtime.lib,os;print(os.path.join(os.path.dirname(nvidia.cuda_runtime.lib.__file__),'libcudart.so.12'))") \
 nohup python -m sglang.launch_server \
     --model ~/compass_max_posttrain_1/.cz/sala/model \
     --trust-remote-code \
@@ -62,10 +65,20 @@ nohup python -m sglang.launch_server \
     --mem-fraction-static 0.82 \
     > server_7.log 2>&1 &
 
-tail -f ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/server_7.log
+sleep 3 && tail -f server_7.log
+
 
 # simple long context cases tests
 python ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/bench/long_context_test_case.py --port 31335
+
+curl http://localhost:31335/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "MiniCPM-SALA",
+    "messages": [{"role": "user", "content": "Hi, how are u?"}],
+    "max_tokens": 8192,
+    "temperature": 0.0
+  }'
 
 curl http://localhost:31335/v1/chat/completions \
   -H "Content-Type: application/json" \
@@ -131,22 +144,6 @@ python -c "import torch; print(f'PyTorch Version: {torch.__version__}\nCUDA Vers
 ```
 
 
-
-## Testing
-
-### Curl test
-```bash
-curl http://localhost:31333/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "MiniCPM-SALA",
-    "messages": [{"role": "user", "content": "Hi, how are u?"}],
-    "max_tokens": 8192,
-    "temperature": 0.0
-  }'
-
-
-```
 
 
 ### KL divergence test
