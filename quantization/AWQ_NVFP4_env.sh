@@ -9,7 +9,8 @@ cd ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization
 if [ ! -d ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization/nvfp4_venv ]; then
   python -m venv ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization/nvfp4_venv
 fi
-
+conda deactivate
+conda deactivate
 source ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization/nvfp4_venv/bin/activate
 unset PYTHONPATH
 export MAX_JOBS=16
@@ -29,12 +30,14 @@ cd ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization
 if [ ! -f flash_attn-2.8.3+cu12torch2.8cxx11abiTRUE-cp310-cp310-linux_x86_64.whl ]; then
   wget https://github.com/Dao-AILab/flash-attention/releases/download/v2.8.3/flash_attn-2.8.3+cu12torch2.8cxx11abiTRUE-cp310-cp310-linux_x86_64.whl
 fi
+uv pip install numpy
 uv pip install flash_attn-2.8.3+cu12torch2.8cxx11abiTRUE-cp310-cp310-linux_x86_64.whl
 python3 -c "import flash_attn; print(flash_attn.__version__)"
 
 echo "===== INSTALL PYTHON DEPS ====="
-apt-get update && apt-get install -y libpcre3-dev
-uv pip install python-pcre regex
+pip install --upgrade pip
+# apt-get update && apt-get install -y libpcre3-dev
+uv pip install regex || true
 uv pip install flash-linear-attention
 uv pip install flashinfer-python
 uv pip install tokenicer
@@ -44,7 +47,7 @@ uv pip install defuser
 uv pip install gptqmodel
 uv pip install accelerate datasets threadpoolctl logbar device-smi
 uv pip install "transformers<5.0"
-pip install --upgrade pip
+
 
 echo "===== VERIFY GPTQMODEL ====="
 python -c "from gptqmodel import GPTQModel, QuantizeConfig; print(\"GPTQModel OK\")"
@@ -54,34 +57,36 @@ echo "===== PREPARE VENDOR SOURCES ====="
 mkdir -p ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/vendor
 rm -rf ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/vendor/infllmv2_cuda_impl
 rm -rf ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/vendor/sparse_kernel
-cp -a ~/compass_max_posttrain_1/.cz/sala/SGLang-MiniCPM-SALA/packages/infllmv2_cuda_impl ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/vendor/
-cp -a ~/compass_max_posttrain_1/.cz/sala/SGLang-MiniCPM-SALA/packages/sparse_kernel ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/vendor/
+cp -a /home/work/compass_max_posttrain_1/.cz/sala/oldMoney-Project/_official_pkgs/infllmv2_cuda_impl ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/vendor/
+cp -a /home/work/compass_max_posttrain_1/.cz/sala/oldMoney-Project/_official_pkgs/sparse_kernel ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/vendor/
 
 echo "===== CLEAN infllmv2_cuda_impl ====="
 cd ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/vendor/infllmv2_cuda_impl
+# 1. 卸载 kernels 包（就是它把 build 搞坏的）
+uv pip uninstall kernels
+# 2. 清理旧的 build 产物
 rm -rf build infllm_v2.egg-info
 find . -name "*.so" -delete
 find . -name "*.o" -delete
-find . -name "*.obj" -delete
+# 3. 指向 CUDA 12.8 工具链（之前 sglang_env 里装过的那个）
+export CUDA_HOME=/home/work/compass_max_posttrain_1/.cz/sala/sglang_env
+export CPATH=$CUDA_HOME/targets/x86_64-linux/include:$CPATH
+export CPLUS_INCLUDE_PATH=$CUDA_HOME/targets/x86_64-linux/include:$CPLUS_INCLUDE_PATH
+export LIBRARY_PATH=$CUDA_HOME/targets/x86_64-linux/lib:$LIBRARY_PATH
+export LD_LIBRARY_PATH=$CUDA_HOME/targets/x86_64-linux/lib:$LD_LIBRARY_PATH
+$CUDA_HOME/bin/nvcc --version | grep release   # 必须显示 12.8
+pip install -e . --no-build-isolation --no-deps -v 2>&1 | tee /tmp/build_infllm.log
+python -c "from infllm_v2 import infllmv2_attn_stage1, max_pooling_1d_varlen; print('infllm_v2 OK')"
 
-echo "===== BUILD infllmv2_cuda_impl ====="
-pip install -e . --no-build-isolation
-
-echo "===== VERIFY infllm_v2 ====="
-python -c "from infllm_v2 import infllmv2_attn_stage1, max_pooling_1d_varlen; print(\"infllm_v2 OK\")"
 
 echo "===== CLEAN sparse_kernel ====="
 cd ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/vendor/sparse_kernel
 rm -rf build *.egg-info
 find . -name "*.so" -delete
 find . -name "*.o" -delete
-find . -name "*.obj" -delete
+pip install -e . --no-build-isolation --no-deps -v 2>&1 | tee /tmp/build_sparse.log
+python -c "import sparse_kernel_extension; print('sparse_kernel OK')"
 
-echo "===== BUILD sparse_kernel ====="
-pip install -e . --no-build-isolation
-
-echo "===== VERIFY sparse_kernel ====="
-python -c "import sparse_kernel_extension; print(\"sparse_kernel_extension OK\")"
 
 echo "===== FINAL VERIFY ====="
 python -c "import transformers; print(\"transformers\", transformers.__version__, transformers.__file__)"

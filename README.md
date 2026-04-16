@@ -36,6 +36,12 @@ cd ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project
 nohup bash env_sala.sh > env_sala.log 2>&1 &
 tail -f env_sala.log
 # Wait until "Setup complete!"
+
+python3 -c "
+from huggingface_hub import snapshot_download
+snapshot_download('borisdotv/model-gptq-int4-dense-smooth', local_dir='~/compass_max_posttrain_1/.cz/sala/model_gptq_int4_dense_smooth', token='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')
+print('Done!')
+"
 ```
 
 Launch the model:
@@ -69,9 +75,9 @@ sleep 3 && tail -f server_7.log
 
 
 # simple long context cases tests
-python ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/bench/long_context_test_case.py --port 31335
+python ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/bench/long_context_test_case.py --port 31333
 
-curl http://localhost:31335/v1/chat/completions \
+curl http://localhost:31333/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "MiniCPM-SALA",
@@ -80,7 +86,7 @@ curl http://localhost:31335/v1/chat/completions \
     "temperature": 0.0
   }'
 
-curl http://localhost:31335/v1/chat/completions \
+curl http://localhost:31333/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "MiniCPM-SALA",
@@ -91,7 +97,7 @@ curl http://localhost:31335/v1/chat/completions \
 
 # 64 concurrency test
 echo "=== Smax (unlimited) ==="
-python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31335 \
+python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31333 \
     --dataset-name custom --dataset-path ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/bench/competition_bench_64.jsonl \
     --num-prompts 64 --flush-cache
 ```
@@ -101,7 +107,7 @@ Mock the process on SOAR official server:
 ```bash
 # Contest server GPU:
 # https://www.techpowerup.com/gpu-specs/rtx-6000d.c4363
-cd /opt/oldMoney-Project/submissions
+cd ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/submissions
 bash simulate_soar.sh submission_20260322.tar.gz
 ```
 
@@ -148,8 +154,8 @@ python -c "import torch; print(f'PyTorch Version: {torch.__version__}\nCUDA Vers
 
 ### KL divergence test
 ```bash
-cd /opt/oldMoney-Project/quantization && python /opt/oldMoney-Project/quantization/fast_eval.py --mode eval --api-base http://127.0.0.1:31333
-# cd /opt/oldMoney-Project/quantization && python /opt/oldMoney-Project/quantization/fast_eval_quantization.py --mode eval --api-base http://127.0.0.1:31333
+cd ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization && python ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization/fast_eval.py --mode eval --api-base http://127.0.0.1:31333
+# cd ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization && python ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization/fast_eval_quantization.py --mode eval --api-base http://127.0.0.1:31333
 ```
 
 
@@ -157,24 +163,24 @@ cd /opt/oldMoney-Project/quantization && python /opt/oldMoney-Project/quantizati
 
 Generate the performance test set:
 ```bash
-python /opt/oldMoney-Project/bench/gen_competition_bench.py
+python ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/bench/gen_competition_bench.py
 ```
 
 Concurrency test aligned with SOAR official metric:
 ```bash
 echo "=== S1 (concurrency 1) ==="
 python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31333 \
-    --dataset-name custom --dataset-path /opt/oldMoney-Project/bench/competition_bench_32.jsonl \
+    --dataset-name custom --dataset-path ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/bench/competition_bench_32.jsonl \
     --num-prompts 32 --flush-cache --max-concurrency 1
 
 echo "=== S8 (concurrency 8) ==="
 python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31333 \
-    --dataset-name custom --dataset-path /opt/oldMoney-Project/bench/competition_bench_32.jsonl \
+    --dataset-name custom --dataset-path ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/bench/competition_bench_32.jsonl \
     --num-prompts 32 --flush-cache --max-concurrency 8
 
 echo "=== Smax (unlimited) ==="
 python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31335 \
-    --dataset-name custom --dataset-path /opt/oldMoney-Project/bench/competition_bench_64.jsonl \
+    --dataset-name custom --dataset-path ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/bench/competition_bench_64.jsonl \
     --num-prompts 64 --flush-cache
 ```
 
@@ -182,15 +188,15 @@ python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31335 \
 ## Accuracy Test
 
 ```bash
-cd /opt/oldMoney-Project/SOAR-Toolkit
+cd ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/SOAR-Toolkit
 nohup python3 eval_model.py \
   --api_base http://127.0.0.1:31333 \
-  --model_path /opt/model_gptq_int4_dense_smooth \
+  --model_path ~/compass_max_posttrain_1/.cz/sala/model_gptq_int4_dense_smooth \
   --data_path eval_dataset/perf_public_set.jsonl \
   --concurrency 64 \
   --num_samples 150 \
   --verbose \
-  > /opt/oldMoney-Project/logs/eval_model_gptq_int4_dense_smooth.log 2>&1 &
+  > ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/logs/eval_model_gptq_int4_dense_smooth.log 2>&1 &
 ```
 
 
@@ -202,8 +208,8 @@ nohup python3 eval_model.py \
 
 First time setup:
 ```bash
-bash /opt/oldMoney-Project/quantization/AWQ_NVFP4_env.sh
-tail -f /opt/oldMoney-Project/logs/AWQ_NVFP4_env.log
+bash ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization/AWQ_NVFP4_env.sh
+tail -f ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/logs/AWQ_NVFP4_env.log
 ```
 
 
@@ -211,21 +217,21 @@ tail -f /opt/oldMoney-Project/logs/AWQ_NVFP4_env.log
 
 Pure dense quantization:
 ```bash
-source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
+source ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization/nvfp4_venv/bin/activate
 export TRITON_PTXAS_PATH="$(which ptxas)"
-export LD_LIBRARY_PATH=/opt/oldMoney-Project/quantization/venv/lib/python3.10/site-packages/torch/lib:$LD_LIBRARY_PATH
-nohup python3 /opt/oldMoney-Project/quantization/GPTQ_int4_flashinfer_dense_smoothing_gpu.py \
-    --input /opt/model \
-    --output /opt/model_gptq_int4_dense_smooth \
+export LD_LIBRARY_PATH=~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization/venv/lib/python3.10/site-packages/torch/lib:$LD_LIBRARY_PATH
+nohup python3 ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization/GPTQ_int4_flashinfer_dense_smoothing_gpu.py \
+    --input ~/compass_max_posttrain_1/.cz/sala/model \
+    --output ~/compass_max_posttrain_1/.cz/sala/model_gptq_int4_dense_smooth \
     --bits 4 \
     --group-size 128 \
-    --calib-data /opt/oldMoney-Project/quantization/calibration_dense/calib_dense_96.jsonl \
+    --calib-data ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization/calibration_dense/calib_dense_96.jsonl \
     --max-samples 96 \
     --max-len 131072 \
     --smooth-alpha 0.5 \
-    > /opt/oldMoney-Project/logs/model_gptq_int4_dense_smooth.log 2>&1 &
+    > ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/logs/model_gptq_int4_dense_smooth.log 2>&1 &
 
-tail -f /opt/oldMoney-Project/logs/model_gptq_int4_dense_smooth.log
+tail -f ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/logs/model_gptq_int4_dense_smooth.log
 ```
 
 
@@ -235,20 +241,23 @@ tail -f /opt/oldMoney-Project/logs/model_gptq_int4_dense_smooth.log
 Dense:
 ```bash
 rm -rf ~/.triton/cache
-rm -rf /opt/oldMoney-Project/sglang_sala_flashinfer/sglang/srt/layers/attention/__pycache__
+rm -rf ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_flashinfer/sglang/srt/layers/attention/__pycache__
 fuser -k -9 31333/tcp
 # pip install -e vendor_flashinfer/sparse_decode_kernel/ --no-build-isolation
-# uv pip install --no-deps -e /opt/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python
-# uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_lightning
-# uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_flashinfer
-uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
+# uv pip install --no-deps -e ~/compass_max_posttrain_1/.cz/sala/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python
+# uv pip install --no-deps -e ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_lightning
+# uv pip install --no-deps -e ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_flashinfer
+uv pip install --no-deps -e ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_cp
 # export SGLANG_SPARSE_PREFILL=1
 # export SGLANG_SPARSE_DECODE=1
 # export SGLANG_SPARSE_TOPK=64
+# Library paths (must be set before launching)
+export LD_LIBRARY_PATH=/home/work/compass_max_posttrain_1/.cz/sala/sglang_env/lib/python3.10/site-packages/torch/lib:/home/work/compass_max_posttrain_1/.cz/sala/sglang_env/lib/python3.10/site-packages/nvidia/cusparselt/lib:$LD_LIBRARY_PATH
+export CUDA_HOME=$CONDA_PREFIX
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 nohup python3 -m sglang.launch_server \
-    --model-path /opt/model_gptq_int4_dense_smooth \
+    --model-path ~/compass_max_posttrain_1/.cz/sala/model_gptq_int4_dense_smooth \
     --port 31333 \
     --quantization gptq_marlin \
     --kv-cache-dtype fp8_e5m2 \
@@ -260,39 +269,39 @@ nohup python3 -m sglang.launch_server \
     --mem-fraction-static 0.82 \
     --max-mamba-cache-size 64 \
     --log-level info \
-    > /opt/server.log 2>&1 &
+    > ~/compass_max_posttrain_1/.cz/sala/server.log 2>&1 &
 
-python /opt/oldMoney-Project/bench/long_context_test_case.py
-cd /opt/oldMoney-Project/quantization && python /opt/oldMoney-Project/quantization/fast_eval_quantization.py --mode eval --api-base http://127.0.0.1:31333
+python ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/bench/long_context_test_case.py
+cd ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization && python ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization/fast_eval_quantization.py --mode eval --api-base http://127.0.0.1:31333
 echo "=== Smax (unlimited) ==="
 python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31333 \
-    --dataset-name custom --dataset-path /opt/oldMoney-Project/bench/competition_bench_64.jsonl \
+    --dataset-name custom --dataset-path ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/bench/competition_bench_64.jsonl \
     --num-prompts 64 --flush-cache
 
-cd /opt/oldMoney-Project/SOAR-Toolkit
+cd ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/SOAR-Toolkit
 nohup python3 eval_model.py \
   --api_base http://127.0.0.1:31333 \
-  --model_path /opt/model_gptq_int4_dense_smooth \
+  --model_path ~/compass_max_posttrain_1/.cz/sala/model_gptq_int4_dense_smooth \
   --data_path eval_dataset/perf_public_set.jsonl \
   --concurrency 64 \
   --num_samples 150 \
   --verbose \
-  > /opt/oldMoney-Project/logs/eval_sala_lightning.log 2>&1 &
+  > ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/logs/eval_sala_lightning.log 2>&1 &
 
 
 fuser -k -9 31333/tcp
-# uv pip install --no-deps -e /opt/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python
-# uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_flashinfer
-uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
+# uv pip install --no-deps -e ~/compass_max_posttrain_1/.cz/sala/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python
+# uv pip install --no-deps -e ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_flashinfer
+uv pip install --no-deps -e ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_cp
 # export SGLANG_SPARSE_PREFILL=1
 # export SGLANG_SPARSE_DECODE=1
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
-/opt/nvidia/nsight-compute/2025.2.1/host/target-linux-x64/nsys profile \
-    -o /opt/lightning_profile -t cuda \
+~/compass_max_posttrain_1/.cz/sala/nvidia/nsight-compute/2025.2.1/host/target-linux-x64/nsys profile \
+    -o ~/compass_max_posttrain_1/.cz/sala/lightning_profile -t cuda \
     --duration 1200 \
     python3 -m sglang.launch_server \
-    --model-path /opt/model_gptq_int4_dense_smooth \
+    --model-path ~/compass_max_posttrain_1/.cz/sala/model_gptq_int4_dense_smooth \
     --port 31333 \
     --quantization gptq_marlin \
     --kv-cache-dtype fp8_e5m2 \
@@ -309,9 +318,9 @@ export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
 fuser -k 31333/tcp
 sleep 10
-/opt/nvidia/nsight-compute/2025.2.1/host/target-linux-x64/nsys stats \
+~/compass_max_posttrain_1/.cz/sala/nvidia/nsight-compute/2025.2.1/host/target-linux-x64/nsys stats \
     --report cuda_gpu_kern_sum --timeunit msec \
-    /opt/lightning_profile.nsys-rep
+    ~/compass_max_posttrain_1/.cz/sala/lightning_profile.nsys-rep
 ```
 
 
@@ -320,11 +329,11 @@ Deploy fp4 / fp8 mixed kv_cache model:
 ```bash
 rm -rf ~/.triton/cache
 fuser -k -9 31333/tcp
-uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_kvfp4
+uv pip install --no-deps -e ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_kvfp4
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 nohup python3 -m sglang.launch_server \
-    --model-path /opt/model_gptq_int4_dense_smooth \
+    --model-path ~/compass_max_posttrain_1/.cz/sala/model_gptq_int4_dense_smooth \
     --port 31333 \
     --quantization gptq_marlin \
     --kv-cache-dtype fp8_e4m3 \
@@ -337,7 +346,7 @@ nohup python3 -m sglang.launch_server \
     --mem-fraction-static 0.82 \
     --max-mamba-cache-size 64 \
     --log-level info \
-    > /opt/server.log 2>&1 &
+    > ~/compass_max_posttrain_1/.cz/sala/server.log 2>&1 &
 ```
 
 
@@ -345,11 +354,11 @@ Deploy nvfp4 llm compressor model:
 ```bash
 rm -rf ~/.triton/cache
 fuser -k -9 31333/tcp
-uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
+uv pip install --no-deps -e ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_cp
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 nohup python3 -m sglang.launch_server \
-    --model-path /opt/model_gptq_w4a16_llmcompressor \
+    --model-path ~/compass_max_posttrain_1/.cz/sala/model_gptq_w4a16_llmcompressor \
     --port 31333 \
     --kv-cache-dtype fp8_e5m2 \
     --quantization compressed-tensors \
@@ -362,17 +371,17 @@ nohup python3 -m sglang.launch_server \
     --max-mamba-cache-size 64 \
     --trust-remote-code \
     --log-level info \
-    > /opt/server.log 2>&1 &
+    > ~/compass_max_posttrain_1/.cz/sala/server.log 2>&1 &
 
-cd /opt/oldMoney-Project/SOAR-Toolkit
+cd ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/SOAR-Toolkit
 nohup python3 eval_model.py \
   --api_base http://127.0.0.1:31333 \
-  --model_path /opt/model_gptq_w4a16_llmcompressor \
+  --model_path ~/compass_max_posttrain_1/.cz/sala/model_gptq_w4a16_llmcompressor \
   --data_path eval_dataset/perf_public_set.jsonl \
   --concurrency 64 \
   --num_samples 150 \
   --verbose \
-  > /opt/oldMoney-Project/logs/eval_llm_compressor_gptq.log 2>&1 &
+  > ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/logs/eval_llm_compressor_gptq.log 2>&1 &
 ```
     
 ## GPTQ Findings
@@ -398,34 +407,34 @@ Long context test results:
 ## Environment
 
 ```bash
-bash /opt/oldMoney-Project/quantization/AWQ_NVFP4_env.sh
-tail -f /opt/oldMoney-Project/logs/AWQ_NVFP4_env.log
+bash ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization/AWQ_NVFP4_env.sh
+tail -f ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/logs/AWQ_NVFP4_env.log
 ```
 
 ## Previous AWQ Attempts (all-FP4)
 
 ```bash
-uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
+uv pip install --no-deps -e ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_cp
 
-source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
+source ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization/nvfp4_venv/bin/activate
 export TRITON_PTXAS_PATH="$(which ptxas)"
                                                                                                                                        
-nohup python /opt/oldMoney-Project/quantization/calibration_dense/AWQ_NVFP4_dense_all.py \
-  --input /opt/model \
-  --output /opt/model_nvfp4_dense_all_test \
-  --calib-data /opt/oldMoney-Project/quantization/calibration_dense/calib_dense_96.jsonl \
+nohup python ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization/calibration_dense/AWQ_NVFP4_dense_all.py \
+  --input ~/compass_max_posttrain_1/.cz/sala/model \
+  --output ~/compass_max_posttrain_1/.cz/sala/model_nvfp4_dense_all_test \
+  --calib-data ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization/calibration_dense/calib_dense_96.jsonl \
   --max-samples 96 \
   --max-len 131072 \
   --mse-iters 120 \
   --smooth-alpha 0.5 \
-  > /opt/quantize_80_53.log 2>&1 &
+  > ~/compass_max_posttrain_1/.cz/sala/quantize_80_53.log 2>&1 &
 
-cd /opt
+cd ~/compass_max_posttrain_1/.cz/sala
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 fuser -k -9 31333/tcp
 nohup python3 -m sglang.launch_server \
-    --model /opt/model_nvfp4_dense_all \
+    --model ~/compass_max_posttrain_1/.cz/sala/model_nvfp4_dense_all \
     --quantization modelopt \
     --trust-remote-code \
     --disable-radix-cache \
@@ -435,35 +444,35 @@ nohup python3 -m sglang.launch_server \
     --port 31333 \
     --log-level info \
     --mem-fraction-static 0.82 \
-    > /opt/server.log 2>&1 &
+    > ~/compass_max_posttrain_1/.cz/sala/server.log 2>&1 &
 
-python /opt/oldMoney-Project/bench/long_context_test_case.py
+python ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/bench/long_context_test_case.py
 
-cd /opt/oldMoney-Project/SOAR-Toolkit
+cd ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/SOAR-Toolkit
 nohup python3 eval_model.py \
   --api_base http://127.0.0.1:31333 \
-  --model_path /opt/model_nvfp4_dense_all_test \
+  --model_path ~/compass_max_posttrain_1/.cz/sala/model_nvfp4_dense_all_test \
   --data_path eval_dataset/perf_public_set.jsonl \
   --concurrency 64 \
   --num_samples 150 \
   --verbose \
-  > /opt/oldMoney-Project/logs/model_nvfp4_dense_all_test.log 2>&1 &
+  > ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/logs/model_nvfp4_dense_all_test.log 2>&1 &
 ```
 
 ## Deploy AWQ Models
 
 ```bash
 
-cd /opt
+cd ~/compass_max_posttrain_1/.cz/sala
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 export TORCHINDUCTOR_COMPILE_THREADS=20
 export TORCH_COMPILE_THREADS=20
-export TORCHINDUCTOR_CACHE_DIR=/opt/.torch_compile_0329
+export TORCHINDUCTOR_CACHE_DIR=~/compass_max_posttrain_1/.cz/sala/.torch_compile_0329
 export TORCHINDUCTOR_FX_GRAPH_CACHE=1
 fuser -k -9 31333/tcp
 nohup python3 -m sglang.launch_server \
-    --model /opt/model_nvfp4_dense_all \
+    --model ~/compass_max_posttrain_1/.cz/sala/model_nvfp4_dense_all \
     --quantization modelopt \
     --trust-remote-code \
     --disable-radix-cache \
@@ -478,7 +487,7 @@ nohup python3 -m sglang.launch_server \
     --torch-compile-max-bs 64 \
     --enable-mixed-chunk \
     --num-continuous-decode-steps 2 \
-    > /opt/server.log 2>&1 &
+    > ~/compass_max_posttrain_1/.cz/sala/server.log 2>&1 &
 ```
 
 ## AWQ Benchmark Result
@@ -510,29 +519,29 @@ Concurrency:                             30.86
 
 ```bash
 # modeling:
-# /opt/oldMoney-Project/sglang_sala_cp/sglang/srt/models/minicpm.py
+# ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_cp/sglang/srt/models/minicpm.py
 
 # quantization:
-# /opt/SGLang-MiniCPM-SALA/sglang_minicpm_sala_env/lib/python3.10/site-packages/flashinfer/fp4_quantization.py
-# /opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/quantization/compressed_tensors/schemes/compressed_tensors_w4a4_nvfp4.py
-# /opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/quantization/__init__.py
-# /opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/quantization/petit_utils.py
-# /opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/quantization/petit.py
-# /opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/modelopt_utils.py
-# /opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/quantization/modelopt_quant.py
-# /opt/SGLang-MiniCPM-SALA/sglang_minicpm_sala_env/lib/python3.10/site-packages/sgl_kernel/gemm.py
-# /opt/oldMoney-Project/quantization/quantize_gptq_sparse_cpu.py
+# ~/compass_max_posttrain_1/.cz/sala/SGLang-MiniCPM-SALA/sglang_minicpm_sala_env/lib/python3.10/site-packages/flashinfer/fp4_quantization.py
+# ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/quantization/compressed_tensors/schemes/compressed_tensors_w4a4_nvfp4.py
+# ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/quantization/__init__.py
+# ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/quantization/petit_utils.py
+# ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/quantization/petit.py
+# ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/modelopt_utils.py
+# ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/quantization/modelopt_quant.py
+# ~/compass_max_posttrain_1/.cz/sala/SGLang-MiniCPM-SALA/sglang_minicpm_sala_env/lib/python3.10/site-packages/sgl_kernel/gemm.py
+# ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization/quantize_gptq_sparse_cpu.py
 
 # kernels:
-# /opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/attention/minicpm_backend.py
-# /opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/attention/minicpm_fuse_kernel.py
-# /opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/attention/minicpm_attention_kernels.py
-# /opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/attention/hybrid_linear_attn_backend.py
-# /opt/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/attention/flashinfer_backend.py
+# ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/attention/minicpm_backend.py
+# ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/attention/minicpm_fuse_kernel.py
+# ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/attention/minicpm_attention_kernels.py
+# ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/attention/hybrid_linear_attn_backend.py
+# ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/attention/flashinfer_backend.py
 ```
 
 ```bash
-bash /opt/oldMoney-Project/utils_prompt/export_files.sh
+bash ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/utils_prompt/export_files.sh
 ```
 
 
@@ -617,13 +626,13 @@ under concurrency=64.
 
 ```bash
 # Analyze token stats and repetition for eval vs calib_64 vs calib_96
-python /opt/oldMoney-Project/bench/analyze_data_96.py
+python ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/bench/analyze_data_96.py
 
 # Legacy: eval vs calib_64 only
-python /opt/oldMoney-Project/bench/analyze_data.py
+python ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/bench/analyze_data.py
 
 # Test the most repetitive eval samples for token-0 collapse
-python /opt/oldMoney-Project/bench/test_repetitive_samples.py
+python ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/bench/test_repetitive_samples.py
 ```
 
 Full analysis log: `optimization_log/20260327_data_analysis.txt`
@@ -631,9 +640,9 @@ Full analysis log: `optimization_log/20260327_data_analysis.txt`
 <!--
 AI notes for future sessions analyzing calibration/eval data:
 
-1. The tokenizer path may change — the model is usually at /opt/model/ but
-   quantized variants are at /opt/model_* or /tmp/model_*. Use the base model
-   tokenizer at /opt/model/ for consistent token counting.
+1. The tokenizer path may change — the model is usually at ~/compass_max_posttrain_1/.cz/sala/model/ but
+   quantized variants are at ~/compass_max_posttrain_1/.cz/sala/model_* or /tmp/model_*. Use the base model
+   tokenizer at ~/compass_max_posttrain_1/.cz/sala/model/ for consistent token counting.
 
 2. The optimal_96.jsonl file actually contains 94 samples, not 96.
    Always check actual sample count vs filename.
@@ -881,29 +890,29 @@ The `exclude_modules` routing logic already handles mixed-precision correctly.
 ```bash
 # Generate balanced calibration: adds 30 MCQ samples from eval to calib_96
 # Fixes zero coverage of short MCQ task (20% of eval score)
-python /opt/oldMoney-Project/quantization/generate_balanced_calib.py
-# Output: /opt/calib_balanced_124.jsonl (~124 samples)
+python ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization/generate_balanced_calib.py
+# Output: ~/compass_max_posttrain_1/.cz/sala/calib_balanced_124.jsonl (~124 samples)
 ```
 
 ### Quantize command
 ```bash
-source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
+source ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization/nvfp4_venv/bin/activate
 export TRITON_PTXAS_PATH="$(which ptxas)"
-nohup python /opt/oldMoney-Project/quantization/AWQ_NVFP4_mixed_bf16attn.py \
-    --input /opt/model \
-    --output /opt/model_nvfp4_bf16attn \
-    --calib-data /opt/calib_balanced_124.jsonl \
+nohup python ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization/AWQ_NVFP4_mixed_bf16attn.py \
+    --input ~/compass_max_posttrain_1/.cz/sala/model \
+    --output ~/compass_max_posttrain_1/.cz/sala/model_nvfp4_bf16attn \
+    --calib-data ~/compass_max_posttrain_1/.cz/sala/calib_balanced_124.jsonl \
     --max-samples 124 \
     --max-len 131072 \
     --smooth-alpha 0.5 \
     --mse-iters 120 \
- > /opt/oldMoney-Project/logs/AWQ_nvfp4_bf16attn.log 2>&1 &
+ > ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/logs/AWQ_nvfp4_bf16attn.log 2>&1 &
 ```
 
 ### Serve command (96 GB Blackwell)
 ```bash
-uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_kernel_fuse
-pip install --no-build-isolation -e /opt/oldMoney-Project/vendor_kernel_fuse
+uv pip install --no-deps -e ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_kernel_fuse
+pip install --no-build-isolation -e ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/vendor_kernel_fuse
 fuser -k -9 31333/tcp
 python3 -m sglang.launch_server \
     --model /tmp/model_nvfp4_smoothed/ \
@@ -917,7 +926,7 @@ python3 -m sglang.launch_server \
     --port 31333 \
     --dense-as-sparse \
     --mem-fraction-static 0.8 \
-    > /opt/server.log 2>&1 &
+    > ~/compass_max_posttrain_1/.cz/sala/server.log 2>&1 &
 ```
 
 ### Suspected fused kernel issue (2026-03-28, needs confirmation)
@@ -938,11 +947,11 @@ Status: **needs further investigation**. Test plan:
 ```bash
 # Baseline (working):
 pip uninstall fused_kernel_extension
-uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_cp
+uv pip install --no-deps -e ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_cp
 
 # Fused (suspected broken with quantized models):
-uv pip install --no-deps -e /opt/oldMoney-Project/sglang_sala_kernel_fuse
-pip install --no-build-isolation -e /opt/oldMoney-Project/vendor_kernel_fuse
+uv pip install --no-deps -e ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_kernel_fuse
+pip install --no-build-isolation -e ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/vendor_kernel_fuse
 ```
 [Sample 146] Task: cwe
 Gold: ['truck', 'choice', 'rain', 'hapless', 'carrier', 'endothelium', 'formulate', 'bestseller', 'accident', 'snowsuit'], Extracted: None, Score: 0
@@ -970,10 +979,10 @@ Total Tokens: In=8644166, Out=1275622
 Average Tokens/Sample: In=57627.8, Out=8504.1
 Overall TPS (Output): 310.39 tokens/s
 Detailed results saved to outputs/20260327_162030/predictions.jsonl
-^Z[1]   Done                    nohup python3 eval_model.py --api_base http://127.0.0.1:31333 --model_path /tmp/model_nvfp4_smoothed/ --data_path eval_dataset/perf_public_set.jsonl --concurrency 64 --num_samples 150 --verbose > /opt/oldMoney-Project/logs/model_nvfp4_smoothed.log 2>&1
+^Z[1]   Done                    nohup python3 eval_model.py --api_base http://127.0.0.1:31333 --model_path /tmp/model_nvfp4_smoothed/ --data_path eval_dataset/perf_public_set.jsonl --concurrency 64 --num_samples 150 --verbose > ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/logs/model_nvfp4_smoothed.log 2>&1
 
-[2]+  Stopped                 tail -f /opt/oldMoney-Project/logs/model_nvfp4_smoothed.log
-root@C.33628558:/opt/SOAR-Toolkit$
+[2]+  Stopped                 tail -f ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/logs/model_nvfp4_smoothed.log
+root@C.33628558:~/compass_max_posttrain_1/.cz/sala/SOAR-Toolkit$
 
 
 ## 2. Dense Flashinfer NVFP4 Optimization
@@ -1094,12 +1103,12 @@ uv run --with requests python -u \
 
 Quantize with new calibration:
 ```bash
-source /opt/oldMoney-Project/quantization/nvfp4_venv/bin/activate
+source ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization/nvfp4_venv/bin/activate
 export TRITON_PTXAS_PATH="$(which ptxas)"
-python /opt/oldMoney-Project/quantization/calibration_dense/AWQ_NVFP4_dense_flashinfer.py \
-    --input /opt/model \
-    --output /opt/model_nvfp4_dense_v2 \
-    --calib-data /opt/oldMoney-Project/quantization/calibration_dense/calib_dense_96.jsonl \
+python ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization/calibration_dense/AWQ_NVFP4_dense_flashinfer.py \
+    --input ~/compass_max_posttrain_1/.cz/sala/model \
+    --output ~/compass_max_posttrain_1/.cz/sala/model_nvfp4_dense_v2 \
+    --calib-data ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization/calibration_dense/calib_dense_96.jsonl \
     --max-samples 96 \
     --max-len 131072 \
     --mse-iters 120 \

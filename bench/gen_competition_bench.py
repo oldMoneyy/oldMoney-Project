@@ -12,22 +12,23 @@ NUM_32 = 32
 PATH_64 = "/opt/oldMoney-Project/bench/competition_bench_64.jsonl"
 PATH_32 = "/opt/oldMoney-Project/bench/competition_bench_32.jsonl"   # 我帮你补全了 /opt/
 
-# Competition input distribution (tokens)
+# Competition input distribution (tokens) — SOAR 2026 updated
 INPUT_DIST = [
-    (0.25, 100, 4000),      # 25% short
-    (0.10, 4000, 16000),     # 10% medium  
-    (0.15, 16000, 32000),    # 15% medium-long
-    (0.35, 32000, 128000),   # 35% long
-    (0.15, 128000, 160000),  # 15% very long
+    (0.16, 100,    4000),     # 16% short (0-4K)
+    (0.08, 4000,   16000),    #  8% medium (4K-16K)
+    (0.08, 16000,  32000),    #  8% medium-long (16K-32K)
+    (0.25, 32000,  128000),   # 25% long (32K-128K)
+    (0.26, 128000, 256000),   # 26% very long (128K-256K)
+    (0.17, 256000, 512000),   # 17% ultra long (256K-512K)
 ]
 
-# Competition output distribution (tokens)  
+# Competition output distribution (tokens) — SOAR 2026 updated
 OUTPUT_DIST = [
-    (0.35, 10, 512),
-    (0.25, 512, 2000),
-    (0.10, 2000, 4000),
-    (0.15, 4000, 16000),
-    (0.15, 16000, 32000),
+    (0.58, 10,    512),       # 58%
+    (0.17, 512,   2000),      # 17%
+    (0.06, 2000,  4000),      #  6%
+    (0.09, 4000,  16000),     #  9%
+    (0.10, 16000, 32000),     # 9% → bumped to 10% so cumulative hits 1.00
 ]
 
 def sample_from_dist(dist):
