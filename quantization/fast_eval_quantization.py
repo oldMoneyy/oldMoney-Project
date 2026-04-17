@@ -7,10 +7,10 @@ import numpy as np
 import requests
 
 # # Step 1: Start BF16 model, run baseline
-# cd /opt/oldMoney-Project/quantization && python /opt/oldMoney-Project/quantization/fast_eval_quantization.py --mode baseline --api-base http://127.0.0.1:31333
+# cd /home/work/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization && python /home/work/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization/fast_eval_quantization.py --mode baseline --api-base http://127.0.0.1:31333
 
 # # Step 2: Start quantized model, run eval
-# cd /opt/oldMoney-Project/quantization && python /opt/oldMoney-Project/quantization/fast_eval_quantization.py --mode eval --api-base http://127.0.0.1:31333
+# cd /home/work/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization && python /home/work/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization/fast_eval_quantization.py --mode eval --api-base http://127.0.0.1:31333
 
 # 测试用的一组 Prompt（覆盖长文本、推理、代码等不同场景）
 _SHORT_PROMPTS = [
@@ -55,7 +55,7 @@ def _make_long_prompt(target_tokens=16384):
     question = "\n\nBased on the document above, what is the secret code hidden in this document? Answer with just the code."
     return body + question
 
-TEST_PROMPTS = _SHORT_PROMPTS + [_make_long_prompt(16384)]
+TEST_PROMPTS = _SHORT_PROMPTS + [_make_long_prompt(163840)]
 
 def get_logprobs_from_sglang(api_base, model_name, prompt, max_tokens=128, top_k=256):
     """

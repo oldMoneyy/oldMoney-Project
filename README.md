@@ -51,13 +51,13 @@ conda activate ~/compass_max_posttrain_1/.cz/sala/sglang_env
 
 cd ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project
 nvidia-smi --id=7 --query-compute-apps=pid --format=csv,noheader | xargs -r kill -9
-fuser -k -9 31335/tcp 2>/dev/null
+fuser -k -9 31333/tcp 2>/dev/null
 sleep 2
 
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
-CUDA_VISIBLE_DEVICES=7 \
+CUDA_VISIBLE_DEVICES=6 \
 LD_PRELOAD=$(python -c "import nvidia.cuda_runtime.lib,os;print(os.path.join(os.path.dirname(nvidia.cuda_runtime.lib.__file__),'libcudart.so.12'))") \
 nohup python -m sglang.launch_server \
     --model ~/compass_max_posttrain_1/.cz/sala/model \
@@ -97,7 +97,7 @@ curl http://localhost:31335/v1/chat/completions \
 
 # 64 concurrency test
 echo "=== Smax (unlimited) ==="
-python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31333 \
+python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31335 \
     --dataset-name custom --dataset-path ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/bench/competition_bench_64.jsonl \
     --num-prompts 64 --flush-cache
 ```
@@ -110,6 +110,138 @@ Mock the process on SOAR official server:
 cd ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/submissions
 bash simulate_soar.sh submission_20260322.tar.gz
 ```
+
+
+
+
+
+## Deploy GPTQ Models
+
+
+
+
+
+
+
+
+
+
+
+Sparse Deployment:
+```bash
+source ~/compass_max_posttrain_1/miniconda3/bin/activate
+conda activate ~/compass_max_posttrain_1/.cz/sala/sglang_env
+rm -rf ~/.triton/cache_fi
+rm -rf ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_flashinfer/sglang/srt/layers/attention/__pycache__
+export TRITON_CACHE_DIR=~/.triton/cache_fi
+uv pip install --no-deps -e ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_flashinfer
+export SGLANG_SPARSE_PREFILL=1
+export SGLANG_SPARSE_DECODE=1
+# export SGLANG_SPARSE_TOPK=64
+export SGLANG_DENSE_LEN=32768
+export LD_LIBRARY_PATH=/home/work/compass_max_posttrain_1/.cz/sala/sglang_env/lib/python3.10/site-packages/torch/lib:/home/work/compass_max_posttrain_1/.cz/sala/sglang_env/lib/python3.10/site-packages/nvidia/cusparselt/lib:$LD_LIBRARY_PATH
+export CUDA_HOME=$CONDA_PREFIX
+export PYTORCH_ALLOC_CONF=expandable_segments:True
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+CUDA_VISIBLE_DEVICES=7 \
+nohup python3 -m sglang.launch_server \
+    --model-path /home/work/compass_max_posttrain_1/.cz/sala/model_gptq_int4_dense_smooth \
+    --port 31335 \
+    --quantization gptq_marlin \
+    --kv-cache-dtype fp8_e5m2 \
+    --dtype bfloat16 \
+    --disable-radix-cache \
+    --max-running-requests 64 \
+    --attention-backend flashinfer \
+    --chunked-prefill-size 32768 \
+    --mem-fraction-static 0.82 \
+    --max-mamba-cache-size 64 \
+    --log-level info \
+    > ~/compass_max_posttrain_1/.cz/sala/server_sparse.log 2>&1 &
+
+python ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/bench/long_context_test_case.py --port 31335
+cd ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization && python ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization/fast_eval_quantization.py --mode eval --api-base http://127.0.0.1:31335
+echo "=== Smax (unlimited) ==="
+nohup python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31335 \
+    --dataset-name custom --dataset-path ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/bench/competition_bench_64.jsonl \
+    --num-prompts 64 --flush-cache \
+    > ~/compass_max_posttrain_1/.cz/sala/64_concurrency_sparse.log 2>&1 &
+
+cd ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/SOAR-Toolkit
+nohup python3 eval_model.py \
+  --api_base http://127.0.0.1:31335 \
+  --model_path /home/work/compass_max_posttrain_1/.cz/sala/model_gptq_int4_dense_smooth \
+  --data_path eval_dataset/perf_public_set.jsonl \
+  --concurrency 64 \
+  --num_samples 150 \
+  --verbose \
+  > ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/logs/eval_sala_sparse_0417.log 2>&1 &
+```
+
+
+
+
+
+
+
+
+
+
+Dense Deployment:
+```bash
+source ~/compass_max_posttrain_1/miniconda3/bin/activate
+conda activate ~/compass_max_posttrain_1/.cz/sala/sglang_env
+rm -rf ~/.triton/cache_cp
+rm -rf ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_cp/sglang/srt/layers/attention/__pycache__
+export TRITON_CACHE_DIR=~/.triton/cache_cp
+uv pip install --no-deps -e ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_cp
+export LD_LIBRARY_PATH=/home/work/compass_max_posttrain_1/.cz/sala/sglang_env/lib/python3.10/site-packages/torch/lib:/home/work/compass_max_posttrain_1/.cz/sala/sglang_env/lib/python3.10/site-packages/nvidia/cusparselt/lib:$LD_LIBRARY_PATH
+export CUDA_HOME=$CONDA_PREFIX
+export PYTORCH_ALLOC_CONF=expandable_segments:True
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+CUDA_VISIBLE_DEVICES=6 \
+nohup python3 -m sglang.launch_server \
+    --model-path /home/work/compass_max_posttrain_1/.cz/sala/model_gptq_int4_dense_smooth \
+    --port 31333 \
+    --quantization gptq_marlin \
+    --kv-cache-dtype fp8_e5m2 \
+    --dtype bfloat16 \
+    --disable-radix-cache \
+    --max-running-requests 64 \
+    --attention-backend flashinfer \
+    --chunked-prefill-size 32768 \
+    --mem-fraction-static 0.82 \
+    --max-mamba-cache-size 64 \
+    --log-level info \
+    > ~/compass_max_posttrain_1/.cz/sala/server_dense.log 2>&1 &
+
+python ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/bench/long_context_test_case.py --port 31333
+cd ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization && python ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization/fast_eval_quantization.py --mode eval --api-base http://127.0.0.1:31333
+echo "=== Smax (unlimited) ==="
+nohup python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31333 \
+    --dataset-name custom --dataset-path ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/bench/competition_bench_64.jsonl \
+    --num-prompts 64 --flush-cache \
+    > ~/compass_max_posttrain_1/.cz/sala/64_concurrency_dense.log 2>&1 &
+
+cd ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/SOAR-Toolkit
+nohup python3 eval_model.py \
+  --api_base http://127.0.0.1:31333 \
+  --model_path /home/work/compass_max_posttrain_1/.cz/sala/model_gptq_int4_dense_smooth \
+  --data_path eval_dataset/perf_public_set.jsonl \
+  --concurrency 64 \
+  --num_samples 150 \
+  --verbose \
+  > ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/logs/eval_sala_dense_0417.log 2>&1 &
+```
+
+
+
+
+
+
+
+
+
 
 
 
@@ -237,63 +369,8 @@ tail -f ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/logs/model_gptq_int4
 ```
 
 
-## Deploy GPTQ Models
-
-
-Dense:
+Benchmarking:
 ```bash
-source ~/compass_max_posttrain_1/miniconda3/bin/activate
-conda activate ~/compass_max_posttrain_1/.cz/sala/sglang_env
-rm -rf ~/.triton/cache
-rm -rf ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_flashinfer/sglang/srt/layers/attention/__pycache__
-fuser -k -9 31335/tcp
-# pip install -e vendor_flashinfer/sparse_decode_kernel/ --no-build-isolation
-# uv pip install --no-deps -e ~/compass_max_posttrain_1/.cz/sala/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python
-# uv pip install --no-deps -e ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_lightning
-# uv pip install --no-deps -e ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_flashinfer
-uv pip install --no-deps -e ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_cp
-export SGLANG_SPARSE_PREFILL=1
-export SGLANG_SPARSE_DECODE=1
-# export SGLANG_SPARSE_TOPK=64
-export SGLANG_DENSE_LEN=32768
-export LD_LIBRARY_PATH=/home/work/compass_max_posttrain_1/.cz/sala/sglang_env/lib/python3.10/site-packages/torch/lib:/home/work/compass_max_posttrain_1/.cz/sala/sglang_env/lib/python3.10/site-packages/nvidia/cusparselt/lib:$LD_LIBRARY_PATH
-export CUDA_HOME=$CONDA_PREFIX
-export PYTORCH_ALLOC_CONF=expandable_segments:True
-export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
-CUDA_VISIBLE_DEVICES=7 \
-nohup python3 -m sglang.launch_server \
-    --model-path /home/work/compass_max_posttrain_1/.cz/sala/model_gptq_int4_dense_smooth \
-    --port 31335 \
-    --quantization gptq_marlin \
-    --kv-cache-dtype fp8_e5m2 \
-    --dtype bfloat16 \
-    --disable-radix-cache \
-    --max-running-requests 64 \
-    --attention-backend flashinfer \
-    --chunked-prefill-size 32768 \
-    --mem-fraction-static 0.82 \
-    --max-mamba-cache-size 64 \
-    --log-level info \
-    > ~/compass_max_posttrain_1/.cz/sala/server.log 2>&1 &
-
-python ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/bench/long_context_test_case.py
-cd ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization && python ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization/fast_eval_quantization.py --mode eval --api-base http://127.0.0.1:31333
-echo "=== Smax (unlimited) ==="
-python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31333 \
-    --dataset-name custom --dataset-path ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/bench/competition_bench_64.jsonl \
-    --num-prompts 64 --flush-cache
-
-cd ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/SOAR-Toolkit
-nohup python3 eval_model.py \
-  --api_base http://127.0.0.1:31333 \
-  --model_path ~/compass_max_posttrain_1/.cz/sala/model_gptq_int4_dense_smooth \
-  --data_path eval_dataset/perf_public_set.jsonl \
-  --concurrency 64 \
-  --num_samples 150 \
-  --verbose \
-  > ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/logs/eval_sala_lightning.log 2>&1 &
-
-
 fuser -k -9 31333/tcp
 # uv pip install --no-deps -e ~/compass_max_posttrain_1/.cz/sala/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python
 # uv pip install --no-deps -e ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_flashinfer
