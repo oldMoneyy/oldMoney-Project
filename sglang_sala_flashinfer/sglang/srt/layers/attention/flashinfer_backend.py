@@ -859,9 +859,9 @@ class FlashInferAttnBackend(AttentionBackend):
                     )
                     torch.cuda.synchronize()
                     _t_sparse = _time.perf_counter() - _t0
-                    logger.info(
+                    print(
                         f"[SPARSE-PAGED] layer={layer.layer_id} "
-                        f"time={_t_sparse:.4f}s"
+                        f"time={_t_sparse:.4f}s", flush=True
                     )
                 else:
                     _t0 = _time.perf_counter()
@@ -874,9 +874,9 @@ class FlashInferAttnBackend(AttentionBackend):
                     )
                     torch.cuda.synchronize()
                     _t_dense = _time.perf_counter() - _t0
-                    logger.info(
+                    print(
                         f"[DENSE-PAGED] layer={layer.layer_id} "
-                        f"time={_t_dense:.4f}s"
+                        f"time={_t_dense:.4f}s", flush=True
                     )
 
                 o, _ = merge_state(o1, s1, o2, s2)
@@ -1147,10 +1147,10 @@ class FlashInferAttnBackend(AttentionBackend):
         )
 
         sparse_wrapper.end_forward()
-        logger.info(
+        print(
             f"[SPARSE-DETAIL] layer={layer.layer_id} "
             f"filtered_tokens={total_tokens} vs full_prefix={sum(prefix_lens[:bs])} "
-            f"ratio={total_tokens/max(1,sum(prefix_lens[:bs])):.2f}"
+            f"ratio={total_tokens/max(1,sum(prefix_lens[:bs])):.2f}", flush=True
         )
         return o, s
 

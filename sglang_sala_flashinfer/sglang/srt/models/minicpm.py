@@ -214,12 +214,16 @@ class MiniCPMAttention(nn.Module):
             _t_meta = _time.perf_counter() - _t_meta
             if sparse_meta is not None:
                 kwargs["sparse_prefill_metadata"] = sparse_meta
-                import logging as _logging
-                _logging.getLogger("sglang").info(
+                print(
                     f"[SPARSE-META] layer={self.attn.layer_id} "
                     f"prefix={sparse_meta['prefix_lens']} "
                     f"dense_len={sparse_meta['dense_len']} "
-                    f"time={_t_meta:.4f}s"
+                    f"time={_t_meta:.4f}s", flush=True
+                )
+            else:
+                print(
+                    f"[SPARSE-META] layer={self.attn.layer_id} "
+                    f"returned None, time={_t_meta:.4f}s", flush=True
                 )
 
         # Sparse decode: compute topk blocks to populate _decode_block_cache.
