@@ -206,11 +206,21 @@ class MiniCPMAttention(nn.Module):
             and forward_batch.forward_mode.is_extend()
             and hasattr(self, '_sparse_config')
         ):
+            import time as _time
+            _t_meta = _time.perf_counter()
             sparse_meta = compute_sparse_prefill_metadata(
                 q, k, forward_batch, self.attn, self._sparse_config,
             )
+            _t_meta = _time.perf_counter() - _t_meta
             if sparse_meta is not None:
                 kwargs["sparse_prefill_metadata"] = sparse_meta
+                import logging as _logging
+                _logging.getLogger("sglang").info(
+                    f"[SPARSE-META] layer={self.attn.layer_id} "
+                    f"prefix={sparse_meta['prefix_lens']} "
+                    f"dense_len={sparse_meta['dense_len']} "
+                    f"time={_t_meta:.4f}s"
+                )
 
         # Sparse decode: compute topk blocks to populate _decode_block_cache.
         # The cache is read by update_sparse_decode in the indices updater.
