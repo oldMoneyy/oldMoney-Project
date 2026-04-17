@@ -308,10 +308,12 @@ class FlashInferAttnBackend(AttentionBackend):
 
         # Sparse decode constant: max KV tokens per request in sparse mode
         # dense_len(8192) + window_size(2048) + topk*block_size
-        # Default topk=64, block_size=64 → 14336. With SGLANG_SPARSE_TOPK override, compute dynamically.
+        # Default topk=64, block_size=64 → 14336. With SGLANG_SPARSE_TOPK/SGLANG_DENSE_LEN override, compute dynamically.
         _topk_override = int(os.environ.get("SGLANG_SPARSE_TOPK", "0"))
         _effective_topk = _topk_override if _topk_override > 0 else 64
-        self._sparse_decode_max_kv_per_req = 8192 + 2048 + _effective_topk * 64
+        _dense_len_override = int(os.environ.get("SGLANG_DENSE_LEN", "0"))
+        _effective_dense_len = _dense_len_override if _dense_len_override > 0 else 8192
+        self._sparse_decode_max_kv_per_req = _effective_dense_len + 2048 + _effective_topk * 64
 
     def _process_multi_item_scoring(
         self, forward_batch: ForwardBatch

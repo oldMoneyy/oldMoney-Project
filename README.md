@@ -75,9 +75,9 @@ sleep 3 && tail -f server_7.log
 
 
 # simple long context cases tests
-python ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/bench/long_context_test_case.py --port 31333
+python ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/bench/long_context_test_case.py --port 31335
 
-curl http://localhost:31333/v1/chat/completions \
+curl http://localhost:31335/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "MiniCPM-SALA",
@@ -86,7 +86,7 @@ curl http://localhost:31333/v1/chat/completions \
     "temperature": 0.0
   }'
 
-curl http://localhost:31333/v1/chat/completions \
+curl http://localhost:31335/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "MiniCPM-SALA",
@@ -217,10 +217,12 @@ tail -f ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/logs/AWQ_NVFP4_env.l
 
 Pure dense quantization:
 ```bash
-source ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization/nvfp4_venv/bin/activate
+VENV=~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization/nvfp4_venv
+source $VENV/bin/activate
+export LD_LIBRARY_PATH=$VENV/lib/python3.10/site-packages/torch/lib:$LD_LIBRARY_PATH
 export TRITON_PTXAS_PATH="$(which ptxas)"
-export LD_LIBRARY_PATH=~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization/venv/lib/python3.10/site-packages/torch/lib:$LD_LIBRARY_PATH
-nohup python3 ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization/GPTQ_int4_flashinfer_dense_smoothing_gpu.py \
+rm -rf ~/.triton/cache
+nohup env PYTHONUNBUFFERED=1 python3 ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization/GPTQ_int4_flashinfer_dense_smoothing_gpu.py \
     --input ~/compass_max_posttrain_1/.cz/sala/model \
     --output ~/compass_max_posttrain_1/.cz/sala/model_gptq_int4_dense_smooth \
     --bits 4 \
@@ -240,25 +242,28 @@ tail -f ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/logs/model_gptq_int4
 
 Dense:
 ```bash
+source ~/compass_max_posttrain_1/miniconda3/bin/activate
+conda activate ~/compass_max_posttrain_1/.cz/sala/sglang_env
 rm -rf ~/.triton/cache
 rm -rf ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_flashinfer/sglang/srt/layers/attention/__pycache__
-fuser -k -9 31333/tcp
+fuser -k -9 31335/tcp
 # pip install -e vendor_flashinfer/sparse_decode_kernel/ --no-build-isolation
 # uv pip install --no-deps -e ~/compass_max_posttrain_1/.cz/sala/SGLang-MiniCPM-SALA/packages/sglang-minicpm/python
 # uv pip install --no-deps -e ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_lightning
 # uv pip install --no-deps -e ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_flashinfer
 uv pip install --no-deps -e ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_cp
-# export SGLANG_SPARSE_PREFILL=1
-# export SGLANG_SPARSE_DECODE=1
+export SGLANG_SPARSE_PREFILL=1
+export SGLANG_SPARSE_DECODE=1
 # export SGLANG_SPARSE_TOPK=64
-# Library paths (must be set before launching)
+export SGLANG_DENSE_LEN=32768
 export LD_LIBRARY_PATH=/home/work/compass_max_posttrain_1/.cz/sala/sglang_env/lib/python3.10/site-packages/torch/lib:/home/work/compass_max_posttrain_1/.cz/sala/sglang_env/lib/python3.10/site-packages/nvidia/cusparselt/lib:$LD_LIBRARY_PATH
 export CUDA_HOME=$CONDA_PREFIX
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+CUDA_VISIBLE_DEVICES=7 \
 nohup python3 -m sglang.launch_server \
-    --model-path ~/compass_max_posttrain_1/.cz/sala/model_gptq_int4_dense_smooth \
-    --port 31333 \
+    --model-path /home/work/compass_max_posttrain_1/.cz/sala/model_gptq_int4_dense_smooth \
+    --port 31335 \
     --quantization gptq_marlin \
     --kv-cache-dtype fp8_e5m2 \
     --dtype bfloat16 \

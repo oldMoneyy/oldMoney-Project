@@ -84,6 +84,12 @@ cd ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/vendor/sparse_kernel
 rm -rf build *.egg-info
 find . -name "*.so" -delete
 find . -name "*.o" -delete
+export CUDA_HOME=/home/work/compass_max_posttrain_1/.cz/sala/sglang_env
+export CPATH=$CUDA_HOME/targets/x86_64-linux/include:$CPATH
+export CPLUS_INCLUDE_PATH=$CUDA_HOME/targets/x86_64-linux/include:$CPLUS_INCLUDE_PATH
+export LIBRARY_PATH=$CUDA_HOME/targets/x86_64-linux/lib:$LIBRARY_PATH
+export LD_LIBRARY_PATH=$CUDA_HOME/targets/x86_64-linux/lib:$LD_LIBRARY_PATH
+$CUDA_HOME/bin/nvcc --version | grep release   # 必须显示 12.8
 pip install -e . --no-build-isolation --no-deps -v 2>&1 | tee /tmp/build_sparse.log
 python -c "import sparse_kernel_extension; print('sparse_kernel OK')"
 

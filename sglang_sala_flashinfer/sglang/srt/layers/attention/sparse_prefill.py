@@ -66,8 +66,13 @@ DECODE_SELECTION_INTERVAL = 16
 # Configurable topk override via environment variable
 _TOPK_OVERRIDE = int(os.environ.get("SGLANG_SPARSE_TOPK", "0"))  # 0 = use model default
 
+# Configurable dense_len override via environment variable
+_DENSE_LEN_OVERRIDE = int(os.environ.get("SGLANG_DENSE_LEN", "0"))  # 0 = use model default
+
 if _TOPK_OVERRIDE > 0:
     logger.info(f"Sparse attention topk override: {_TOPK_OVERRIDE} (model default: 64)")
+if _DENSE_LEN_OVERRIDE > 0:
+    logger.info(f"Sparse attention dense_len override: {_DENSE_LEN_OVERRIDE} (model default: 8192)")
 if SPARSE_PREFILL_ENABLED:
     logger.info("Sparse prefill ENABLED with cross-layer block sharing (anchor=layer 0)")
 if SPARSE_DECODE_ENABLED:
@@ -141,7 +146,7 @@ def set_sparse_decode_config(config) -> None:
     if not hasattr(config, 'sparse_dense_len'):
         return
     _sparse_decode_cfg = {
-        "dense_len": config.sparse_dense_len,
+        "dense_len": _DENSE_LEN_OVERRIDE if _DENSE_LEN_OVERRIDE > 0 else config.sparse_dense_len,
         "window_size": config.sparse_window_size,
         "block_size": config.sparse_block_size,
         "topk": _TOPK_OVERRIDE if _TOPK_OVERRIDE > 0 else config.sparse_topk,
@@ -308,7 +313,7 @@ def compute_sparse_prefill_metadata(
     block_size = config.sparse_block_size
     kernel_size = config.sparse_kernel_size
     kernel_stride = config.sparse_kernel_stride
-    dense_len = config.sparse_dense_len
+    dense_len = _DENSE_LEN_OVERRIDE if _DENSE_LEN_OVERRIDE > 0 else config.sparse_dense_len
     topk = _TOPK_OVERRIDE if _TOPK_OVERRIDE > 0 else config.sparse_topk
     window_size = config.sparse_window_size
     init_blocks = config.sparse_init_blocks
@@ -605,7 +610,7 @@ def compute_sparse_decode_metadata(
     block_size = config.sparse_block_size
     kernel_size = config.sparse_kernel_size
     kernel_stride = config.sparse_kernel_stride
-    dense_len = config.sparse_dense_len
+    dense_len = _DENSE_LEN_OVERRIDE if _DENSE_LEN_OVERRIDE > 0 else config.sparse_dense_len
     topk = _TOPK_OVERRIDE if _TOPK_OVERRIDE > 0 else config.sparse_topk
     window_size = config.sparse_window_size
     init_blocks = config.sparse_init_blocks
