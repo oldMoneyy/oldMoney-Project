@@ -199,6 +199,17 @@ class MiniCPMAttention(nn.Module):
             q, k = self.rotary_emb(positions, q, k)
             q, k = q.to(orig_dtype), k.to(orig_dtype)
 
+        # === DEBUG PROBE: written at top of forward, before any sparse check ===
+        if self.layer_id == 0:
+            try:
+                with open("/tmp/sparse_debug.log", "a") as _f:
+                    _f.write(f"[ENTER] layer={self.layer_id} mode={forward_batch.forward_mode} "
+                             f"sparse_prefill={SPARSE_PREFILL_ENABLED} sparse_decode={SPARSE_DECODE_ENABLED} "
+                             f"has_config={hasattr(self, '_sparse_config')} q_shape={q.shape}\n")
+                    _f.flush()
+            except Exception as _e:
+                pass
+
         # Sparse prefill: compute topk blocks for paged prefix attention
         kwargs = {}
         if (
