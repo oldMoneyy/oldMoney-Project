@@ -212,19 +212,14 @@ class MiniCPMAttention(nn.Module):
                 q, k, forward_batch, self.attn, self._sparse_config,
             )
             _t_meta = _time.perf_counter() - _t_meta
+            with open("/tmp/sparse_debug.log", "a") as _f:
+                if sparse_meta is not None:
+                    _f.write(f"[SPARSE-META] layer={self.attn.layer_id} prefix={sparse_meta['prefix_lens']} dense_len={sparse_meta['dense_len']} time={_t_meta:.4f}s\n")
+                else:
+                    _f.write(f"[SPARSE-META] layer={self.attn.layer_id} returned None time={_t_meta:.4f}s\n")
+                _f.flush()
             if sparse_meta is not None:
                 kwargs["sparse_prefill_metadata"] = sparse_meta
-                print(
-                    f"[SPARSE-META] layer={self.attn.layer_id} "
-                    f"prefix={sparse_meta['prefix_lens']} "
-                    f"dense_len={sparse_meta['dense_len']} "
-                    f"time={_t_meta:.4f}s", flush=True
-                )
-            else:
-                print(
-                    f"[SPARSE-META] layer={self.attn.layer_id} "
-                    f"returned None, time={_t_meta:.4f}s", flush=True
-                )
 
         # Sparse decode: compute topk blocks to populate _decode_block_cache.
         # The cache is read by update_sparse_decode in the indices updater.
