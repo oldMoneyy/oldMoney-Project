@@ -9,8 +9,8 @@ random.seed(42)
 # ================== 配置 ==================
 NUM_64 = 64
 NUM_32 = 32
-PATH_64 = "/opt/oldMoney-Project/bench/competition_bench_64.jsonl"
-PATH_32 = "/opt/oldMoney-Project/bench/competition_bench_32.jsonl"   # 我帮你补全了 /opt/
+PATH_64 = "~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/bench/competition_bench_64.jsonl"
+PATH_32 = "~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/bench/competition_bench_32.jsonl"   # 我帮你补全了 /opt/
 
 # Competition input distribution (tokens) — SOAR 2026 updated
 INPUT_DIST = [
