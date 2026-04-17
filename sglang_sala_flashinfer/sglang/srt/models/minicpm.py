@@ -199,17 +199,6 @@ class MiniCPMAttention(nn.Module):
             q, k = self.rotary_emb(positions, q, k)
             q, k = q.to(orig_dtype), k.to(orig_dtype)
 
-        # === DEBUG PROBE: written at top of forward, before any sparse check ===
-        if self.layer_id == 0:
-            try:
-                with open("/tmp/sparse_debug.log", "a") as _f:
-                    _f.write(f"[ENTER] layer={self.layer_id} mode={forward_batch.forward_mode} "
-                             f"sparse_prefill={SPARSE_PREFILL_ENABLED} sparse_decode={SPARSE_DECODE_ENABLED} "
-                             f"has_config={hasattr(self, '_sparse_config')} q_shape={q.shape}\n")
-                    _f.flush()
-            except Exception as _e:
-                pass
-
         # Sparse prefill: compute topk blocks for paged prefix attention
         kwargs = {}
         if (
@@ -217,18 +206,9 @@ class MiniCPMAttention(nn.Module):
             and forward_batch.forward_mode.is_extend()
             and hasattr(self, '_sparse_config')
         ):
-            import time as _time
-            _t_meta = _time.perf_counter()
             sparse_meta = compute_sparse_prefill_metadata(
                 q, k, forward_batch, self.attn, self._sparse_config,
             )
-            _t_meta = _time.perf_counter() - _t_meta
-            with open("/tmp/sparse_debug.log", "a") as _f:
-                if sparse_meta is not None:
-                    _f.write(f"[SPARSE-META] layer={self.attn.layer_id} prefix={sparse_meta['prefix_lens']} dense_len={sparse_meta['dense_len']} time={_t_meta:.4f}s\n")
-                else:
-                    _f.write(f"[SPARSE-META] layer={self.attn.layer_id} returned None time={_t_meta:.4f}s\n")
-                _f.flush()
             if sparse_meta is not None:
                 kwargs["sparse_prefill_metadata"] = sparse_meta
 

@@ -850,20 +850,12 @@ class FlashInferAttnBackend(AttentionBackend):
                 )
 
                 # Check for sparse prefill: use filtered paged wrapper
-                import time as _time
                 sparse_meta = kwargs.get("sparse_prefill_metadata")
                 if sparse_meta is not None and layer.layer_id in _MINICPM4_LAYERS:
-                    _t0 = _time.perf_counter()
                     o2, s2 = self._forward_extend_sparse_paged_lse(
                         q, layer, forward_batch, sparse_meta, logits_soft_cap,
                     )
-                    torch.cuda.synchronize()
-                    _t_sparse = _time.perf_counter() - _t0
-                    with open("/tmp/sparse_debug.log", "a") as _f:
-                        _f.write(f"[SPARSE-PAGED] layer={layer.layer_id} time={_t_sparse:.4f}s\n")
-                        _f.flush()
                 else:
-                    _t0 = _time.perf_counter()
                     o2, s2 = prefill_wrapper_paged.forward_return_lse(
                         q.view(-1, layer.tp_q_head_num, layer.head_dim),
                         forward_batch.token_to_kv_pool.get_kv_buffer(layer.layer_id),
@@ -871,11 +863,6 @@ class FlashInferAttnBackend(AttentionBackend):
                         sm_scale=layer.scaling,
                         logits_soft_cap=logits_soft_cap,
                     )
-                    torch.cuda.synchronize()
-                    _t_dense = _time.perf_counter() - _t0
-                    with open("/tmp/sparse_debug.log", "a") as _f:
-                        _f.write(f"[DENSE-PAGED] layer={layer.layer_id} time={_t_dense:.4f}s\n")
-                        _f.flush()
 
                 o, _ = merge_state(o1, s1, o2, s2)
 
@@ -1145,9 +1132,6 @@ class FlashInferAttnBackend(AttentionBackend):
         )
 
         sparse_wrapper.end_forward()
-        with open("/tmp/sparse_debug.log", "a") as _f:
-            _f.write(f"[SPARSE-DETAIL] layer={layer.layer_id} filtered_tokens={total_tokens} vs full_prefix={sum(prefix_lens[:bs])} ratio={total_tokens/max(1,sum(prefix_lens[:bs])):.2f}\n")
-            _f.flush()
         return o, s
 
     def forward_decode(

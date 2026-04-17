@@ -134,11 +134,13 @@ conda activate ~/compass_max_posttrain_1/.cz/sala/sglang_env
 rm -rf ~/.triton/cache_fi
 rm -rf ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_flashinfer/sglang/srt/layers/attention/__pycache__
 export TRITON_CACHE_DIR=~/.triton/cache_fi
-uv pip install --no-deps -e ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_flashinfer
+pip install --no-deps -e ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_flashinfer
+cd ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/vendor_flashinfer/sparse_decode_kernel                                       
+pip install --no-build-isolation .   
 export SGLANG_SPARSE_PREFILL=1
-export SGLANG_SPARSE_DECODE=1
+export SGLANG_SPARSE_DECODE=0
 # export SGLANG_SPARSE_TOPK=64
-export SGLANG_DENSE_LEN=32768
+export SGLANG_DENSE_LEN=16384
 export LD_LIBRARY_PATH=/home/work/compass_max_posttrain_1/.cz/sala/sglang_env/lib/python3.10/site-packages/torch/lib:/home/work/compass_max_posttrain_1/.cz/sala/sglang_env/lib/python3.10/site-packages/nvidia/cusparselt/lib:$LD_LIBRARY_PATH
 export CUDA_HOME=$CONDA_PREFIX
 export PYTORCH_ALLOC_CONF=expandable_segments:True
