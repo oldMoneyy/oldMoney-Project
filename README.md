@@ -50,14 +50,14 @@ source ~/compass_max_posttrain_1/miniconda3/bin/activate
 conda activate ~/compass_max_posttrain_1/.cz/sala/sglang_env
 
 cd ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project
-nvidia-smi --id=7 --query-compute-apps=pid --format=csv,noheader | xargs -r kill -9
+nvidia-smi --id=5 --query-compute-apps=pid --format=csv,noheader | xargs -r kill -9
 fuser -k -9 31333/tcp 2>/dev/null
 sleep 2
 
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
-CUDA_VISIBLE_DEVICES=6 \
+CUDA_VISIBLE_DEVICES=5 \
 LD_PRELOAD=$(python -c "import nvidia.cuda_runtime.lib,os;print(os.path.join(os.path.dirname(nvidia.cuda_runtime.lib.__file__),'libcudart.so.12'))") \
 nohup python -m sglang.launch_server \
     --model ~/compass_max_posttrain_1/.cz/sala/model \
@@ -66,10 +66,10 @@ nohup python -m sglang.launch_server \
     --attention-backend minicpm_flashinfer \
     --chunked-prefill-size 8192 \
     --max-running-requests 32 \
-    --port 31335 \
+    --port 31336 \
     --dense-as-sparse \
     --mem-fraction-static 0.82 \
-    > server_7.log 2>&1 &
+    > server_original.log 2>&1 &
 
 sleep 3 && tail -f server_7.log
 
@@ -77,7 +77,7 @@ sleep 3 && tail -f server_7.log
 # simple long context cases tests
 python ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/bench/long_context_test_case.py --port 31335
 
-curl http://localhost:31335/v1/chat/completions \
+curl http://localhost:31336/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "MiniCPM-SALA",
@@ -86,7 +86,7 @@ curl http://localhost:31335/v1/chat/completions \
     "temperature": 0.0
   }'
 
-curl http://localhost:31335/v1/chat/completions \
+curl http://localhost:31336/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "MiniCPM-SALA",
@@ -131,20 +131,27 @@ Sparse Deployment:
 ```bash
 source ~/compass_max_posttrain_1/miniconda3/bin/activate
 conda activate ~/compass_max_posttrain_1/.cz/sala/sglang_env
+# --- Toolchain env FIRST ---
+export CUDA_HOME=$CONDA_PREFIX
+export PATH=$CUDA_HOME/bin:$PATH
+export LD_LIBRARY_PATH=$CONDA_PREFIX/lib/python3.10/site-packages/torch/lib:$CONDA_PREFIX/lib/python3.10/site-packages/nvidia/cusparselt/lib:$CUDA_HOME/lib64:$LD_LIBRARY_PATH
+unset CUDA_PATH
+# --- Caches ---
 rm -rf ~/.triton/cache_fi
 rm -rf ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_flashinfer/sglang/srt/layers/attention/__pycache__
 export TRITON_CACHE_DIR=~/.triton/cache_fi
-pip install --no-deps -e ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_flashinfer
-cd ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/vendor_flashinfer/sparse_decode_kernel                                       
-pip install --no-build-isolation .   
-export SGLANG_SPARSE_PREFILL=1
-export SGLANG_SPARSE_DECODE=0
-# export SGLANG_SPARSE_TOPK=64
-export SGLANG_DENSE_LEN=16384
-export LD_LIBRARY_PATH=/home/work/compass_max_posttrain_1/.cz/sala/sglang_env/lib/python3.10/site-packages/torch/lib:/home/work/compass_max_posttrain_1/.cz/sala/sglang_env/lib/python3.10/site-packages/nvidia/cusparselt/lib:$LD_LIBRARY_PATH
-export CUDA_HOME=$CONDA_PREFIX
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+# --- Builds ---
+pip install --no-deps -e ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_flashinfer
+cd ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/vendor_flashinfer/sparse_decode_kernel
+pip install --no-build-isolation .
+# --- Runtime flags ---
+export SGLANG_SPARSE_PREFILL=1
+export SGLANG_SPARSE_DECODE=0
+export SGLANG_SPARSE_TOPK=64
+export SGLANG_DENSE_LEN=65536
+# --- Launch ---
 CUDA_VISIBLE_DEVICES=7 \
 nohup python3 -m sglang.launch_server \
     --model-path /home/work/compass_max_posttrain_1/.cz/sala/model_gptq_int4_dense_smooth \
