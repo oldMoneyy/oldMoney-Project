@@ -1,0 +1,19 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/work/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_cp/sglang/bench_serving.py", line 45, in <module>
+    from transformers import (
+  File "/opt/venv/lib/python3.12/site-packages/transformers/__init__.py", line 27, in <module>
+    from . import dependency_versions_check
+  File "/opt/venv/lib/python3.12/site-packages/transformers/dependency_versions_check.py", line 16, in <module>
+    from .utils.versions import require_version, require_version_core
+  File "/opt/venv/lib/python3.12/site-packages/transformers/utils/__init__.py", line 24, in <module>
+    from .auto_docstring import (
+  File "/opt/venv/lib/python3.12/site-packages/transformers/utils/auto_docstring.py", line 30, in <module>
+    from .generic import ModelOutput
+  File "/opt/venv/lib/python3.12/site-packages/transformers/utils/generic.py", line 51, in <module>
+    import torch
+  File "/usr/local/lib/python3.12/dist-packages/torch/__init__.py", line 427, in <module>
+    from torch._C import *  # noqa: F403
+    ^^^^^^^^^^^^^^^^^^^^^^
+ImportError: libcusparseLt.so.0: cannot open shared object file: No such file or directory

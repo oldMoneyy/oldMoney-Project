@@ -46,3 +46,5 @@ nohup: ignoring input
 [2026-04-12 05:03:10] [http_server] Error: Request is disconnected from the client side (type 1). Abort request obj.rid='bbbcd7dc8053499c95da9df7bfaad634'
 /home/work/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_cp/sglang/srt/entrypoints/http_server.py:649: FastAPIDeprecationWarning: ORJSONResponse is deprecated, FastAPI now serializes data directly to JSON bytes via Pydantic when a return type or response model is set, which is faster and doesn't need a custom response class. Read more in the FastAPI docs: https://fastapi.tiangolo.com/advanced/custom-response/#orjson-or-response-model and https://fastapi.tiangolo.com/tutorial/response-model/
   return _create_error_response(e)
+/home/work/compass_max_posttrain_1/.cz/sala/sglang_env_20260411/lib/python3.10/multiprocessing/resource_tracker.py:224: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '

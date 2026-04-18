@@ -1,0 +1,10 @@
+Model: /home/work/compass_max_posttrain_1/.cz/sala/model_gptq_int4_dense_smooth
+Data: eval_dataset/perf_public_set.jsonl
+Original Accuracy: 78.11%
+Normalized Accuracy: 97.64%
+Num Samples: 150
+Total Duration: 1447.48 s
+Total Output Tokens: 1044544
+Average Input Tokens: 57628.8
+Average Output Tokens: 6963.6
+TPS: 721.63

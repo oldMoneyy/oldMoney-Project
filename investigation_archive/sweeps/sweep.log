@@ -1,0 +1,119 @@
+nohup: ignoring input
+=== Standard sweep ===
+Sparse port: 31335
+Dense  port: 31333
+Sizes: [50000, 60000, 70000, 90000]
+Runs per size: 2
+Max output tokens: 64
+Sequential firing (never parallel) to avoid GPU contention
+
+  size=  50000 run=1/2: sparse=  5.54s  dense=  5.86s  Δ= +5.4%
+  size=  50000 run=2/2: sparse=  5.55s  dense=  5.85s  Δ= +5.2%
+  size=  50000 SUMMARY: sparse_min=5.54s  dense_min=5.85s  speedup=+5.3%  (actual_tokens=70035)
+
+  size=  60000 run=1/2: sparse=  7.10s  dense=  7.38s  Δ= +3.8%
+  size=  60000 run=2/2: sparse=  7.07s  dense=  7.36s  Δ= +3.9%
+  size=  60000 SUMMARY: sparse_min=7.07s  dense_min=7.36s  speedup=+3.9%  (actual_tokens=84035)
+
+  size=  70000 run=1/2: sparse=  8.63s  dense=  8.94s  Δ= +3.4%
+  size=  70000 run=2/2: sparse=  8.64s  dense=  8.96s  Δ= +3.5%
+  size=  70000 SUMMARY: sparse_min=8.63s  dense_min=8.94s  speedup=+3.4%  (actual_tokens=98035)
+
+  size=  90000 run=1/2: sparse= 11.35s  dense= 12.68s  Δ=+10.5%
+  size=  90000 run=2/2: sparse= 11.34s  dense= 12.66s  Δ=+10.4%
+  size=  90000 SUMMARY: sparse_min=11.34s  dense_min=12.66s  speedup=+10.4%  (actual_tokens=126035)
+
+========================================================================
+FINAL SUMMARY
+========================================================================
+    size    actual    sparse     dense    speedup
+   50000     70035     5.54s     5.85s      +5.3%
+   60000     84035     7.07s     7.36s      +3.9%
+   70000     98035     8.63s     8.94s      +3.4%
+   90000    126035    11.34s    12.66s     +10.4%
+
+Crossover point (first size with speedup >= +5%):
+  target 50000 (actual 70035 tokens)
+  speedup +5.3%
+
+Raw data saved to sparse_critical_sweep.json
+
+=== Fine-grained sweep ===
+Sparse port: 31335
+Dense  port: 31333
+Sizes: [55000, 65000, 75000, 85000]
+Runs per size: 2
+Max output tokens: 64
+Sequential firing (never parallel) to avoid GPU contention
+
+  size=  55000 run=1/2: sparse=  6.31s  dense=  6.62s  Δ= +4.7%
+  size=  55000 run=2/2: sparse=  6.32s  dense=  6.61s  Δ= +4.3%
+  size=  55000 SUMMARY: sparse_min=6.31s  dense_min=6.61s  speedup=+4.5%  (actual_tokens=77035)
+
+  size=  65000 run=1/2: sparse=  7.84s  dense=  8.15s  Δ= +3.7%
+  size=  65000 run=2/2: sparse=  7.89s  dense=  8.16s  Δ= +3.4%
+  size=  65000 SUMMARY: sparse_min=7.84s  dense_min=8.15s  speedup=+3.7%  (actual_tokens=91035)
+
+  size=  75000 run=1/2: sparse=  8.61s  dense=  9.90s  Δ=+13.0%
+  size=  75000 run=2/2: sparse=  8.56s  dense=  9.88s  Δ=+13.4%
+  size=  75000 SUMMARY: sparse_min=8.56s  dense_min=9.88s  speedup=+13.4%  (actual_tokens=105035)
+
+  size=  85000 run=1/2: sparse= 10.41s  dense= 11.74s  Δ=+11.3%
+  size=  85000 run=2/2: sparse= 10.40s  dense= 11.72s  Δ=+11.3%
+  size=  85000 SUMMARY: sparse_min=10.40s  dense_min=11.72s  speedup=+11.3%  (actual_tokens=119035)
+
+========================================================================
+FINAL SUMMARY
+========================================================================
+    size    actual    sparse     dense    speedup
+   55000     77035     6.31s     6.61s      +4.5%
+   65000     91035     7.84s     8.15s      +3.7%
+   75000    105035     8.56s     9.88s     +13.4%
+   85000    119035    10.40s    11.72s     +11.3%
+
+Crossover point (first size with speedup >= +5%):
+  target 75000 (actual 105035 tokens)
+  speedup +13.4%
+
+Raw data saved to sparse_critical_fine.json
+
+=== With warmup ===
+Sparse port: 31335
+Dense  port: 31333
+Sizes: [50000, 60000, 70000, 90000]
+Runs per size: 2
+Max output tokens: 64
+Sequential firing (never parallel) to avoid GPU contention
+
+Warmup: tiny ping to each server...
+
+  size=  50000 run=1/2: sparse=  5.56s  dense=  5.87s  Δ= +5.3%
+  size=  50000 run=2/2: sparse=  5.55s  dense=  5.87s  Δ= +5.4%
+  size=  50000 SUMMARY: sparse_min=5.55s  dense_min=5.87s  speedup=+5.4%  (actual_tokens=70035)
+
+  size=  60000 run=1/2: sparse=  7.08s  dense=  7.38s  Δ= +4.0%
+  size=  60000 run=2/2: sparse=  7.07s  dense=  7.36s  Δ= +4.0%
+  size=  60000 SUMMARY: sparse_min=7.07s  dense_min=7.36s  speedup=+4.0%  (actual_tokens=84035)
+
+  size=  70000 run=1/2: sparse=  8.66s  dense=  8.94s  Δ= +3.1%
+  size=  70000 run=2/2: sparse=  8.62s  dense=  8.94s  Δ= +3.6%
+  size=  70000 SUMMARY: sparse_min=8.62s  dense_min=8.94s  speedup=+3.6%  (actual_tokens=98035)
+
+  size=  90000 run=1/2: sparse= 11.34s  dense= 12.66s  Δ=+10.4%
+  size=  90000 run=2/2: sparse= 11.35s  dense= 12.69s  Δ=+10.6%
+  size=  90000 SUMMARY: sparse_min=11.34s  dense_min=12.66s  speedup=+10.4%  (actual_tokens=126035)
+
+========================================================================
+FINAL SUMMARY
+========================================================================
+    size    actual    sparse     dense    speedup
+   50000     70035     5.55s     5.87s      +5.4%
+   60000     84035     7.07s     7.36s      +4.0%
+   70000     98035     8.62s     8.94s      +3.6%
+   90000    126035    11.34s    12.66s     +10.4%
+
+Crossover point (first size with speedup >= +5%):
+  target 50000 (actual 70035 tokens)
+  speedup +5.4%
+
+Raw data saved to sparse_critical_warmup.json
