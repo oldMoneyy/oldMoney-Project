@@ -165,6 +165,7 @@ nohup python3 -m sglang.launch_server \
     --chunked-prefill-size 32768 \
     --mem-fraction-static 0.82 \
     --max-mamba-cache-size 64 \
+    --enable-torch-compile \
     --log-level info \
     > ~/compass_max_posttrain_1/.cz/sala/server_sparse.log 2>&1 &
 
@@ -220,6 +221,7 @@ nohup python3 -m sglang.launch_server \
     --attention-backend flashinfer \
     --chunked-prefill-size 32768 \
     --mem-fraction-static 0.82 \
+    --enable-torch-compile \
     --max-mamba-cache-size 64 \
     --log-level info \
     > ~/compass_max_posttrain_1/.cz/sala/server_dense.log 2>&1 &
@@ -1260,3 +1262,61 @@ Key observations:
   model-inherent limitations, not quantization damage.
 - The 97% relative accuracy threshold = 80 * 0.97 = 77.6. GPTQ at 78.69% is **barely
   above threshold** (1.09pp margin). NVFP4 at 80.53% has a safer margin (2.93pp).
+
+## Eval Dataset Distribution (perf_public_set.jsonl)
+
+150 requests, tokenized with MiniCPM-SALA tokenizer (model_gptq_int4_dense_smooth).
+Tokenizer counts are ~8 tokens lower than dataset's `prompt_tokens` field (chat template overhead).
+
+### Input length
+
+| Stat | Tokens |
+|------|--------|
+| min | 94 |
+| p10 | 241 |
+| p25 | 28,520 |
+| median | 56,280 |
+| p75 | 114,346 |
+| p90 | 127,138 |
+| p95 | 127,501 |
+| p99 | 127,690 |
+| max | 127,731 |
+| mean | 57,620 |
+| total | 8,642,966 |
+
+### Output length
+
+| Stat | Tokens |
+|------|--------|
+| min | 69 |
+| p10 | 103 |
+| p25 | 216 |
+| median | 616 |
+| p75 | 1,044 |
+| p90 | 6,620 |
+| p95 | 7,918 |
+| p99 | 10,010 |
+| max | 10,235 |
+| mean | 1,646 |
+| total | 246,942 |
+
+### Input length buckets
+
+| Bucket | Count | % | Sum Input | Sum Output |
+|--------|-------|---|-----------|------------|
+| 0-4K | 30 | 20.0% | 7,828 | 3,111 |
+| 4K-16K | 0 | 0.0% | 0 | 0 |
+| 16K-32K | 40 | 26.7% | 1,213,004 | 14,742 |
+| 32K-64K | 40 | 26.7% | 2,442,690 | 28,903 |
+| 64K-128K | 40 | 26.7% | 4,979,444 | 200,186 |
+| 128K+ | 0 | 0.0% | 0 | 0 |
+
+### By task
+
+| Task | Count | Avg Input | Avg Output |
+|------|-------|-----------|------------|
+| cwe | 30 | 74,156 | 679 |
+| fwe | 30 | 68,145 | 811 |
+| mcq | 30 | 260 | 6,293 |
+| niah | 30 | 73,974 | 342 |
+| qa | 30 | 71,561 | 103 |
