@@ -1,0 +1,22 @@
+python3 -c "
+from transformers import AutoTokenizer
+tokenizer = AutoTokenizer.from_pretrained('/home/work/compass_max_posttrain_1/.cz/sala/model', trust_remote_code=True)
+text = 'Long-sequence processing is a critical capability'
+ids = tokenizer.encode(text, add_special_tokens=False)
+print('Text:', repr(text))
+print('Token count:', len(ids))
+print('Token IDs:', ids)
+print()
+for i, tid in enumerate(ids):
+    print('  [%2d] id=%6d  ->  %r' % (i, tid, tokenizer.decode([tid])))
+print()
+print('BOS token id:', tokenizer.bos_token_id)
+ids_bos = tokenizer.encode(text, add_special_tokens=True)
+print('With BOS:', ids_bos)
+print('Count with BOS:', len(ids_bos))
+print()
+target_ids = tokenizer.encode(' for', add_special_tokens=False)
+print('Target \" for\" IDs:', target_ids)
+for tid in target_ids:
+    print('  id=%6d  ->  %r' % (tid, tokenizer.decode([tid])))
+"
