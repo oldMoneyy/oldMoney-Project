@@ -60,6 +60,13 @@ DECODE_ANCHOR_LAYER = 0
 # Sparse prefill: anchor layer for block selection (compute once, reuse for all 8 layers)
 PREFILL_ANCHOR_LAYER = 0
 
+# Per-layer anchor mode: if enabled, every MiniCPM4 layer computes its own topk
+# instead of reusing layer 0's selection. Aligned with paper, costs ~8x block
+# selection compute but may improve accuracy for quantized models.
+_PER_LAYER_PREFILL_ANCHOR = os.environ.get("SGLANG_PER_LAYER_PREFILL_ANCHOR", "0") == "1"
+if _PER_LAYER_PREFILL_ANCHOR:
+    logger.info("Per-layer prefill anchor ENABLED: each MiniCPM4 layer computes its own topk")
+
 # Sparse decode: recompute block selection every N decode steps
 DECODE_SELECTION_INTERVAL = 16
 
@@ -333,7 +340,11 @@ def compute_sparse_prefill_metadata(
     req_pool_indices = forward_batch.req_pool_indices
 
     # Non-anchor layers: reuse cached blocks from the anchor layer
-    is_anchor = (layer_id == PREFILL_ANCHOR_LAYER)
+    if _PER_LAYER_PREFILL_ANCHOR:
+        # Every MiniCPM4 layer is its own anchor — compute topk independently
+        is_anchor = (layer_id in MINICPM4_LAYERS)
+    else:
+        is_anchor = (layer_id == PREFILL_ANCHOR_LAYER)
     if not is_anchor:
         sparse_block_indices = []
         any_sparse = False

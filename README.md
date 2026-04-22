@@ -147,10 +147,11 @@ pip install --no-deps -e ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sgl
 cd ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/vendor_flashinfer/sparse_decode_kernel
 pip install --no-build-isolation .
 # --- Runtime flags ---
+export SGLANG_PER_LAYER_PREFILL_ANCHOR=1
 export SGLANG_SPARSE_PREFILL=1
 export SGLANG_SPARSE_DECODE=0
 export SGLANG_SPARSE_TOPK=64
-export SGLANG_DENSE_LEN=65536
+export SGLANG_DENSE_LEN=8192
 # --- Launch ---
 CUDA_VISIBLE_DEVICES=7 \
 nohup python3 -m sglang.launch_server \
@@ -185,7 +186,7 @@ nohup python3 eval_model.py \
   --concurrency 64 \
   --num_samples 150 \
   --verbose \
-  > ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/logs/eval_sala_sparse_0417.log 2>&1 &
+  > ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/logs/eval_sala_sparse_0421.log 2>&1 &
 ```
 
 
