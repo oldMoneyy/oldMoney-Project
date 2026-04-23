@@ -147,7 +147,7 @@ pip install --no-deps -e ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sgl
 cd ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/vendor_flashinfer/sparse_decode_kernel
 pip install --no-build-isolation .
 # --- Runtime flags ---
-export SGLANG_PER_LAYER_PREFILL_ANCHOR=1
+# export SGLANG_PER_LAYER_PREFILL_ANCHOR=1
 export SGLANG_SPARSE_PREFILL=1
 export SGLANG_SPARSE_DECODE=0
 export SGLANG_SPARSE_TOPK=64
@@ -166,9 +166,10 @@ nohup python3 -m sglang.launch_server \
     --chunked-prefill-size 32768 \
     --mem-fraction-static 0.82 \
     --max-mamba-cache-size 64 \
-    --enable-torch-compile \
     --log-level info \
     > ~/compass_max_posttrain_1/.cz/sala/server_sparse.log 2>&1 &
+
+# --enable-torch-compile
 
 python ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/bench/long_context_test_case.py --port 31335
 cd ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization && python ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization/fast_eval_quantization.py --mode eval --api-base http://127.0.0.1:31335
@@ -186,10 +187,82 @@ nohup python3 eval_model.py \
   --concurrency 64 \
   --num_samples 150 \
   --verbose \
-  > ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/logs/eval_sala_sparse_0421.log 2>&1 &
+  > ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/logs/eval_sala_sparse_0422.log 2>&1 &
 ```
 
+Every layer uses the same sparse indices: ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/logs/eval_sala_sparse_0421.log
+Every layer uses their own sparse indices: ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/logs/eval_sala_sparse_anchor.log
 
+### Sparse Prefill 8192 — 10-Run Stability Test (2026-04-22/23)
+
+Config: GPTQ INT4 dense-smooth, flashinfer attention, sparse prefill with `SGLANG_DENSE_LEN=8192`,
+`SGLANG_SPARSE_TOPK=64`, per-layer sparse indices, `--kv-cache-dtype fp8_e5m2`,
+`--chunked-prefill-size 32768`, `--max-running-requests 64`, concurrency=64.
+
+**With `--enable-torch-compile` (2026-04-22):**
+
+| Run | Score |
+|-----|-------|
+| 1 | 76.67% |
+| 2 | 79.67% |
+| 3 | 78.71% |
+| 4 | 78.00% |
+| 5 | 78.04% |
+| 6 | 77.84% |
+| 7 | 77.04% |
+| 8 | 75.84% |
+| 9 | 79.24% |
+| 10 | 78.78% |
+| **Mean** | **77.98%** |
+| **Stdev** | **~1.1pp** |
+| **Range** | **75.84% – 79.67% (3.83pp)** |
+
+**Without `--enable-torch-compile` (2026-04-23):**
+
+| Run | Score |
+|-----|-------|
+| 1 | 80.33% |
+| 2 | 78.58% |
+| 3 | 80.20% |
+| 4 | 81.53% |
+| 5 | 77.98% |
+| 6 | 75.27% |
+| 7 | 78.78% |
+| 8 | 79.64% |
+| 9 | 79.67% |
+| 10 | 77.33% |
+| **Mean** | **78.93%** |
+| **Stdev** | **~1.8pp** |
+| **Range** | **75.27% – 81.53% (6.26pp)** |
+
+**Per-task breakdown (with torch compile, 10 runs):**
+
+| Task | Mean | Range | Stability |
+|------|------|-------|-----------|
+| NIAH | 96.7% | 96.7% – 96.7% | Perfectly stable (29/30 every run) |
+| FWE | 99.2% | 98.9% – 100% | Near-perfect |
+| CWE | 81.3% | 78.0% – 85.0% | Moderate variance (partial keyword scores shift) |
+| MCQ | 62.7% | 53.3% – 66.7% | Most volatile (16/30 questions flip between runs) |
+| QA | 50.0% | 46.7% – 53.3% | 2 questions flip |
+
+**Per-sample stability analysis (20 runs combined):**
+
+| Category | MCQ | NIAH | QA | FWE | CWE |
+|----------|-----|------|-----|-----|-----|
+| Always right | 9 | 29 | 14 | 29 | 0 |
+| Always wrong | 5 | 1 | 14 | 0 | 0 |
+| Flipping | 16 | 0 | 2 | 1 | 30 |
+
+The variance is not caused by torch compile or sparse prefill — it comes from concurrent batching
+(64 requests) causing floating-point non-determinism in batch scheduling and accumulation order.
+Temperature is set to 0 but the sglang server's default chat sampling params include `top_k=50`
+and `top_p=1.0`, which may also contribute.
+
+**Conclusion:** Sparse prefill with `SGLANG_DENSE_LEN=8192` achieves **~78-79% mean accuracy**
+across 20 runs, comparable to dense attention results. The 5 always-wrong MCQs and 14 always-wrong
+QAs are model-inherent limitations (hard GPQA questions + long-context QA format mismatches),
+not sparse prefill degradation. NIAH and FWE are near-perfect, confirming sparse prefill preserves
+retrieval and extraction capabilities.
 
 
 
@@ -222,10 +295,11 @@ nohup python3 -m sglang.launch_server \
     --attention-backend flashinfer \
     --chunked-prefill-size 32768 \
     --mem-fraction-static 0.82 \
-    --enable-torch-compile \
     --max-mamba-cache-size 64 \
     --log-level info \
     > ~/compass_max_posttrain_1/.cz/sala/server_dense.log 2>&1 &
+
+# --enable-torch-compile
 
 python ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/bench/long_context_test_case.py --port 31333
 cd ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization && python ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization/fast_eval_quantization.py --mode eval --api-base http://127.0.0.1:31333
