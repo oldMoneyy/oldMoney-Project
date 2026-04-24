@@ -434,9 +434,7 @@ def should_use_atomic_add_reduce(
     if device.type != "cuda":
         return False
 
-    # For small M (decode), atomic_add eliminates barrier sync overhead.
-    # The C++ side has a more refined threshold; Python gate just enables it.
-    if m <= 16:
+    if m <= 16 and n < 2048 and k >= 2048:
         return True
 
     # For larger M, only use when m*n is small and k is large

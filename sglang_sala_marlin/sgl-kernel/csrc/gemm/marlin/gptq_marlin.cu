@@ -837,10 +837,8 @@ void marlin_mm(
 
     cudaFuncSetAttribute(kernel, cudaFuncAttributeMaxDynamicSharedMemorySize, max_shared_mem_new);
 
-    // For small M (decode), atomic_add is always beneficial — eliminates
-    // barrier sync serialization overhead between thread blocks
     bool part_use_atomic_add = use_atomic_add &&
-        (prob_m_split <= 16 || div_ceil(prob_m_split, 64) * prob_n <= 16384);
+        (prob_m_split <= 16 && prob_n < 2048 || div_ceil(prob_m_split, 64) * prob_n <= 2048);
 
     // avoid ">>>" being formatted to "> > >"
     // clang-format off
