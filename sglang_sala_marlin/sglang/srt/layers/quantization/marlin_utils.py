@@ -43,7 +43,26 @@ except ImportError:
 _is_cuda = is_cuda()
 
 if _is_cuda:
-    from sgl_kernel import gptq_marlin_gemm
+    try:
+        import marlin_custom
+        from marlin_custom import gptq_marlin_gemm as _raw_gptq_marlin_gemm
+        import functools
+
+        @functools.wraps(_raw_gptq_marlin_gemm)
+        def gptq_marlin_gemm(a, c, b_q_weight, b_scales, global_scale,
+                             b_zeros, g_idx, perm, workspace, b_q_type,
+                             size_m, size_n, size_k, is_k_full=True,
+                             use_atomic_add=False, use_fp32_reduce=False,
+                             is_zp_float=False):
+            b_q_type_id = b_q_type.id if hasattr(b_q_type, 'id') else int(b_q_type)
+            return _raw_gptq_marlin_gemm(
+                a, c, b_q_weight, b_scales, global_scale,
+                b_zeros, g_idx, perm, workspace, b_q_type_id,
+                size_m, size_n, size_k, is_k_full,
+                use_atomic_add, use_fp32_reduce, is_zp_float)
+
+    except ImportError:
+        from sgl_kernel import gptq_marlin_gemm
 
 logger = logging.getLogger(__name__)
 
@@ -408,54 +427,20 @@ def moe_awq_to_marlin_zero_points(
     return output
 
 
-def maybe_warn_marlin_atomic_add(device, dtype):
-    if torch.compiler.is_dynamo_compiling():
-        return
-    device_capability = torch.cuda.get_device_capability(device)
-    if device_capability[0] < 9 and dtype == torch.bfloat16:
-        logger.info_once(
-            "You are running Marlin kernel with bf16 on GPUs before SM90. "
-            "You can consider change to fp16 to achieve better performance "
-            "if possible."
-        )
-
-
-def maybe_warn_marlin_atomic_add_env():
-    if torch.compiler.is_dynamo_compiling():
-        return
-    # TODO(yiyun): Need to add sglang's MARLIN_USE_ATOMIC_ADD: bool = False
-    if True:
-        return
-    # if envs.VLLM_MARLIN_USE_ATOMIC_ADD:
-    #     return
-    logger.info_once(
-        "Marlin kernel can achieve better performance for small size_n "
-        "with experimental use_atomic_add feature. "
-        "You can consider set environment variable "
-        "VLLM_MARLIN_USE_ATOMIC_ADD to 1 if possible."
-    )
-
-
 def should_use_atomic_add_reduce(
     m: int, n: int, k: int, device: torch.device, dtype: torch.dtype
 ) -> bool:
 
-    # the performance of atomicAdd is better than global reduce
-    # only when m*n is small and k is large
-    if n >= 2048 or k < 2048 or device.type != "cuda":
+    if device.type != "cuda":
         return False
 
-    # disable atomicAdd reduce by default,
-    # one can enable it with VLLM_MARLIN_USE_ATOMIC_ADD=1
-    # TODO: Need to add sglang's MARLIN_USE_ATOMIC_ADD: bool = False
-    if not True:
-        maybe_warn_marlin_atomic_add_env()
-        return False
+    # For small M (decode), atomic_add eliminates barrier sync overhead.
+    # The C++ side has a more refined threshold; Python gate just enables it.
+    if m <= 16:
+        return True
 
-    # sm8x doesn't support atomicAdd + bfloat16 natively
-    device_capability = torch.cuda.get_device_capability(device)
-    if device_capability[0] < 9 and dtype == torch.bfloat16:
-        maybe_warn_marlin_atomic_add(device, dtype)
+    # For larger M, only use when m*n is small and k is large
+    if n >= 2048 or k < 2048:
         return False
 
     return True

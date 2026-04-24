@@ -127,6 +127,7 @@ bash simulate_soar.sh submission_20260322.tar.gz
 
 
 
+
 Sparse Deployment:
 ```bash
 source ~/compass_max_posttrain_1/miniconda3/bin/activate
@@ -271,6 +272,9 @@ retrieval and extraction capabilities.
 
 
 
+
+
+
 Dense Deployment:
 ```bash
 source ~/compass_max_posttrain_1/miniconda3/bin/activate
@@ -319,6 +323,79 @@ nohup python3 eval_model.py \
   --verbose \
   > ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/logs/eval_sala_dense_0417.log 2>&1 &
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Marlin Optimization Deployment:
+
+```bash
+source ~/compass_max_posttrain_1/miniconda3/bin/activate
+conda activate ~/compass_max_posttrain_1/.cz/sala/sglang_env
+# --- Toolchain env FIRST ---
+export CUDA_HOME=$CONDA_PREFIX
+export PATH=$CUDA_HOME/bin:$PATH
+export LD_LIBRARY_PATH=$CONDA_PREFIX/lib/python3.10/site-packages/torch/lib:$CONDA_PREFIX/lib/python3.10/site-packages/nvidia/cusparselt/lib:$CUDA_HOME/lib64:$LD_LIBRARY_PATH
+unset CUDA_PATH
+# --- Caches ---
+rm -rf ~/.triton/cache_marlin
+rm -rf ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_marlin/sglang/srt/layers/attention/__pycache__
+export TRITON_CACHE_DIR=~/.triton/cache_marlin
+export PYTORCH_ALLOC_CONF=expandable_segments:True
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+# --- Builds ---
+cd ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_marlin/sgl-kernel
+pip install --no-build-isolation .
+pip install --no-deps -e ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/sglang_sala_marlin
+# --- Launch ---
+CUDA_VISIBLE_DEVICES=7 \
+nohup python3 -m sglang.launch_server \
+    --model-path /home/work/compass_max_posttrain_1/.cz/sala/model_gptq_int4_dense_smooth \
+    --port 31335 \
+    --quantization gptq_marlin \
+    --kv-cache-dtype fp8_e5m2 \
+    --dtype bfloat16 \
+    --disable-radix-cache \
+    --max-running-requests 64 \
+    --attention-backend flashinfer \
+    --chunked-prefill-size 32768 \
+    --mem-fraction-static 0.82 \
+    --max-mamba-cache-size 64 \
+    --log-level info \
+    > ~/compass_max_posttrain_1/.cz/sala/server_marlin.log 2>&1 &
+
+# --enable-torch-compile
+
+python ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/bench/long_context_test_case.py --port 31335
+cd ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization && python ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/quantization/fast_eval_quantization.py --mode eval --api-base http://127.0.0.1:31335
+echo "=== Smax (unlimited) ==="
+nohup python3 -m sglang.bench_serving --backend sglang --host 127.0.0.1 --port 31335 \
+    --dataset-name custom --dataset-path ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/bench/competition_bench_64.jsonl \
+    --num-prompts 64 --flush-cache \
+    > ~/compass_max_posttrain_1/.cz/sala/64_concurrency_sparse.log 2>&1 &
+
+cd ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/SOAR-Toolkit
+nohup python3 eval_model.py \
+  --api_base http://127.0.0.1:31335 \
+  --model_path /home/work/compass_max_posttrain_1/.cz/sala/model_gptq_int4_dense_smooth \
+  --data_path eval_dataset/perf_public_set.jsonl \
+  --concurrency 64 \
+  --num_samples 150 \
+  --verbose \
+  > ~/compass_max_posttrain_1/.cz/sala/oldMoney-Project/logs/eval_sala_sparse_0422.log 2>&1 &
+```
+
+
 
 
 
