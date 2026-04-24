@@ -1,5 +1,6 @@
 # oldMoney Project
 
+
 Team **oldMoney** — SOAR Competition: MiniCPM-SALA optimization on NVIDIA Blackwell.
 
 Homepage: https://oldmoneyy.github.io/soar/
@@ -8,6 +9,7 @@ Homepage: https://oldmoneyy.github.io/soar/
 
 Once access the server:
 ```bash
+#hi testing
 echo "root:123456" | chpasswd
 sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
 sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
