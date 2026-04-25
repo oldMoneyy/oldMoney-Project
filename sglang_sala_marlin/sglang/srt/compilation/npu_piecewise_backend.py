@@ -13,6 +13,7 @@ from sglang.srt.compilation.cuda_piecewise_backend import (
 )
 
 
+
 class NPUPiecewiseBackend(CUDAPiecewiseBackend):
     def __init__(
         self,
