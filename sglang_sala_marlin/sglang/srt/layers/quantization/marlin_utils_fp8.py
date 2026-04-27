@@ -17,26 +17,7 @@ from sglang.srt.utils import is_cuda
 
 _is_cuda = is_cuda()
 if _is_cuda:
-    from sgl_kernel import gptq_marlin_repack
-    try:
-        import marlin_custom
-        from marlin_custom import gptq_marlin_gemm as _raw_gptq_marlin_gemm
-        import functools
-
-        @functools.wraps(_raw_gptq_marlin_gemm)
-        def gptq_marlin_gemm(a, c, b_q_weight, b_scales, global_scale,
-                             b_zeros, g_idx, perm, workspace, b_q_type,
-                             size_m, size_n, size_k, is_k_full=True,
-                             use_atomic_add=False, use_fp32_reduce=False,
-                             is_zp_float=False):
-            b_q_type_id = b_q_type.id if hasattr(b_q_type, 'id') else int(b_q_type)
-            return _raw_gptq_marlin_gemm(
-                a, c, b_q_weight, b_scales, global_scale,
-                b_zeros, g_idx, perm, workspace, b_q_type_id,
-                size_m, size_n, size_k, is_k_full,
-                use_atomic_add, use_fp32_reduce, is_zp_float)
-    except ImportError:
-        from sgl_kernel import gptq_marlin_gemm
+    from sgl_kernel import gptq_marlin_gemm, gptq_marlin_repack
 
 ScalarType, scalar_types = get_scalar_types()
 

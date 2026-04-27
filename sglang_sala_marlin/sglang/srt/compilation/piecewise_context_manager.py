@@ -11,7 +11,6 @@ _in_pcg_torch_compile = False
 _pcg_capture_stream = None
 
 
-
 def is_in_piecewise_cuda_graph():
     return _in_piecewise_cuda_graph
 
