@@ -9,7 +9,6 @@ Homepage: https://oldmoneyy.github.io/soar/
 
 Once access the server:
 ```bash
-#hi testing
 echo "root:123456" | chpasswd
 sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
 sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
@@ -31,6 +30,9 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 apt update
 apt install psmisc lsof -y
 ```
+
+
+
 
 Steps to push commits:
 ```bash
@@ -68,7 +70,10 @@ bash simulate_soar.sh submission_20260322.tar.gz
 
 ## Environment
 
-Download model, toolkit and uv:
+
+
+
+Download model:
 ```bash
 # Download MiniCPM-SALA model:
 cd /opt
@@ -89,7 +94,53 @@ export HF_HUB_ENABLE_HF_TRANSFER=1
 # export HF_ENDPOINT=https://hf-mirror.com
 python download_minicpm_sala.py
 ```
+or:
 
+```bash
+#!/bin/bash
+set -e
+
+MODEL_DIR="/opt/model"
+BASE_URL="https://hf-mirror.com/openbmb/MiniCPM-SALA/resolve/main"
+
+mkdir -p "${MODEL_DIR}"
+cd "${MODEL_DIR}"
+
+SMALL_FILES=(
+  config.json
+  tokenizer.json
+  tokenizer_config.json
+  special_tokens_map.json
+  model.safetensors.index.json
+  generation_config.json
+  merges.txt
+  vocab.json
+  added_tokens.json
+  tokenizer.model
+)
+
+echo "=== Downloading small files ==="
+for f in "${SMALL_FILES[@]}"; do
+  if [ -f "${f}" ]; then
+    echo "SKIP (exists): ${f}"
+  else
+    wget -q "${BASE_URL}/${f}" -O "${f}" 2>/dev/null && echo "OK: ${f}" || echo "FAIL: ${f}"
+  fi
+done
+
+echo ""
+echo "=== Downloading model shards ==="
+for i in 1 2 3 4; do
+  f="model-0000${i}-of-00004.safetensors"
+  echo "Downloading ${f} ..."
+  wget -c --show-progress "${BASE_URL}/${f}" -O "${f}"
+  echo "Done: ${f}"
+  echo ""
+done
+
+echo "=== All downloads complete ==="
+ls -lh "${MODEL_DIR}"
+```
 
 Environment changes we made:
 1. Updated `if model_runner.server_args.fuse_topk:` logic in minicpm_backend.py for JIT redundant compiling.
