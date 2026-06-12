@@ -16,7 +16,7 @@ sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_c
 service ssh restart
 
 cd /opt
-git clone https://oldMoneyy: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@github.com/oldMoneyy/oldMoney-Project.git
+git clone https://oldMoneyy:<token>@github.com/oldMoneyy/oldMoney-Project.git
 
 python3 -c "
 from huggingface_hub import snapshot_download
@@ -43,7 +43,7 @@ cd /opt/oldMoney-Project
 git pull
 git add .
 git commit -m "What are the commits about"
-git remote set-url origin https://oldMoneyy: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@github.com/oldMoneyy/oldMoney-Project.git
+git remote set-url origin https://oldMoneyy:<token>@github.com/oldMoneyy/oldMoney-Project.git
 git push -u origin main
 ```
 
